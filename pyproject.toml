@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spike-trace"
+version = "0.1.0"
+description = "Train and run volleyball action recognition models on match video."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Jimmyxia25" }
+]
+dependencies = [
+  "numpy>=1.26,<3",
+  "opencv-python-headless>=4.9,<5",
+  "torch>=2.3,<3",
+  "torchvision>=0.18,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.16,<1",
+]
+
+[project.scripts]
+spiketrace = "spiketrace.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+spiketrace = ["py.typed"]

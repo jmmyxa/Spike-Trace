@@ -1,0 +1,4 @@
+video_path,start_seconds,end_seconds,label,team_side,player_number,crop_x1,crop_y1,crop_x2,crop_y2,split
+videos/match_001.mp4,12.40,14.10,serve,far,8,0,0,1280,430,train
+videos/match_001.mp4,16.20,17.60,receive,far,3,0,0,1280,430,train
+videos/match_002.mp4,28.50,30.00,attack,near,12,0,170,1280,720,val

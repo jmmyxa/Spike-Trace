@@ -1,0 +1,108 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from .domain import ActionWindow
+from .events import merge_action_windows
+from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
+from .outputs import write_inference_outputs
+from .video import inspect_video, iter_window_times, sample_video_clip
+
+
+def infer_video(
+    video_path: str | Path,
+    checkpoint_path: str | Path,
+    output_dir: str | Path,
+    *,
+    stride_seconds: float = 0.4,
+    confidence_threshold: float = 0.5,
+    merge_gap_seconds: float = 0.25,
+    min_event_seconds: float = 0.2,
+    batch_size: int = 8,
+    device: str = "auto",
+    crop: tuple[int, int, int, int] | None = None,
+) -> dict[str, object]:
+    torch = require_torch()
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive.")
+    selected_device = resolve_device(device)
+    model, checkpoint = load_checkpoint(checkpoint_path, device=selected_device)
+    metadata = inspect_video(video_path)
+    num_frames = int(checkpoint["num_frames"])
+    image_size = int(checkpoint["image_size"])
+    window_seconds = float(checkpoint["window_seconds"])
+    labels = list(checkpoint["labels"])
+    model_version = str(checkpoint["model_version"])
+
+    times = list(
+        iter_window_times(
+            metadata.duration_seconds,
+            window_seconds=window_seconds,
+            stride_seconds=stride_seconds,
+        )
+    )
+    windows: list[ActionWindow] = []
+    for batch_start in range(0, len(times), batch_size):
+        batch_times = times[batch_start : batch_start + batch_size]
+        tensors = []
+        for start, end in batch_times:
+            frames = sample_video_clip(
+                metadata.path,
+                start,
+                end,
+                num_frames=num_frames,
+                image_size=image_size,
+                crop=crop,
+            )
+            tensors.append(frames_to_tensor(frames))
+        batch = torch.stack(tensors).to(selected_device)
+        with torch.no_grad():
+            probabilities = torch.softmax(model(batch), dim=1).detach().cpu()
+        scores, indices = probabilities.max(dim=1)
+        for (start, end), score, index in zip(batch_times, scores, indices):
+            windows.append(
+                ActionWindow(
+                    start_seconds=round(start, 6),
+                    end_seconds=round(end, 6),
+                    action=labels[int(index)],
+                    confidence=round(float(score), 6),
+                )
+            )
+        completed = min(batch_start + len(batch_times), len(times))
+        print(f"Processed {completed}/{len(times)} windows", flush=True)
+
+    events = merge_action_windows(
+        windows,
+        video_id=metadata.path.stem,
+        model_version=model_version,
+        confidence_threshold=confidence_threshold,
+        merge_gap_seconds=merge_gap_seconds,
+        min_event_seconds=min_event_seconds,
+    )
+    settings = {
+        "device": selected_device,
+        "checkpoint": str(Path(checkpoint_path).expanduser().resolve()),
+        "window_seconds": window_seconds,
+        "stride_seconds": stride_seconds,
+        "confidence_threshold": confidence_threshold,
+        "merge_gap_seconds": merge_gap_seconds,
+        "min_event_seconds": min_event_seconds,
+        "batch_size": batch_size,
+        "crop": list(crop) if crop is not None else None,
+    }
+    json_path, csv_path = write_inference_outputs(
+        output_dir,
+        metadata=metadata,
+        model_version=model_version,
+        events=events,
+        windows=windows,
+        settings=settings,
+    )
+    return {
+        "video": metadata.to_dict(),
+        "model_version": model_version,
+        "window_count": len(windows),
+        "event_count": len(events),
+        "events_json": str(json_path),
+        "events_csv": str(csv_path),
+    }
