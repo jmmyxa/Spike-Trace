@@ -47,20 +47,19 @@ def inspect_video(video_path: str | Path) -> VideoMetadata:
         capture.release()
 
 
-def sample_video_clip(
+def sample_video_frames(
     video_path: str | Path,
     start_seconds: float,
     end_seconds: float,
     *,
     num_frames: int,
-    image_size: int,
     crop: tuple[int, int, int, int] | None = None,
 ) -> np.ndarray:
-    """Return an RGB uint8 array with shape [T, H, W, C]."""
+    """Return BGR uint8 frames with shape [T, H, W, C] at source resolution."""
     cv2 = _cv2()
     path = Path(video_path).expanduser().resolve()
-    if num_frames <= 0 or image_size <= 0:
-        raise VideoError("num_frames and image_size must be positive.")
+    if num_frames <= 0:
+        raise VideoError("num_frames must be positive.")
     if start_seconds < 0 or end_seconds <= start_seconds:
         raise VideoError("Clip must satisfy 0 <= start_seconds < end_seconds.")
 
@@ -103,15 +102,41 @@ def sample_video_clip(
                         f"Crop {crop} exceeds video frame {frame_width}x{frame_height}."
                     )
                 frame = frame[y1:y2, x1:x2]
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(
-                frame,
-                (image_size, image_size),
-                interpolation=cv2.INTER_AREA,
-            )
             frames.append(frame)
     finally:
         capture.release()
+
+    return np.stack(frames, axis=0)
+
+
+def sample_video_clip(
+    video_path: str | Path,
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    num_frames: int,
+    image_size: int,
+    crop: tuple[int, int, int, int] | None = None,
+) -> np.ndarray:
+    """Return an RGB uint8 array with shape [T, H, W, C]."""
+    cv2 = _cv2()
+    if num_frames <= 0 or image_size <= 0:
+        raise VideoError("num_frames and image_size must be positive.")
+    source_frames = sample_video_frames(
+        video_path,
+        start_seconds,
+        end_seconds,
+        num_frames=num_frames,
+        crop=crop,
+    )
+    frames = [
+        cv2.resize(
+            cv2.cvtColor(frame, cv2.COLOR_BGR2RGB),
+            (image_size, image_size),
+            interpolation=cv2.INTER_AREA,
+        )
+        for frame in source_frames
+    ]
 
     return np.stack(frames, axis=0)
 

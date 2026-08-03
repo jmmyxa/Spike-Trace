@@ -102,6 +102,20 @@ def build_parser() -> argparse.ArgumentParser:
     infer_parser.add_argument(
         "--device", choices=("auto", "cpu", "cuda", "mps"), default="auto"
     )
+
+    pretrained_parser = subparsers.add_parser(
+        "evaluate-pretrained",
+        help="Evaluate pretrained YOLO action weights against an annotation CSV.",
+    )
+    pretrained_parser.add_argument("manifest", type=Path)
+    pretrained_parser.add_argument("weights", type=Path)
+    pretrained_parser.add_argument("output_dir", type=Path)
+    pretrained_parser.add_argument("--video-root", type=Path)
+    pretrained_parser.add_argument("--confidence-threshold", type=float, default=0.25)
+    pretrained_parser.add_argument("--frames-per-window", type=_positive_int, default=6)
+    pretrained_parser.add_argument(
+        "--device", choices=("auto", "cpu", "cuda", "mps"), default="auto"
+    )
     return parser
 
 
@@ -153,6 +167,19 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             batch_size=args.batch_size,
             device=args.device,
             crop=args.crop,
+        )
+
+    if args.command == "evaluate-pretrained":
+        from .pretrained import evaluate_pretrained_model
+
+        return evaluate_pretrained_model(
+            args.manifest,
+            args.weights,
+            args.output_dir,
+            video_root=args.video_root,
+            confidence_threshold=args.confidence_threshold,
+            frames_per_window=args.frames_per_window,
+            device=args.device,
         )
 
     raise ValueError(f"Unknown command: {args.command}")
