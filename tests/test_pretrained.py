@@ -14,6 +14,7 @@ from spiketrace.pretrained import (
     aggregate_action_detections,
     evaluate_pretrained_model,
     extract_action_detections,
+    format_video_time,
     normalize_external_label,
 )
 
@@ -29,6 +30,10 @@ def detection(action: str, confidence: float) -> DetectionEvidence:
 
 
 class PretrainedLabelTests(unittest.TestCase):
+    def test_formats_video_seconds_as_readable_timestamp(self):
+        self.assertEqual(format_video_time(731.6), "00:12:11.60")
+        self.assertEqual(format_video_time(3661.0), "01:01:01.00")
+
     def test_normalizes_external_labels(self):
         self.assertEqual(normalize_external_label("spike"), "attack")
         self.assertEqual(normalize_external_label(" SERVE "), "serve")
@@ -153,6 +158,12 @@ class PretrainedEvaluationTests(unittest.TestCase):
             self.assertEqual(result["metrics"]["accuracy"], 1.0)
             self.assertTrue((output / "pretrained_evaluation.json").is_file())
             self.assertTrue((output / "pretrained_review.csv").is_file())
+            review_text = (output / "pretrained_review.csv").read_text(
+                encoding="utf-8-sig"
+            )
+            self.assertIn("start_time,end_time", review_text)
+            self.assertIn("00:00:00.00,00:00:01.00", review_text)
+            self.assertIn("True", review_text)
 
 
 class PretrainedCliTests(unittest.TestCase):

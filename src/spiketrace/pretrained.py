@@ -32,6 +32,8 @@ REVIEW_FIELDS = (
     "video_path",
     "start_seconds",
     "end_seconds",
+    "start_time",
+    "end_time",
     "split",
     "team_side",
     "player_number",
@@ -65,6 +67,14 @@ class WindowPrediction:
 
 def normalize_external_label(label: str) -> str | None:
     return EXTERNAL_ACTION_LABELS.get(label.strip().lower())
+
+
+def format_video_time(seconds: float) -> str:
+    total_centiseconds = round(seconds * 100)
+    hours, remainder = divmod(total_centiseconds, 60 * 60 * 100)
+    minutes, remainder = divmod(remainder, 60 * 100)
+    whole_seconds, centiseconds = divmod(remainder, 100)
+    return f"{hours:02d}:{minutes:02d}:{whole_seconds:02d}.{centiseconds:02d}"
 
 
 def aggregate_action_detections(
@@ -248,6 +258,8 @@ def _review_row(
         "video_path": str(record.video_path),
         "start_seconds": record.start_seconds,
         "end_seconds": record.end_seconds,
+        "start_time": format_video_time(record.start_seconds),
+        "end_time": format_video_time(record.end_seconds),
         "split": record.split,
         "team_side": record.team_side or "",
         "player_number": record.player_number or "",

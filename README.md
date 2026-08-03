@@ -142,7 +142,9 @@ spiketrace evaluate-pretrained `
 输出目录包含：
 
 - `pretrained_evaluation.json`：权重 SHA-256、依赖版本、模型标签、设置、逐类指标、混淆矩阵和逐条检测证据。
-- `pretrained_review.csv`：预期标签、预测标签、置信度和检测框，供人工播放复核。
+- `pretrained_review.csv`：同时提供原始秒数和 `HH:MM:SS.ss` 可读时间，并保留置信度、`correct` 和检测框供人工播放复核。
+
+复核时以 `start_time` 和 `end_time` 跳转视频，例如 `00:12:11.60` 表示视频开始后的 12 分 11.60 秒。`correct=False` 只表示 `expected_action` 与 `predicted_action` 不同，不代表人工标注一定错误；必须播放视频后再决定保留或修改标签。
 
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
