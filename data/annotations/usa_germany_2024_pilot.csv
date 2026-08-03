@@ -1,0 +1,6 @@
+video_path,start_seconds,end_seconds,label,team_side,player_number,crop_x1,crop_y1,crop_x2,crop_y2,split,review_status,notes
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,728.0,728.8,background,far,,0,0,1280,430,train,provisional,USA ready position
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,731.6,732.4,receive,far,,0,0,1280,430,train,provisional,USA first contact
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.0,732.8,set,far,,0,0,1280,430,train,provisional,USA transition and set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.6,733.4,attack,far,,0,0,1280,430,train,provisional,USA attack against German block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,733.9,734.7,block,far,,0,0,1280,430,train,provisional,USA block against German attack

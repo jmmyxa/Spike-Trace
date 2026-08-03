@@ -6,7 +6,10 @@ __pycache__/
 .coverage
 
 # Local data and generated artifacts
-data/
+data/*
+!data/annotations/
+!data/annotations/*.csv
+!data/annotations/*.json
 runs/
 outputs/
 checkpoints/

@@ -1,0 +1,41 @@
+{
+  "match_id": "usa-germany-2024-olympics",
+  "video_path": "../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4",
+  "our_team": "USA",
+  "opponent": "Germany",
+  "fps": 30.0,
+  "width": 1280,
+  "height": 720,
+  "duration_seconds": 7687.333333333333,
+  "annotation_manifest": "usa_germany_2024_annotations.csv",
+  "annotation_status": "provisional_frame_review",
+  "pilot_interval": {
+    "start_seconds": 728.0,
+    "end_seconds": 735.0,
+    "usa_side": "far",
+    "crop": [0, 0, 1280, 430]
+  },
+  "reviewed_intervals": [
+    {"start_seconds": 360.0, "end_seconds": 364.8, "usa_side": "far"},
+    {"start_seconds": 370.0, "end_seconds": 378.0, "usa_side": "far"},
+    {"start_seconds": 728.0, "end_seconds": 735.0, "usa_side": "far"},
+    {"start_seconds": 1018.0, "end_seconds": 1028.0, "usa_side": "far"},
+    {"start_seconds": 1138.0, "end_seconds": 1153.0, "usa_side": "far"},
+    {"start_seconds": 1318.0, "end_seconds": 1328.0, "usa_side": "far"},
+    {"start_seconds": 1388.0, "end_seconds": 1398.0, "usa_side": "far"},
+    {"start_seconds": 1460.0, "end_seconds": 1469.0, "usa_side": "far"},
+    {"start_seconds": 2190.0, "end_seconds": 2196.6, "usa_side": "near"},
+    {"start_seconds": 2934.0, "end_seconds": 2944.0, "usa_side": "near"},
+    {"start_seconds": 3656.8, "end_seconds": 3663.0, "usa_side": "far"},
+    {"start_seconds": 4020.0, "end_seconds": 4027.0, "usa_side": "far"},
+    {"start_seconds": 4390.0, "end_seconds": 4399.4, "usa_side": "far"},
+    {"start_seconds": 4745.0, "end_seconds": 4768.0, "usa_side": "far"},
+    {"start_seconds": 5124.0, "end_seconds": 5138.4, "usa_side": "near"},
+    {"start_seconds": 5485.0, "end_seconds": 5490.0, "usa_side": "near"},
+    {"start_seconds": 5862.0, "end_seconds": 5871.4, "usa_side": "near"},
+    {"start_seconds": 6220.0, "end_seconds": 6229.4, "usa_side": "near"},
+    {"start_seconds": 6940.0, "end_seconds": 6954.0, "usa_side": "near"},
+    {"start_seconds": 7325.0, "end_seconds": 7334.4, "usa_side": "far"}
+  ],
+  "notes": "Annotations were reviewed from 0.2-second contact sheets but remain provisional until human playback review."
+}
