@@ -61,9 +61,7 @@ class ReviewQueueTests(unittest.TestCase):
             )
             output = root / "output" / "queue.csv"
 
-            result = prepare_review_queue(
-                manifest, spec, output, require_files=False
-            )
+            result = prepare_review_queue(manifest, spec, output, require_files=False)
 
             with output.open("r", encoding="utf-8-sig", newline="") as handle:
                 rows = list(csv.DictReader(handle))

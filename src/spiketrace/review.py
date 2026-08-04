@@ -72,9 +72,10 @@ def _read_spec(spec_path: str | Path) -> tuple[Path, dict[str, Any]]:
         )
     if not isinstance(payload.get("manifest"), str) or not payload["manifest"].strip():
         raise ReviewError("Review specification must name its annotation manifest.")
-    if not isinstance(payload.get("target_team"), str) or not payload[
-        "target_team"
-    ].strip():
+    if (
+        not isinstance(payload.get("target_team"), str)
+        or not payload["target_team"].strip()
+    ):
         raise ReviewError("Review specification must provide target_team.")
     if not isinstance(payload.get("requests"), list) or not payload["requests"]:
         raise ReviewError("Review specification requests must be a non-empty list.")
@@ -93,9 +94,7 @@ def _suggested_time(request: dict[str, Any], field: str, request_number: int) ->
     return parsed
 
 
-def _validate_requests(
-    requests: list[Any], record_count: int
-) -> list[dict[str, Any]]:
+def _validate_requests(requests: list[Any], record_count: int) -> list[dict[str, Any]]:
     validated: list[dict[str, Any]] = []
     seen: set[int] = set()
     for request_number, raw_request in enumerate(requests, start=1):
@@ -110,13 +109,17 @@ def _validate_requests(
 
         record_index = raw_request.get("record_index")
         if isinstance(record_index, bool) or not isinstance(record_index, int):
-            raise ReviewError(f"Request {request_number} record_index must be an integer.")
+            raise ReviewError(
+                f"Request {request_number} record_index must be an integer."
+            )
         if not 1 <= record_index <= record_count:
             raise ReviewError(
                 f"Request {request_number} record_index {record_index} is out of range."
             )
         if record_index in seen:
-            raise ReviewError(f"Review request has duplicate record_index {record_index}.")
+            raise ReviewError(
+                f"Review request has duplicate record_index {record_index}."
+            )
         seen.add(record_index)
 
         reason = raw_request.get("reason")
@@ -201,7 +204,9 @@ def _queue_row(
         "review_reason": request["reason"],
         "suggested_operation": request.get("suggested_operation", ""),
         "suggested_action": request.get("suggested_action", ""),
-        "suggested_start_seconds": suggested_start if suggested_start is not None else "",
+        "suggested_start_seconds": suggested_start
+        if suggested_start is not None
+        else "",
         "suggested_end_seconds": suggested_end if suggested_end is not None else "",
         "suggested_start_time": (
             format_video_time(suggested_start) if suggested_start is not None else ""

@@ -8,12 +8,13 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 
 ## 已实现
 
-- 六类动作数据契约：`background`、`serve`、`receive`、`set`、`attack`、`block`。
+- 内部七类动作数据契约：`background`、`serve`、`receive`、`set`、`attack`、`block`、`dig`；旧六类 checkpoint 继续兼容。
 - CSV 标注清单校验，并强制按完整比赛隔离训练集和验证集。
 - OpenCV 视频元数据读取和固定帧数片段采样。
 - 可训练的 R3D-18 基线，以及只用于冒烟测试的 Tiny3D 模型。
 - 可选的 Ultralytics YOLO 预训练动作检测适配层，不复制外部项目源码。
 - 外部模型标签归一化、逐窗口预测、混淆矩阵和人工复核 CSV。
+- 基于 JSON 规格生成精简二次复核队列，输出可读时间和空白人工确认字段。
 - 训练集/验证集损失、逐类 Precision/Recall/F1 和混淆矩阵。
 - 可复现 checkpoint，包含标签、预处理参数、指标和模型版本。
 - 整场视频滑动窗口推理、动作事件合并、JSON/CSV 导出。
@@ -67,19 +68,23 @@ Spike-Trace/
 │  ├─ ml.py                      # PyTorch 模型、设备和 checkpoint
 │  ├─ outputs.py                 # 事件 JSON/CSV 输出
 │  ├─ pretrained.py              # 外部 YOLO 适配、标签归一化与评估
+│  ├─ review.py                  # 二次复核规格校验与队列 CSV 生成
+│  ├─ timecode.py                # 视频秒数与可读时间互转
 │  ├─ training.py                # R3D-18/Tiny3D 训练与验证
 │  └─ video.py                   # 视频检查、原画幅帧采样和片段采样
 ├─ tests/                        # 不依赖真实视频或外部权重的单元测试
 └─ tools/                        # 冒烟数据和人工复核辅助工具
 ```
 
-动作模型采用两条可替换路径，并共享同一套六类标签与指标：
+动作模型采用两条可替换路径。自训练路径使用内部七类严格契约；外部 YOLO 保留上游六类能力契约：
 
 ```text
 标注 CSV + 比赛视频
-├─ 自训练路径：片段采样 -> R3D-18/Tiny3D -> 滑窗合并 -> events.json/events.csv
-└─ 预训练路径：原画幅采样 -> YOLO 检测 -> 标签归一化 -> 评估 JSON/复核 CSV
+├─ 自训练路径：七类标注 -> R3D-18/Tiny3D -> 滑窗合并 -> events.json/events.csv
+└─ 预训练路径：六类 YOLO -> 标签归一化 -> 严格七类/兼容六类指标 -> 复核 CSV
 ```
+
+`receive` 仅表示美国队直接接对方发球的第一次触球；`dig` 表示针对对方扣球、吊球等进攻的防守起球，不含拦网。对方直接出界且美国队未触球时标为 `background`。非进攻 free ball 的我方首次触球本轮暂标为 `background`，并在备注写 `free-ball`。
 
 ## 准备标注
 
@@ -130,7 +135,7 @@ spiketrace evaluate-pretrained `
   --device auto
 ```
 
-程序按清单中的时间和半场裁剪采样原始画幅，在每个窗口内选择置信度最高的有效动作。没有有效检测时输出 `background`。外部标签统一转换为：
+程序按清单中的时间和半场裁剪采样原始画幅，在每个窗口内选择置信度最高的有效动作。没有有效检测时输出 `background`。该 YOLO 权重不包含 `dig`，外部标签统一转换为：
 
 | 外部 YOLO 标签 | Spike-Trace 标签 | 处理方式 |
 | --- | --- | --- |
@@ -143,14 +148,31 @@ spiketrace evaluate-pretrained `
 
 输出目录包含：
 
-- `pretrained_evaluation.json`：权重 SHA-256、依赖版本、模型标签、设置、逐类指标、混淆矩阵和逐条检测证据。
+- `pretrained_evaluation.json`：权重 SHA-256、依赖版本、模型标签、设置、逐类指标、混淆矩阵和逐条检测证据；同时包含严格七类 `metrics` 和将真值 `dig` 映射为 `receive` 的六类 `compatibility_metrics`。
 - `pretrained_review.csv`：同时提供原始秒数和 `HH:MM:SS.ss` 可读时间，并保留置信度、`correct` 和检测框供人工播放复核。
 
 复核时以 `start_time` 和 `end_time` 跳转视频，例如 `00:12:11.60` 表示视频开始后的 12 分 11.60 秒。`correct=False` 只表示 `expected_action` 与 `predicted_action` 不同，不代表人工标注一定错误；必须播放视频后再决定保留或修改标签。
 
 人工复核表以“人工确认动作”非空作为已复核标志，不设置单独的审核状态；无法确定的片段直接在备注中说明。
 
+`compatibility_metrics` 只衡量旧六类模型发现宽泛防守触球候选的能力，不能覆盖人工 `dig` 真值，也不能作为七类部署成绩。
+
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
+
+## 生成二次复核队列
+
+二次复核请求保存在可提交的 JSON 规格中，程序将其与首轮已复核标注合并为 UTF-8 BOM CSV：
+
+```powershell
+spiketrace prepare-review `
+  data\annotations\usa_germany_2024_annotations.csv `
+  data\annotations\usa_germany_2024_second_review.json `
+  outputs\second-review\usa_germany_2024_second_review.csv
+```
+
+跨设备仅检查结构且本地没有原视频时，可加 `--allow-missing-videos`。当前规格包含原清单记录 `1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67`。CSV 保留来源、建议处理方式和 `HH:MM:SS.ss` 可读时间；人工确认动作、开始/结束时间和备注默认留空。人工确认动作非空即表示该行完成复核，不另设审核状态。
+
+JSON 规格和标注 CSV 是可复现输入；便于填写的 XLSX 视图、预览和视频均保存在忽略的 `outputs/` 中，不提交 Git。本轮只生成队列，不直接修改 67 行首轮标注。
 
 ## 整场视频推理
 
@@ -193,12 +215,13 @@ python -m unittest discover -s tests -v
 - 视频规格：1280x720、30 FPS、约 2 小时 8 分钟。
 - 首个试标注区间：`728.0-735.0` 秒，美国队位于远端半场。
 - 远端裁剪：`0,0,1280,430`；近端建议裁剪：`0,170,1280,720`。
-- 67 个候选窗口已完成首轮人工复核，46 条标签被修正，状态已从 `provisional`
-  更新为 `reviewed`。
+- 67 个候选窗口已完成首轮人工复核，46 条标签被修正，比赛状态为
+  `first_pass_reviewed`。
 - 复核后分布为：`background` 45、`block` 8、`receive` 6、`serve` 5、`set` 2、
   `attack` 1。大量候选窗口没有覆盖实际触球瞬间，不能直接作为均衡训练集。
-- 当前仍维持上游兼容的六类契约。首轮复核中的 `receive` 尚未区分接发球与防守起球；
-  自有模型正式训练前应将接发球定义为 `receive`，防守起球拆为 `dig`，并只复核这 6 条。
+- 内部契约已升级为七类，旧 YOLO 仍为六类。17 条精简二次复核队列已生成，状态为
+  `pending_human_review`；它同时覆盖 6 条现有 `receive` 的 `receive/dig/background`
+  拆分，以及人工备注指出的时间偏移或不确定窗口。
 
 同一局内可以固定我方半场裁剪；换边后需要按局次切换裁剪。训练与验证必须使用
 不同的完整比赛，不能把本场不同局拆到不同数据集分区。
@@ -223,5 +246,5 @@ python -m unittest discover -s tests -v
 跑通自训练工程链路和外部 YOLO 权重评估，但当前清单有 45 个 `background`，正样本数量
 与时间边界都不足以支持微调。预训练动作检测只能减少“候选片段发现”的工作，不能自动
 完成美国队过滤、球衣号码归属、发球成功率、得分结果、一传到位率或上场时间。下一步是
-按人工备注移动或新增动作窗口、拆分 `receive/dig`、补齐正样本；正式评估仍需至少一场
-独立比赛。
+填写 17 条二次复核队列，再把人工确认的重标、移动和新增窗口同步回标注清单；随后补齐
+七类正样本。正式评估仍需至少一场独立比赛。

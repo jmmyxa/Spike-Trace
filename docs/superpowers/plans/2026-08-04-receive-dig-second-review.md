@@ -63,9 +63,7 @@ Append `dig` to `ACTION_LABELS`, add `ACTION_LABEL_SCHEMA_VERSION = 2`, and incl
 Define the pretrained capability explicitly:
 
 ```python
-PRETRAINED_ACTION_LABELS = (
-    "background", "serve", "receive", "set", "attack", "block"
-)
+PRETRAINED_ACTION_LABELS = ("background", "serve", "receive", "set", "attack", "block")
 PRETRAINED_COMPATIBILITY_MAP = {"dig": "receive"}
 ```
 

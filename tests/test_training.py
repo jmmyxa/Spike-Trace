@@ -24,9 +24,7 @@ class TrainingConfigTests(unittest.TestCase):
             output = root / "output"
 
             with (
-                mock.patch(
-                    "spiketrace.training._validate_annotation_bounds"
-                ),
+                mock.patch("spiketrace.training._validate_annotation_bounds"),
                 mock.patch(
                     "spiketrace.training._run_epoch",
                     side_effect=[(0.0, [1], [1]), (0.0, [4], [4])],
