@@ -146,6 +146,8 @@ spiketrace evaluate-pretrained `
 
 复核时以 `start_time` 和 `end_time` 跳转视频，例如 `00:12:11.60` 表示视频开始后的 12 分 11.60 秒。`correct=False` 只表示 `expected_action` 与 `predicted_action` 不同，不代表人工标注一定错误；必须播放视频后再决定保留或修改标签。
 
+人工复核表以“人工确认动作”非空作为已复核标志，不设置单独的审核状态；无法确定的片段直接在备注中说明。
+
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
 ## 整场视频推理
