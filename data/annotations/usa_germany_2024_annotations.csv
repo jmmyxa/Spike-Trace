@@ -1,68 +1,68 @@
 video_path,start_seconds,end_seconds,label,team_side,player_number,crop_x1,crop_y1,crop_x2,crop_y2,split,review_status,notes
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,728.0,728.8,background,far,,0,0,1280,430,train,provisional,USA ready position
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,731.6,732.4,receive,far,,0,0,1280,430,train,provisional,USA first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.0,732.8,set,far,,0,0,1280,430,train,provisional,USA transition and set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.6,733.4,attack,far,,0,0,1280,430,train,provisional,USA attack against German block
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,733.9,734.7,block,far,,0,0,1280,430,train,provisional,USA block against German attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,364.0,364.8,background,far,,0,0,1280,430,train,provisional,USA static receive formation
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,2190.0,2190.8,background,near,,0,170,1280,720,train,provisional,USA between rallies
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5124.0,5124.8,background,near,,0,170,1280,720,train,provisional,USA static receive formation
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5135.6,5136.4,background,near,,0,170,1280,720,train,provisional,USA post-rally movement
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5862.0,5862.8,background,near,,0,170,1280,720,train,provisional,USA static receive formation
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5868.8,5869.6,background,near,,0,170,1280,720,train,provisional,USA post-rally celebration
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6221.0,6221.8,background,near,,0,170,1280,720,train,provisional,USA pre-serve reset
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6227.8,6228.6,background,near,,0,170,1280,720,train,provisional,USA post-point movement
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7326.0,7326.8,background,far,,0,0,1280,430,train,provisional,USA pre-serve formation
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,2195.2,2196.0,serve,near,,0,170,1280,720,train,provisional,USA jump serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6224.0,6224.8,serve,near,,0,170,1280,720,train,provisional,USA jump serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7330.0,7330.8,serve,far,,0,0,1280,430,train,provisional,USA far-court serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3657.6,3658.4,attack,far,,0,0,1280,430,train,provisional,USA first transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3659.4,3660.2,block,far,,0,0,1280,430,train,provisional,USA block against German attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3660.2,3661.0,receive,far,,0,0,1280,430,train,provisional,USA defensive first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3660.6,3661.4,set,far,,0,0,1280,430,train,provisional,USA transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3661.0,3661.8,attack,far,,0,0,1280,430,train,provisional,USA second transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4391.2,4392.0,receive,far,,0,0,1280,430,train,provisional,USA serve receive
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4391.8,4392.6,set,far,,0,0,1280,430,train,provisional,USA first transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4392.4,4393.2,attack,far,,0,0,1280,430,train,provisional,USA first transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4393.8,4394.6,block,far,,0,0,1280,430,train,provisional,USA first block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4394.6,4395.4,receive,far,,0,0,1280,430,train,provisional,USA defensive first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4395.2,4396.0,set,far,,0,0,1280,430,train,provisional,USA second transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4395.8,4396.6,attack,far,,0,0,1280,430,train,provisional,USA second transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4397.8,4398.6,block,far,,0,0,1280,430,train,provisional,USA second block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5129.8,5130.6,receive,near,,0,170,1280,720,train,provisional,USA diving first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5131.0,5131.8,set,near,,0,170,1280,720,train,provisional,USA transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5131.8,5132.6,attack,near,,0,170,1280,720,train,provisional,USA right-side attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5132.8,5133.6,block,near,,0,170,1280,720,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5864.0,5864.8,receive,near,,0,170,1280,720,train,provisional,USA first contact under pressure
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7332.4,7333.2,block,far,,0,0,1280,430,train,provisional,USA first block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7333.4,7334.2,block,far,,0,0,1280,430,train,provisional,USA repeat block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,375.2,376.0,receive,far,,0,0,1280,430,train,provisional,USA first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,375.6,376.4,set,far,,0,0,1280,430,train,provisional,USA transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,376.0,376.8,attack,far,,0,0,1280,430,train,provisional,USA attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,377.2,378.0,block,far,,0,0,1280,430,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4022.6,4023.4,attack,far,,0,0,1280,430,train,provisional,USA attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4024.2,4025.0,block,far,,0,0,1280,430,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4025.0,4025.8,receive,far,,0,0,1280,430,train,provisional,USA defensive first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4025.4,4026.2,set,far,,0,0,1280,430,train,provisional,USA transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4026.0,4026.8,attack,far,,0,0,1280,430,train,provisional,USA transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4761.2,4762.0,receive,far,,0,0,1280,430,train,provisional,USA first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4761.8,4762.6,set,far,,0,0,1280,430,train,provisional,USA set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4762.4,4763.2,attack,far,,0,0,1280,430,train,provisional,USA attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4764.2,4765.0,block,far,,0,0,1280,430,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.0,4765.8,receive,far,,0,0,1280,430,train,provisional,USA defensive first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.4,4766.2,set,far,,0,0,1280,430,train,provisional,USA second transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.8,4766.6,attack,far,,0,0,1280,430,train,provisional,USA second transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4766.2,4767.0,block,far,,0,0,1280,430,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6945.0,6945.8,receive,near,,0,170,1280,720,train,provisional,USA first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6945.8,6946.6,set,near,,0,170,1280,720,train,provisional,USA set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6947.6,6948.4,attack,near,,0,170,1280,720,train,provisional,USA attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6950.2,6951.0,block,near,,0,170,1280,720,train,provisional,USA block attempt
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6951.0,6951.8,receive,near,,0,170,1280,720,train,provisional,USA defensive first contact
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6951.8,6952.6,set,near,,0,170,1280,720,train,provisional,USA transition set
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6952.4,6953.2,attack,near,,0,170,1280,720,train,provisional,USA transition attack
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1467.4,1468.2,serve,far,,0,0,1280,430,train,provisional,USA serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4750.0,4750.8,background,far,,0,0,1280,430,train,provisional,USA ready position
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5489.0,5489.8,background,near,,0,170,1280,720,train,provisional,USA ready position
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1147.8,1148.6,serve,far,,0,0,1280,430,train,provisional,USA far-court serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1319.2,1320.0,serve,far,,0,0,1280,430,train,provisional,USA far-court serve
-../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1396.2,1397.0,serve,far,,0,0,1280,430,train,provisional,USA far-court serve
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,728.0,728.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; reviewer note: 12：10发球
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,731.6,732.4,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.0,732.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,732.6,733.4,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,733.9,734.7,block,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,364.0,364.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,2190.0,2190.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5124.0,5124.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5135.6,5136.4,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5862.0,5862.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5868.8,5869.6,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6221.0,6221.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6227.8,6228.6,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7326.0,7326.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,2195.2,2196.0,serve,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6224.0,6224.8,serve,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7330.0,7330.8,serve,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3657.6,3658.4,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3659.4,3660.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block; reviewer note: 1:01:00:20才刚开始block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3660.2,3661.0,block,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3660.6,3661.4,receive,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,3661.0,3661.8,receive,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4391.2,4392.0,serve,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive; reviewer note: serve到1：13:11.80开始background
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4391.8,4392.6,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4392.4,4393.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4393.8,4394.6,block,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4394.6,4395.4,receive,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4395.2,4396.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4395.8,4396.6,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4397.8,4398.6,block,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5129.8,5130.6,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from receive; reviewer note: 不确定，receive在30-31之间
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5131.0,5131.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from set; reviewer note: receive应该30.60-31.20
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5131.8,5132.6,set,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5132.8,5133.6,attack,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5864.0,5864.8,receive,near,,0,170,1280,720,train,reviewed,Human-reviewed; reviewer note: 对手失误出界算不算receive？
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7332.4,7333.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,7333.4,7334.2,block,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,375.2,376.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,375.6,376.4,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set; reviewer note: 不确定，刚开始block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,376.0,376.8,block,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,377.2,378.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block; reviewer note: 没接到球
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4022.6,4023.4,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4024.2,4025.0,receive,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4025.0,4025.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4025.4,4026.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4026.0,4026.8,set,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack; reviewer note: attack大概是6.60-7.40
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4761.2,4762.0,serve,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive; reviewer note: 20.6-21.6 serve
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4761.8,4762.6,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4762.4,4763.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4764.2,4765.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.0,4765.8,block,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.4,4766.2,block,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4765.8,4766.6,receive,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4766.2,4767.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6945.0,6945.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6945.8,6946.6,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6947.6,6948.4,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6950.2,6951.0,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from block
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6951.0,6951.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from receive
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6951.8,6952.6,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from set
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,6952.4,6953.2,background,near,,0,170,1280,720,train,reviewed,Human-reviewed; label corrected from attack
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1467.4,1468.2,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from serve
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,4750.0,4750.8,background,far,,0,0,1280,430,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,5489.0,5489.8,background,near,,0,170,1280,720,train,reviewed,Human-reviewed
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1147.8,1148.6,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from serve; reviewer note: 0：19：08.60才刚开始serve
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1319.2,1320.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from serve; reviewer note: 0:22:00.00刚开始serve
+../USA vs Germany _ Men's Volleyball _ Full Match _ 2024 Olympics [ylqePmC_klo].mp4,1396.2,1397.0,background,far,,0,0,1280,430,train,reviewed,Human-reviewed; label corrected from serve; reviewer note: 0:23:17.00刚开始serve
