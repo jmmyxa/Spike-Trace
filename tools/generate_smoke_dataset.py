@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-LABELS = ("background", "serve", "receive", "set", "attack", "block")
+LABELS = ("background", "serve", "receive", "set", "attack", "block", "dig")
 COLORS = {
     "background": (70, 70, 70),
     "serve": (40, 40, 220),
@@ -16,6 +16,7 @@ COLORS = {
     "set": (210, 80, 40),
     "attack": (30, 210, 220),
     "block": (180, 50, 180),
+    "dig": (60, 180, 240),
 }
 
 
@@ -56,6 +57,16 @@ def _draw_frame(cv2, label: str, frame_index: int, total_frames: int, size: int)
             color,
             -1,
         )
+    elif label == "dig":
+        y = int(size * (0.7 - 0.45 * progress))
+        cv2.circle(frame, (size // 2, y), size // 9, color, thickness=-1)
+        cv2.line(
+            frame,
+            (margin, size - margin),
+            (size - margin, y),
+            color,
+            thickness=max(2, size // 14),
+        )
     return frame
 
 
@@ -76,7 +87,7 @@ def generate_dataset(output_dir: Path, *, fps: int = 8, size: int = 64) -> Path:
         (
             "val_01.avi",
             "val",
-            ("serve", "set", "attack", "block", "receive", "background"),
+            ("serve", "set", "attack", "block", "dig", "receive", "background"),
         ),
     )
     rows: list[dict[str, object]] = []

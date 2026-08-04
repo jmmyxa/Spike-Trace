@@ -165,6 +165,54 @@ class PretrainedEvaluationTests(unittest.TestCase):
             self.assertIn("00:00:00.00,00:00:01.00", review_text)
             self.assertIn("True", review_text)
 
+    def test_reports_strict_and_compatible_metrics_for_dig(self):
+        class FakeDetector:
+            def __init__(self, weights, **_kwargs):
+                self.weights = Path(weights).resolve()
+                self.device = "cpu"
+                self.weights_sha256 = "fake-sha256"
+                self.ultralytics_version = "test"
+                self.model_labels = (
+                    "ball",
+                    "block",
+                    "receive",
+                    "set",
+                    "spike",
+                    "serve",
+                )
+
+            def predict_window(self, _frames):
+                return WindowPrediction("receive", 0.9, ())
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "match.avi"
+            weights = root / "actions.pt"
+            video.touch()
+            weights.touch()
+            manifest = root / "annotations.csv"
+            manifest.write_text(
+                "video_path,start_seconds,end_seconds,label,split\n"
+                "match.avi,0,1,dig,test\n",
+                encoding="utf-8",
+            )
+
+            with (
+                mock.patch(
+                    "spiketrace.pretrained.PretrainedActionDetector", FakeDetector
+                ),
+                mock.patch(
+                    "spiketrace.pretrained.sample_video_frames",
+                    return_value=np.zeros((2, 8, 8, 3), dtype=np.uint8),
+                ),
+            ):
+                result = evaluate_pretrained_model(
+                    manifest, weights, root / "output", frames_per_window=2
+                )
+
+            self.assertEqual(result["metrics"]["accuracy"], 0.0)
+            self.assertEqual(result["compatibility_metrics"]["accuracy"], 1.0)
+
 
 class PretrainedCliTests(unittest.TestCase):
     def test_parser_accepts_evaluate_pretrained_command(self):

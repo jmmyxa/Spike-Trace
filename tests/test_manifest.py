@@ -41,6 +41,20 @@ class ManifestTests(unittest.TestCase):
             records = load_manifest(manifest, require_files=False)
             self.assertEqual(records[0].crop, (0, 0, 1280, 430))
 
+    def test_loads_dig_label(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = root / "annotations.csv"
+            manifest.write_text(
+                "video_path,start_seconds,end_seconds,label,split\n"
+                "match.avi,0,1,dig,test\n",
+                encoding="utf-8",
+            )
+
+            records = load_manifest(manifest, require_files=False)
+
+            self.assertEqual(records[0].label, "dig")
+
     def test_rejects_partial_crop(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

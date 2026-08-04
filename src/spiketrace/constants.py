@@ -7,7 +7,9 @@ ACTION_LABELS: tuple[str, ...] = (
     "set",
     "attack",
     "block",
+    "dig",
 )
 
 BACKGROUND_LABEL = "background"
+ACTION_LABEL_SCHEMA_VERSION = 2
 CHECKPOINT_FORMAT_VERSION = 1

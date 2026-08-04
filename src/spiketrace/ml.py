@@ -7,7 +7,7 @@ from typing import Any
 
 import numpy as np
 
-from .constants import CHECKPOINT_FORMAT_VERSION
+from .constants import ACTION_LABEL_SCHEMA_VERSION, CHECKPOINT_FORMAT_VERSION
 from .errors import CheckpointError
 
 KINETICS_MEAN = (0.43216, 0.394666, 0.37645)
@@ -114,6 +114,7 @@ def make_checkpoint(
         "model_name": model_name,
         "model_version": model_version,
         "labels": list(labels),
+        "action_label_schema_version": ACTION_LABEL_SCHEMA_VERSION,
         "num_frames": num_frames,
         "image_size": image_size,
         "window_seconds": window_seconds,

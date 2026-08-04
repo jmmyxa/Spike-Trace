@@ -26,6 +26,15 @@ EXTERNAL_ACTION_LABELS: dict[str, str | None] = {
     "spike": "attack",
     "serve": "serve",
 }
+PRETRAINED_ACTION_LABELS = (
+    "background",
+    "serve",
+    "receive",
+    "set",
+    "attack",
+    "block",
+)
+PRETRAINED_COMPATIBILITY_MAP = {"dig": "receive"}
 
 REVIEW_FIELDS = (
     "record_index",
@@ -297,6 +306,11 @@ def evaluate_pretrained_model(
     targets: list[int] = []
     predictions: list[int] = []
     label_to_index = {label: index for index, label in enumerate(ACTION_LABELS)}
+    compatibility_targets: list[int] = []
+    compatibility_predictions: list[int] = []
+    compatibility_label_to_index = {
+        label: index for index, label in enumerate(PRETRAINED_ACTION_LABELS)
+    }
 
     for record_index, record in enumerate(records, start=1):
         print(
@@ -315,8 +329,21 @@ def evaluate_pretrained_model(
         review_rows.append(_review_row(record_index, record, prediction))
         targets.append(label_to_index[record.label])
         predictions.append(label_to_index[prediction.action])
+        compatibility_targets.append(
+            compatibility_label_to_index[
+                PRETRAINED_COMPATIBILITY_MAP.get(record.label, record.label)
+            ]
+        )
+        compatibility_predictions.append(
+            compatibility_label_to_index[
+                PRETRAINED_COMPATIBILITY_MAP.get(prediction.action, prediction.action)
+            ]
+        )
 
     metrics = classification_metrics(targets, predictions, ACTION_LABELS)
+    compatibility_metrics = classification_metrics(
+        compatibility_targets, compatibility_predictions, PRETRAINED_ACTION_LABELS
+    )
     report_path = destination / "pretrained_evaluation.json"
     review_path = destination / "pretrained_review.csv"
     report = {
@@ -335,6 +362,7 @@ def evaluate_pretrained_model(
         "manifest": str(Path(manifest_path).expanduser().resolve()),
         "manifest_summary": summarize_manifest(records),
         "metrics": metrics,
+        "compatibility_metrics": compatibility_metrics,
         "records": review_rows,
     }
     report_path.write_text(
@@ -352,4 +380,5 @@ def evaluate_pretrained_model(
         "report": str(report_path),
         "review_csv": str(review_path),
         "metrics": metrics,
+        "compatibility_metrics": compatibility_metrics,
     }

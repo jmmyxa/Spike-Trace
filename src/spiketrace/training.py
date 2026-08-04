@@ -5,7 +5,7 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
-from .constants import ACTION_LABELS
+from .constants import ACTION_LABEL_SCHEMA_VERSION, ACTION_LABELS
 from .domain import AnnotationRecord
 from .manifest import load_manifest, summarize_manifest
 from .metrics import classification_metrics
@@ -188,6 +188,7 @@ def train_action_model(
         "device": selected_device,
         "seed": seed,
         "labels": labels,
+        "action_label_schema_version": ACTION_LABEL_SCHEMA_VERSION,
     }
     (output / "training_config.json").write_text(
         json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"
