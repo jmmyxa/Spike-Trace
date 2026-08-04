@@ -12,3 +12,7 @@ class VideoError(SpikeTraceError):
 
 class CheckpointError(SpikeTraceError):
     """Raised when a model checkpoint is invalid or incompatible."""
+
+
+class ReviewError(SpikeTraceError):
+    """Raised when a review request specification is invalid."""

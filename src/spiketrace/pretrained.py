@@ -16,6 +16,7 @@ from .errors import SpikeTraceError
 from .manifest import load_manifest, summarize_manifest
 from .metrics import classification_metrics
 from .ml import resolve_device
+from .timecode import format_video_time
 from .video import sample_video_frames
 
 EXTERNAL_ACTION_LABELS: dict[str, str | None] = {
@@ -76,14 +77,6 @@ class WindowPrediction:
 
 def normalize_external_label(label: str) -> str | None:
     return EXTERNAL_ACTION_LABELS.get(label.strip().lower())
-
-
-def format_video_time(seconds: float) -> str:
-    total_centiseconds = round(seconds * 100)
-    hours, remainder = divmod(total_centiseconds, 60 * 60 * 100)
-    minutes, remainder = divmod(remainder, 60 * 100)
-    whole_seconds, centiseconds = divmod(remainder, 100)
-    return f"{hours:02d}:{minutes:02d}:{whole_seconds:02d}.{centiseconds:02d}"
 
 
 def aggregate_action_detections(

@@ -1,0 +1,113 @@
+{
+  "format_version": 1,
+  "manifest": "usa_germany_2024_annotations.csv",
+  "target_team": "USA",
+  "requests": [
+    {
+      "record_index": 1,
+      "reason": "原备注指出 00:12:10.00 才出现发球，需要播放视频重新对齐窗口。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve"
+    },
+    {
+      "record_index": 19,
+      "reason": "原备注指出 01:01:00.20 才开始拦网，需要确认当前 background 窗口边界。",
+      "suggested_operation": "keep",
+      "suggested_action": "background"
+    },
+    {
+      "record_index": 21,
+      "reason": "现有 receive 需要按新口径区分接发球、dig 或 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 22,
+      "reason": "现有 receive 需要按新口径区分接发球、dig 或 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 23,
+      "reason": "原备注明确发球在 01:13:11.80 结束，之后为 background。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve",
+      "suggested_start_seconds": 4391.2,
+      "suggested_end_seconds": 4391.8
+    },
+    {
+      "record_index": 27,
+      "reason": "现有 receive 需要按新口径区分接发球、dig 或 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 31,
+      "reason": "原备注指出 receive 位于 01:25:30-01:25:31 之间，需要确认当前 background 是否保留。",
+      "suggested_operation": "keep",
+      "suggested_action": "background"
+    },
+    {
+      "record_index": 32,
+      "reason": "原备注明确 receive 约为 01:25:30.60-01:25:31.20。",
+      "suggested_operation": "move_window",
+      "suggested_action": "receive",
+      "suggested_start_seconds": 5130.6,
+      "suggested_end_seconds": 5131.2
+    },
+    {
+      "record_index": 35,
+      "reason": "必须播放视频确认美国队是否触球；未触球时应为 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 39,
+      "reason": "原备注只确认刚开始拦网，需要播放视频确定准确边界。",
+      "suggested_operation": "move_window"
+    },
+    {
+      "record_index": 43,
+      "reason": "现有 receive 需要按新口径区分接发球、dig 或 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 46,
+      "reason": "原备注指出应新增 01:07:06.60-01:07:07.40 的 attack 窗口。",
+      "suggested_operation": "add_window",
+      "suggested_action": "attack",
+      "suggested_start_seconds": 4026.6,
+      "suggested_end_seconds": 4027.4
+    },
+    {
+      "record_index": 47,
+      "reason": "原备注明确发球约为 01:19:20.60-01:19:21.60。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve",
+      "suggested_start_seconds": 4760.6,
+      "suggested_end_seconds": 4761.6
+    },
+    {
+      "record_index": 53,
+      "reason": "现有 receive 需要按新口径区分接发球、dig 或 background。",
+      "suggested_operation": "relabel"
+    },
+    {
+      "record_index": 65,
+      "reason": "原备注只确认 00:19:08.60 才开始发球，需要播放视频确定结束时刻。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve",
+      "suggested_start_seconds": 1148.6
+    },
+    {
+      "record_index": 66,
+      "reason": "原备注只确认 00:22:00.00 才开始发球，需要播放视频确定结束时刻。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve",
+      "suggested_start_seconds": 1320.0
+    },
+    {
+      "record_index": 67,
+      "reason": "原备注只确认 00:23:17.00 才开始发球，需要播放视频确定结束时刻。",
+      "suggested_operation": "move_window",
+      "suggested_action": "serve",
+      "suggested_start_seconds": 1397.0
+    }
+  ]
+}

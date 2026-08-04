@@ -116,6 +116,16 @@ def build_parser() -> argparse.ArgumentParser:
     pretrained_parser.add_argument(
         "--device", choices=("auto", "cpu", "cuda", "mps"), default="auto"
     )
+
+    review_parser = subparsers.add_parser(
+        "prepare-review",
+        help="Build a focused manual-review CSV from a reviewed manifest.",
+    )
+    review_parser.add_argument("manifest", type=Path)
+    review_parser.add_argument("spec", type=Path)
+    review_parser.add_argument("output_csv", type=Path)
+    review_parser.add_argument("--video-root", type=Path)
+    review_parser.add_argument("--allow-missing-videos", action="store_true")
     return parser
 
 
@@ -180,6 +190,17 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             confidence_threshold=args.confidence_threshold,
             frames_per_window=args.frames_per_window,
             device=args.device,
+        )
+
+    if args.command == "prepare-review":
+        from .review import prepare_review_queue
+
+        return prepare_review_queue(
+            args.manifest,
+            args.spec,
+            args.output_csv,
+            video_root=args.video_root,
+            require_files=not args.allow_missing_videos,
         )
 
     raise ValueError(f"Unknown command: {args.command}")
