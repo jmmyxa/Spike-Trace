@@ -51,7 +51,9 @@ README 必须随模块或目录变更同步更新。当前结构和职责如下�
 ```text
 Spike-Trace/
 ├─ data/annotations/             # 可提交的清单与比赛元数据；原视频不进入 Git
-├─ docs/PROJECT_PLAN.md          # 产品边界、技术决策与阶段路线
+├─ docs/
+│  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
+│  └─ superpowers/               # 已确认的阶段设计与逐步实现计划
 ├─ examples/                     # 标注格式示例
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
