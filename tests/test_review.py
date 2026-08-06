@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import json
 import tempfile
 import unittest
@@ -804,6 +805,156 @@ class ReviewQueueTests(unittest.TestCase):
                 summary["records_by_label"],
             )
             self.assertEqual(match["second_review"]["status"], "applied")
+            baseline = match["pretrained_baseline"]
+            self.assertEqual(baseline["status"], "completed")
+            self.assertEqual(baseline["manifest"], committed_output.name)
+            self.assertEqual(
+                baseline["manifest_sha256"],
+                hashlib.sha256(committed_output.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                baseline["weights_sha256"],
+                "bfd7f2354ff15c91839cbe987a069d5f04b2311d296989487c87fb04bddef109",
+            )
+            self.assertEqual(
+                baseline["settings"],
+                {"frames_per_window": 6, "confidence_threshold": 0.25},
+            )
+            strict_metrics = baseline["strict_seven_class_metrics"]
+            self.assertEqual(strict_metrics["records"], len(rows))
+            self.assertEqual(strict_metrics["correct"], 46)
+            self.assertEqual(strict_metrics["accuracy"], 0.676471)
+            self.assertEqual(strict_metrics["macro_f1"], 0.353654)
+            self.assertEqual(
+                strict_metrics["per_class"],
+                {
+                    "background": {
+                        "precision": 0.770833,
+                        "recall": 0.948718,
+                        "f1": 0.850575,
+                        "support": 39,
+                    },
+                    "serve": {
+                        "precision": 0.666667,
+                        "recall": 0.222222,
+                        "f1": 0.333333,
+                        "support": 9,
+                    },
+                    "receive": {
+                        "precision": 0.666667,
+                        "recall": 0.666667,
+                        "f1": 0.666667,
+                        "support": 3,
+                    },
+                    "set": {
+                        "precision": 0.0,
+                        "recall": 0.0,
+                        "f1": 0.0,
+                        "support": 2,
+                    },
+                    "attack": {
+                        "precision": 0.0,
+                        "recall": 0.0,
+                        "f1": 0.0,
+                        "support": 2,
+                    },
+                    "block": {
+                        "precision": 0.714286,
+                        "recall": 0.555556,
+                        "f1": 0.625,
+                        "support": 9,
+                    },
+                    "dig": {
+                        "precision": 0.0,
+                        "recall": 0.0,
+                        "f1": 0.0,
+                        "support": 4,
+                    },
+                },
+            )
+            self.assertEqual(
+                baseline["compatibility_six_class_metrics"],
+                {
+                    "dig_mapped_to": "receive",
+                    "accuracy": 0.676471,
+                    "macro_f1": 0.368151,
+                },
+            )
+            self.assertEqual(
+                baseline["largest_error_groups"],
+                [
+                    {"expected": "serve", "predicted": "background", "count": 7},
+                    {"expected": "block", "predicted": "set", "count": 4},
+                    {"expected": "dig", "predicted": "attack", "count": 2},
+                ],
+            )
+            expansion = match["annotation_expansion"]
+            expansion_spec_path = root / "data" / "annotations" / expansion["spec"]
+            expansion_spec = json.loads(expansion_spec_path.read_text(encoding="utf-8"))
+            self.assertEqual(expansion["status"], "pending_human_review")
+            self.assertEqual(expansion["interval_count"], 6)
+            self.assertEqual(expansion["duration_seconds"], 70.6)
+            self.assertEqual(
+                expansion["source_interval_indices"], [19, 13, 11, 2, 6, 14]
+            )
+            self.assertEqual(
+                expansion["priority_labels"],
+                ["set", "attack", "receive", "dig", "block"],
+            )
+            self.assertEqual(expansion_spec["source_manifest"], committed_output.name)
+            self.assertEqual(
+                expansion_spec["source_manifest_sha256"],
+                hashlib.sha256(committed_output.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                expansion_spec["workbook"],
+                expansion["workbook"],
+            )
+            self.assertTrue((root / expansion["workbook"]).is_file())
+            self.assertEqual(expansion_spec["annotation_mode"], "exhaustive_full_rally")
+            self.assertEqual(expansion_spec["time_precision_seconds"], 1.0)
+            self.assertEqual(expansion_spec["action_slots_per_interval"], 8)
+            self.assertEqual(
+                expansion_spec["priority_labels"], expansion["priority_labels"]
+            )
+            self.assertEqual(
+                expansion_spec["review_rules"],
+                {
+                    "confirm_entire_interval": True,
+                    "record_only_missing_usa_actions": True,
+                    "blank_action_rows_are_ignored": True,
+                    "input_time_format": "HH:MM:SS",
+                    "existing_actions_remain_unchanged": True,
+                },
+            )
+            self.assertEqual(
+                expansion["interval_count"], len(expansion_spec["intervals"])
+            )
+            self.assertEqual(
+                [
+                    interval["source_interval_index"]
+                    for interval in expansion_spec["intervals"]
+                ],
+                expansion["source_interval_indices"],
+            )
+            for interval in expansion_spec["intervals"]:
+                source_interval = match["reviewed_intervals"][
+                    interval["source_interval_index"] - 1
+                ]
+                self.assertEqual(
+                    {
+                        key: interval[key]
+                        for key in ("start_seconds", "end_seconds", "usa_side")
+                    },
+                    source_interval,
+                )
+            self.assertAlmostEqual(
+                sum(
+                    interval["end_seconds"] - interval["start_seconds"]
+                    for interval in expansion_spec["intervals"]
+                ),
+                expansion["duration_seconds"],
+            )
 
 
 if __name__ == "__main__":

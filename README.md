@@ -51,16 +51,20 @@ README 必须随模块或目录变更同步更新。当前结构和职责如下�
 
 ```text
 Spike-Trace/
+├─ .gitattributes                # 固定标注 CSV 换行，保证跨设备字节哈希稳定
 ├─ data/annotations/
 │  ├─ *_annotations.csv          # 保留的首轮人工复核清单
 │  ├─ *_second_review.json       # 二次复核请求规格
 │  ├─ *_second_review_results.json # 可审计的人工确认结果与来源快照
 │  ├─ *_annotations_second_reviewed.csv # 当前训练清单
+│  ├─ *_expansion_batch_*.json # 完整回合穷举补标批次
 │  └─ *_match.json               # 比赛信息、当前清单指针与复核状态
 ├─ docs/
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
 │  └─ superpowers/               # 已确认的阶段设计与逐步实现计划
 ├─ examples/                     # 标注格式示例
+├─ outputs/expansion-batch-01/
+│  └─ *_expansion_batch_01.xlsx  # 可跨设备填写并提交的完整回合补标工作簿
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -80,6 +84,8 @@ Spike-Trace/
 ├─ tests/                        # 不依赖真实视频或外部权重的单元测试
 └─ tools/                        # 冒烟数据和人工复核辅助工具
 ```
+
+`data/annotations/*.csv` 固定使用 CRLF 换行；Python `csv` 写出的清单本身也采用这一格式。不要绕过 Git 属性手工转换这些文件的换行，否则用于基线和补标规格的 SHA-256 会变化。
 
 动作模型采用两条可替换路径。自训练路径使用内部七类严格契约；外部 YOLO 保留上游六类能力契约：
 
@@ -132,9 +138,9 @@ spiketrace train data\annotations.csv runs\r3d18-v01 `
 
 ```powershell
 spiketrace evaluate-pretrained `
-  data\annotations\usa_germany_2024_annotations.csv `
+  data\annotations\usa_germany_2024_annotations_second_reviewed.csv `
   checkpoints\volleyball-actions.pt `
-  outputs\pretrained-usa-germany `
+  outputs\pretrained-usa-germany-second-reviewed `
   --frames-per-window 6 `
   --confidence-threshold 0.25 `
   --device auto
@@ -162,6 +168,8 @@ spiketrace evaluate-pretrained `
 
 `compatibility_metrics` 只衡量旧六类模型发现宽泛防守触球候选的能力，不能覆盖人工 `dig` 真值，也不能作为七类部署成绩。
 
+当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。因此现阶段新增训练样本仍要先人工选出完整回合，再对回合内所有美国队动作做穷举标注。
+
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
 ## 生成与应用二次复核
@@ -177,7 +185,7 @@ spiketrace prepare-review `
 
 跨设备仅检查结构且本地没有原视频时，可加 `--allow-missing-videos`。当前规格包含原清单记录 `1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67`。CSV 保留来源、建议处理方式和 `HH:MM:SS.ss` 可读时间；人工确认动作、开始/结束时间和备注默认留空。人工确认动作非空即表示该行完成复核，不另设审核状态。
 
-便于填写的 XLSX 视图、预览和视频均保存在忽略的 `outputs/` 中，不提交 Git。填写后的人工动作非空即表示已确认；本场只能精确到秒级，因此结果文件将 `time_precision_seconds` 记录为 `1.0`，小数时间仍按原值保留，例如记录 21 的开始时间为 `3660.5` 秒。
+便于填写的临时 XLSX 视图、预览和视频通常保存在忽略的 `outputs/` 中，不提交 Git。完整回合补标工作簿是例外，会明确纳入版本控制，便于跨设备继续填写。填写后的人工动作非空即表示已确认；本场只能精确到秒级，因此结果文件将 `time_precision_seconds` 记录为 `1.0`，小数时间仍按原值保留，例如记录 21 的开始时间为 `3660.5` 秒。
 
 人工结论规范化为可提交的 `*_second_review_results.json` 后，使用以下命令写出新的标注清单：
 
@@ -194,6 +202,23 @@ spiketrace apply-review `
 新清单先写入目标目录内的临时文件，重新加载验证成功后才原子替换正式输出；任何写入或验证错误都会保留已有输出。验证期间相对 `video_path` 始终按来源清单的视频根解释，因此输出可以放在其他目录；CSV 内的相对路径不会被改写，后续单独读取异目录输出时需通过 `--video-root` 指向原视频根。跨设备缺少原视频时可加 `--allow-missing-videos`。
 
 本场保留 67 条首轮清单作为历史输入，提交 17 条机器可读确认结果，并生成 68 条二次复核清单。记录 46 的原 `set` 保留，同时新增一条 `attack`。
+
+## 完整回合补标
+
+新基线确认外部 YOLO 会漏掉大量正类，因此下一批不再从模型预测中挑选，而是完整播放指定回合，只补录当前清单缺少的美国队动作。第一批规格为 `data/annotations/usa_germany_2024_expansion_batch_01.json`，包含 6 段、共 70.6 秒，按补标优先级排列：
+
+| 视频时间 | 美国队位置 | 选择原因 |
+| --- | --- | --- |
+| `01:55:40-01:55:54` | 近端 | 7 条现有窗口全是背景，但实际是含多次防守和转换的长回合 |
+| `01:13:10-01:13:19.4` | 远端 | 多次往返中 `01:13:15-01:13:17` 的转换阶段未覆盖 |
+| `01:00:56.8-01:01:03` | 远端 | 开头有举球式触球，随后还有拦防动作 |
+| `00:06:10-00:06:18` | 远端 | 两个已有拦网之前存在处理球和攻防转换 |
+| `00:21:58-00:22:08` | 远端 | 目前只有发球，需检查对方进攻后的拦防和二传 |
+| `01:19:05-01:19:28` | 远端 | 后 9 秒包含发球、对方进攻和美国队防守转换 |
+
+填写入口为 `outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx`，该文件会随仓库同步到其他设备。在“完整回合”页看完整段后把“人工确认完整回合”选为“是”；只把缺少的动作写入“新增动作”页，时间直接填视频播放器显示的 `HH:MM:SS`，允许只估到秒。已有动作保持不变，空白动作行会被忽略，工作簿不包含模型结果、`False` 或单独审核状态。
+
+填完后保留原文件名和路径并提交工作簿，再告知 Codex“第一批完整回合已填写”。当前版本先把 XLSX 作为人工结果入口；下一步才会把其中的非空动作规范化为可审计的结果 JSON，并应用到新的训练清单，不需要手工修改 CSV。
 
 ## 整场视频推理
 
@@ -242,29 +267,32 @@ python -m unittest discover -s tests -v
   `set` 2、`attack` 2，总窗口时长 `60.3` 秒，全部属于 `train`。
 - 二次复核原位更新 16 条，并从记录 46 追加 1 条 `attack`；记录 21 的 `3660.5`
   秒小数边界和全部人工备注均保留。
+- 已准备 6 个完整回合的第一批穷举补标任务，状态为 `pending_human_review`，优先补充
+  `set`、`attack`、`receive`、`dig` 和 `block`。
 
 同一局内可以固定我方半场裁剪；换边后需要按局次切换裁剪。训练与验证必须使用
 不同的完整比赛，不能把本场不同局拆到不同数据集分区。
 
 ### 预训练权重兼容性基线
 
-2026-08-03 已完成上游六类 YOLO 权重的第一次本地实测，2026-08-04 使用人工复核标签重新评估：
+2026-08-03 已完成上游六类 YOLO 权重的第一次本地实测；2026-08-07 在当前 68 条二次复核清单上完成新基线：
 
 - 权重 SHA-256：`bfd7f2354ff15c91839cbe987a069d5f04b2311d296989487c87fb04bddef109`。
 - 环境：PyTorch `2.13.0+cpu`、Ultralytics `8.4.115`、CPU、每窗口 6 帧。
-- 使用人工复核清单和美国队半场裁剪，阈值 `0.25`：Accuracy `0.776119`，Macro F1 `0.491001`。
-- `background` 命中 41/45、`serve` 3/5、`receive` 3/6、`block` 5/8；`set` 0/2、
-  `attack` 0/1。
-- 高 Accuracy 主要来自占比 67% 的 `background`，不能说明动作模型已经可用；`set` 和
-  `attack` 仍没有有效召回。
+- 使用当前清单、美国队半场裁剪和阈值 `0.25`：严格七类 Accuracy `0.676471`
+  （46/68），Macro F1 `0.353654`；六类兼容 Macro F1 `0.368151`。
+- 逐类 Recall：`background` 94.9%、`serve` 22.2%、`receive` 66.7%、`set` 0%、
+  `attack` 0%、`block` 55.6%、`dig` 0%。
+- 最大错分组为 `serve -> background` 7 条、`block -> set` 4 条、
+  `dig -> attack` 2 条。
 
-这些数字基于已归档的 67 条首轮清单，仍只是同一场比赛上的零样本兼容性检查，不是正式模型成绩。二次复核已重新对齐目标窗口，因此后续比较必须在当前 68 条清单上重新评估。现有权重可以辅助发现部分 `serve`、`receive` 和 `block` 候选，但不能直接用于自动统计；下一步是补足正样本并建立独立验证比赛，再考虑微调。
+67 条首轮基线 Accuracy `0.776119`、Macro F1 `0.491001` 只作为历史记录；标签和窗口已经变化，不能与当前结果直接当作模型回归比较。新基线下降主要是二次复核补出了更多真实正类，暴露了旧权重对 `serve`、`set`、`attack` 和 `dig` 的不足。全部数据仍来自同一场比赛，因此这只是零样本兼容性检查，不是正式模型成绩。可复现参数和核心指标保存在比赛元数据的 `pretrained_baseline` 中。
 
 ## 当前限制
 
 当前只有一场真实比赛和 68 个二次复核窗口，没有可用于生产的模型权重。代码已经跑通
 自训练工程链路、外部 YOLO 权重评估和人工复核回写，但数据仍以 39 个 `background` 为主，
-`set`、`attack`、`receive` 和 `dig` 正样本远远不足。预训练动作检测只能减少“候选片段发现”
-的工作，不能自动完成美国队过滤、球衣号码归属、发球成功率、得分结果、一传到位率或
-上场时间。下一步是从更多完整回合补齐七类正样本，并加入至少一场独立比赛作为验证集，
-再进行微调和正式比较。
+`set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
+预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
+结果、一传到位率或上场时间。下一步是不依赖模型候选，从完整回合穷举补齐七类正样本；
+同时加入至少一场独立比赛作为验证集，再进行微调和正式比较。

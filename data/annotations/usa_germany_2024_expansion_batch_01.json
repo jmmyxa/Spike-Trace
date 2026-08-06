@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "batch_id": "usa-germany-2024-expansion-01",
+  "match_id": "usa-germany-2024-olympics",
+  "source_manifest": "usa_germany_2024_annotations_second_reviewed.csv",
+  "source_manifest_sha256": "ca5c9585c75f806b57cdecbe0345f0c1ae9e6755a031fb0ca0ec4f7394b4991f",
+  "workbook": "outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx",
+  "target_team": "USA",
+  "annotation_mode": "exhaustive_full_rally",
+  "time_precision_seconds": 1.0,
+  "priority_labels": ["set", "attack", "receive", "dig", "block"],
+  "action_slots_per_interval": 8,
+  "review_rules": {
+    "confirm_entire_interval": true,
+    "record_only_missing_usa_actions": true,
+    "blank_action_rows_are_ignored": true,
+    "input_time_format": "HH:MM:SS",
+    "existing_actions_remain_unchanged": true
+  },
+  "intervals": [
+    {
+      "source_interval_index": 19,
+      "start_seconds": 6940.0,
+      "end_seconds": 6954.0,
+      "usa_side": "near",
+      "reason": "Seven current windows are background despite a long active rally with multiple USA defensive and transition actions."
+    },
+    {
+      "source_interval_index": 13,
+      "start_seconds": 4390.0,
+      "end_seconds": 4399.4,
+      "usa_side": "far",
+      "reason": "The multi-touch rally has an uncovered transition around 4395-4397; check for set, attack, and another dig."
+    },
+    {
+      "source_interval_index": 11,
+      "start_seconds": 3656.8,
+      "end_seconds": 3663.0,
+      "usa_side": "far",
+      "reason": "The opening contains a set-like touch currently covered by background, followed by USA block and defense."
+    },
+    {
+      "source_interval_index": 2,
+      "start_seconds": 370.0,
+      "end_seconds": 378.0,
+      "usa_side": "far",
+      "reason": "The USA touch and transition before the two existing blocks may contain missing set, attack, or dig actions."
+    },
+    {
+      "source_interval_index": 6,
+      "start_seconds": 1318.0,
+      "end_seconds": 1328.0,
+      "usa_side": "far",
+      "reason": "Only a serve is labeled; the opponent attack and USA response may add block, dig, and a later set."
+    },
+    {
+      "source_interval_index": 14,
+      "start_seconds": 4745.0,
+      "end_seconds": 4768.0,
+      "usa_side": "far",
+      "reason": "The active ending includes serve, opponent attack, and USA defensive transition; check for additional dig, block, set, or attack."
+    }
+  ]
+}

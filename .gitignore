@@ -11,7 +11,10 @@ data/*
 !data/annotations/*.csv
 !data/annotations/*.json
 runs/
-outputs/
+outputs/*
+!outputs/expansion-batch-01/
+outputs/expansion-batch-01/*
+!outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx
 checkpoints/
 *.pt
 *.pth

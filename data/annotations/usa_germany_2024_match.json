@@ -66,5 +66,70 @@
     "output_record_count": 68,
     "record_indices": [1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67]
   },
-  "notes": "First-pass review is preserved in the source manifest. The focused 17-record receive/dig and timing review was completed and applied; record 46 added one attack window."
+  "pretrained_baseline": {
+    "status": "completed",
+    "evaluated_on": "2026-08-07",
+    "manifest": "usa_germany_2024_annotations_second_reviewed.csv",
+    "manifest_sha256": "ca5c9585c75f806b57cdecbe0345f0c1ae9e6755a031fb0ca0ec4f7394b4991f",
+    "weights": "checkpoints/volleyball-actions.pt",
+    "weights_sha256": "bfd7f2354ff15c91839cbe987a069d5f04b2311d296989487c87fb04bddef109",
+    "model_type": "ultralytics-yolo-action-detector",
+    "environment": {
+      "os": "Windows 11",
+      "cpu": "AMD Ryzen 7 9800X3D 8-Core Processor",
+      "memory_gb": 61.7,
+      "torch": "2.13.0+cpu",
+      "ultralytics": "8.4.115",
+      "device": "cpu",
+      "cuda_available": false
+    },
+    "settings": {
+      "frames_per_window": 6,
+      "confidence_threshold": 0.25
+    },
+    "strict_seven_class_metrics": {
+      "records": 68,
+      "correct": 46,
+      "accuracy": 0.676471,
+      "macro_f1": 0.353654,
+      "per_class": {
+        "background": {"precision": 0.770833, "recall": 0.948718, "f1": 0.850575, "support": 39},
+        "serve": {"precision": 0.666667, "recall": 0.222222, "f1": 0.333333, "support": 9},
+        "receive": {"precision": 0.666667, "recall": 0.666667, "f1": 0.666667, "support": 3},
+        "set": {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 2},
+        "attack": {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 2},
+        "block": {"precision": 0.714286, "recall": 0.555556, "f1": 0.625, "support": 9},
+        "dig": {"precision": 0.0, "recall": 0.0, "f1": 0.0, "support": 4}
+      }
+    },
+    "compatibility_six_class_metrics": {
+      "dig_mapped_to": "receive",
+      "accuracy": 0.676471,
+      "macro_f1": 0.368151
+    },
+    "largest_error_groups": [
+      {"expected": "serve", "predicted": "background", "count": 7},
+      {"expected": "block", "predicted": "set", "count": 4},
+      {"expected": "dig", "predicted": "attack", "count": 2}
+    ],
+    "scope": [
+      "same_match_zero_shot_check",
+      "not_independent_validation",
+      "not_deployment_score"
+    ]
+  },
+  "annotation_expansion": {
+    "status": "pending_human_review",
+    "spec": "usa_germany_2024_expansion_batch_01.json",
+    "workbook": "outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx",
+    "source_manifest": "usa_germany_2024_annotations_second_reviewed.csv",
+    "source_manifest_sha256": "ca5c9585c75f806b57cdecbe0345f0c1ae9e6755a031fb0ca0ec4f7394b4991f",
+    "annotation_mode": "exhaustive_full_rally",
+    "time_precision_seconds": 1.0,
+    "interval_count": 6,
+    "duration_seconds": 70.6,
+    "source_interval_indices": [19, 13, 11, 2, 6, 14],
+    "priority_labels": ["set", "attack", "receive", "dig", "block"]
+  },
+  "notes": "First-pass review is preserved in the source manifest. The focused 17-record receive/dig and timing review was completed and applied; record 46 added one attack window. The current pretrained baseline is a same-match zero-shot check, not an independent validation score. Expansion batch 01 is pending exhaustive human review."
 }
