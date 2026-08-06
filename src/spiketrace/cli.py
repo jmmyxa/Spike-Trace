@@ -126,6 +126,17 @@ def build_parser() -> argparse.ArgumentParser:
     review_parser.add_argument("output_csv", type=Path)
     review_parser.add_argument("--video-root", type=Path)
     review_parser.add_argument("--allow-missing-videos", action="store_true")
+
+    apply_review_parser = subparsers.add_parser(
+        "apply-review",
+        help="Apply completed manual-review results to a new annotation CSV.",
+    )
+    apply_review_parser.add_argument("manifest", type=Path)
+    apply_review_parser.add_argument("spec", type=Path)
+    apply_review_parser.add_argument("results", type=Path)
+    apply_review_parser.add_argument("output_csv", type=Path)
+    apply_review_parser.add_argument("--video-root", type=Path)
+    apply_review_parser.add_argument("--allow-missing-videos", action="store_true")
     return parser
 
 
@@ -198,6 +209,18 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         return prepare_review_queue(
             args.manifest,
             args.spec,
+            args.output_csv,
+            video_root=args.video_root,
+            require_files=not args.allow_missing_videos,
+        )
+
+    if args.command == "apply-review":
+        from .review import apply_review_results
+
+        return apply_review_results(
+            args.manifest,
+            args.spec,
+            args.results,
             args.output_csv,
             video_root=args.video_root,
             require_files=not args.allow_missing_videos,

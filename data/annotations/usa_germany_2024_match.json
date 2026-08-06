@@ -7,8 +7,24 @@
   "width": 1280,
   "height": 720,
   "duration_seconds": 7687.333333333333,
-  "annotation_manifest": "usa_germany_2024_annotations.csv",
-  "annotation_status": "first_pass_reviewed",
+  "annotation_manifest": "usa_germany_2024_annotations_second_reviewed.csv",
+  "annotation_status": "second_pass_reviewed",
+  "annotation_summary": {
+    "records": 68,
+    "duration_seconds": 60.3,
+    "records_by_split": {
+      "train": 68
+    },
+    "records_by_label": {
+      "attack": 2,
+      "background": 39,
+      "block": 9,
+      "dig": 4,
+      "receive": 3,
+      "serve": 9,
+      "set": 2
+    }
+  },
   "pilot_interval": {
     "start_seconds": 728.0,
     "end_seconds": 735.0,
@@ -38,10 +54,17 @@
     {"start_seconds": 7325.0, "end_seconds": 7334.4, "usa_side": "far"}
   ],
   "second_review": {
-    "status": "pending_human_review",
+    "status": "applied",
+    "source_manifest": "usa_germany_2024_annotations.csv",
     "spec": "usa_germany_2024_second_review.json",
+    "results": "usa_germany_2024_second_review_results.json",
+    "output_manifest": "usa_germany_2024_annotations_second_reviewed.csv",
+    "time_precision_seconds": 1.0,
     "record_count": 17,
+    "updated_record_count": 16,
+    "added_record_count": 1,
+    "output_record_count": 68,
     "record_indices": [1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67]
   },
-  "notes": "First-pass human review is complete. A focused 17-record receive/dig and timing review is pending."
+  "notes": "First-pass review is preserved in the source manifest. The focused 17-record receive/dig and timing review was completed and applied; record 46 added one attack window."
 }

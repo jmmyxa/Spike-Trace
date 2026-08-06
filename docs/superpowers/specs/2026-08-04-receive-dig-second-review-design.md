@@ -62,7 +62,7 @@ background, serve, receive, set, attack, block
 - 建议处理方式、建议动作和建议起止时间。
 - 留空的人工确认动作、确认时间和补充备注。
 
-Excel 只是便于填写的视图，CSV/JSON 才是可复现输入。生成的 workbook、预览和视频仍保留在 `outputs/`，不提交 Git。
+Excel 只是便于填写的视图，CSV/JSON 才是可复现输入。生成的 workbook、预览和视频仍保留在 `outputs/`，不提交 Git。填写内容规范化为带来源快照的结果 JSON，记录秒级人工精度、接受的操作、确认动作、确认起止秒数和备注。
 
 ## 命令与数据流
 
@@ -72,17 +72,21 @@ review spec JSON + reviewed annotation CSV
     -> second_review_queue.csv
     -> artifact-tool workbook
     -> 用户填写人工确认动作/时间/备注
-    -> 后续同步回 annotation manifest
+    -> normalized review results JSON
+    -> spiketrace apply-review
+    -> second-reviewed annotation CSV
 ```
 
-`prepare-review` 默认检查视频存在；跨设备只检查结构时可使用 `--allow-missing-videos`。
+`prepare-review` 和 `apply-review` 默认检查视频存在；跨设备只检查结构时可使用 `--allow-missing-videos`。`prepare-review` 禁止覆盖来源清单或复核规格，`apply-review` 禁止覆盖来源清单、复核规格或确认结果。普通操作原位更新，`add_window` 保留来源记录并将新窗口追加到末尾。应用结果时，相对 `video_path` 始终按来源清单的视频根验证；输出位于其他目录时路径文本保持不变，后续读取需显式提供相同视频根。
 
 ## 错误处理
 
-- 规格版本未知、记录号重复/越界、未知标签、无效建议操作或无效时间范围时立即失败。
-- 规格中的 manifest 文件名与实际输入不一致时立即失败，避免把复核请求套到另一份数据。
-- 不允许只提供建议开始或建议结束时间。
-- 当前生成步骤只读原 manifest，不直接修改人工标注。
+- 规格或结果版本未知、记录号缺失/重复/额外/乱序、未知标签、无效操作或无效时间范围时立即失败。
+- 规格和结果中的 manifest/spec 文件名必须与实际输入一致，避免把复核请求套到另一份数据。
+- 建议开始和建议结束可分别省略；正式确认结果必须同时提供动作、开始秒数和结束秒数，且时间为非负有限数并满足 `start < end`。
+- 结果逐条精确校验来源视频、动作、时间、split、我方位置、号码、裁剪和原备注；任何来源时间变化都拒绝应用。
+- 源 CSV 出现表头之外的额外单元格时立即失败，不把底层写入错误暴露给用户。
+- 生成队列和应用结果都不覆盖输入文件；结果先写入同目录临时文件，重新加载通过后原子替换，失败时保留已有输出。
 
 ## 测试与验收
 
@@ -91,11 +95,14 @@ review spec JSON + reviewed annotation CSV
 - 真值 `dig`、预测 `receive` 时严格指标判错，兼容指标判对，复核记录仍保留 `dig`。
 - 复核队列按原 manifest 顺序输出 17 条，并正确提取 `reviewer note:` 后的内容。
 - workbook 包含 17 条、七类下拉选项、可读时间和建议列；所有工作表完成数值检查、公式错误扫描和渲染目检。
+- 结果应用保留 67 条首轮数据，原位更新 16 条并追加 1 条，最终 68 条且总时长 60.3 秒。
+- 缺失、重复、额外、乱序确认，来源快照变化，非法动作/时间、异常 CSV 和同路径覆盖均失败且不破坏已有输出。
 - 完整单元测试、Ruff lint 与格式检查通过。
 
 ## 延后事项
 
-- 把填写后的精简 workbook 自动同步为更新/新增/删除窗口。
+- 将填写后的 workbook 自动规范化为结果 JSON；当前由人工/开发流程完成规范化。
+- 支持人工明确删除或合并窗口；当前只支持 `keep/relabel/move_window/add_window`。
 - 处理 free ball 的正式标签口径。
 - 从更多完整回合补充 `serve`、`set`、`attack` 和 `dig` 正样本。
 - 使用另一场完整比赛建立独立验证集后再微调。

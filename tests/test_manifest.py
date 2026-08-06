@@ -92,6 +92,20 @@ class ManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ManifestError, "must satisfy"):
                 load_manifest(manifest, require_files=False)
 
+    def test_rejects_non_finite_times(self):
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                manifest = root / "annotations.csv"
+                manifest.write_text(
+                    "video_path,start_seconds,end_seconds,label,split\n"
+                    f"missing.avi,{value},2,serve,train\n",
+                    encoding="utf-8",
+                )
+
+                with self.assertRaisesRegex(ManifestError, "finite"):
+                    load_manifest(manifest, require_files=False)
+
     def test_rejects_same_video_in_multiple_splits(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

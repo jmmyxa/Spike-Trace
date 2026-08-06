@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import math
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -100,6 +101,10 @@ def load_manifest(
                 raise ManifestError(
                     f"Row {row_number} has invalid split '{split}'. "
                     "Use train, val, or test."
+                )
+            if not math.isfinite(start) or not math.isfinite(end):
+                raise ManifestError(
+                    f"Row {row_number} start_seconds and end_seconds must be finite."
                 )
             if start < 0 or end <= start:
                 raise ManifestError(
