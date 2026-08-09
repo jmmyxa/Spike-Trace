@@ -806,21 +806,22 @@ class ReviewQueueTests(unittest.TestCase):
             ]
             self.assertEqual(len(covering_segments), 1, row)
 
-    def test_prepared_expansion_batch_02_matches_confirmed_side_segments(self):
+    def test_applied_expansion_batch_02_matches_confirmed_side_segments(self):
         root = Path(__file__).parents[1]
         match = json.loads(
             (
                 root / "data" / "annotations" / "usa_germany_2024_match.json"
             ).read_text(encoding="utf-8")
         )
-        prepared = match["annotation_expansion_batch_02"]
-        self.assertEqual(prepared["status"], "prepared")
-        self.assertEqual(prepared["created_on"], "2026-08-09")
-        self.assertIs(prepared["confirmed_side_segments"], True)
-        self.assertEqual(prepared["interval_count"], 6)
-        self.assertEqual(prepared["duration_seconds"], 85.0)
+        applied = match["annotation_expansion_batch_02"]
+        self.assertEqual(applied["status"], "applied")
+        self.assertEqual(applied["created_on"], "2026-08-09")
+        self.assertEqual(applied["applied_on"], "2026-08-10")
+        self.assertIs(applied["confirmed_side_segments"], True)
+        self.assertEqual(applied["interval_count"], 6)
+        self.assertEqual(applied["duration_seconds"], 85.0)
         self.assertEqual(
-            prepared["source_segment_ids"],
+            applied["source_segment_ids"],
             [
                 "set_1",
                 "set_2",
@@ -830,21 +831,43 @@ class ReviewQueueTests(unittest.TestCase):
                 "set_5_post_switch",
             ],
         )
+        self.assertEqual(
+            match["annotation_manifest"], applied["output_manifest"]
+        )
+        self.assertEqual(match["annotation_status"], "expansion_batch_02_applied")
+        self.assertEqual(
+            match["annotation_summary"],
+            {
+                "records": 90,
+                "duration_seconds": 80.9,
+                "records_by_split": {"train": 90},
+                "records_by_label": {
+                    "attack": 8,
+                    "background": 39,
+                    "block": 12,
+                    "dig": 6,
+                    "receive": 6,
+                    "serve": 11,
+                    "set": 8,
+                },
+            },
+        )
 
-        spec_path = root / "data" / "annotations" / prepared["spec"]
+        spec_path = root / "data" / "annotations" / applied["spec"]
         spec = json.loads(spec_path.read_text(encoding="utf-8"))
-        workbook_path = root / prepared["workbook"]
+        workbook_path = root / applied["workbook"]
         self.assertTrue(workbook_path.is_file())
         workbook_sha256 = hashlib.sha256(workbook_path.read_bytes()).hexdigest()
-        self.assertEqual(prepared["workbook_sha256"], workbook_sha256)
+        self.assertEqual(applied["workbook_sha256"], workbook_sha256)
         self.assertEqual(spec["workbook_sha256"], workbook_sha256)
-        self.assertEqual(
-            spec["source_manifest"], match["annotation_manifest"]
+        self.assertEqual(spec["source_manifest"], applied["source_manifest"])
+        self.assertNotEqual(spec["source_manifest"], match["annotation_manifest"])
+        source_manifest = (
+            root / "data" / "annotations" / applied["source_manifest"]
         )
-        source_manifest = root / "data" / "annotations" / match["annotation_manifest"]
         source_manifest_sha256 = hashlib.sha256(source_manifest.read_bytes()).hexdigest()
         self.assertEqual(spec["source_manifest_sha256"], source_manifest_sha256)
-        self.assertEqual(prepared["source_manifest_sha256"], source_manifest_sha256)
+        self.assertEqual(applied["source_manifest_sha256"], source_manifest_sha256)
         self.assertEqual(spec["interval_count"], 6)
         self.assertEqual(spec["action_slots_per_interval"], 8)
         self.assertEqual(spec["annotation_mode"], "exhaustive_full_rally")
@@ -901,6 +924,156 @@ class ReviewQueueTests(unittest.TestCase):
                 interval["start_seconds"], segment["start_seconds"]
             )
             self.assertLessEqual(interval["end_seconds"], segment["end_seconds"])
+
+    def test_applied_expansion_batch_02_results_preserve_source_and_append_actions(self):
+        root = Path(__file__).parents[1]
+        annotations = root / "data" / "annotations"
+        match = json.loads(
+            (annotations / "usa_germany_2024_match.json").read_text(encoding="utf-8")
+        )
+        applied = match["annotation_expansion_batch_02"]
+        spec = json.loads(
+            (annotations / applied["spec"]).read_text(encoding="utf-8")
+        )
+        results = json.loads(
+            (annotations / applied["results"]).read_text(encoding="utf-8")
+        )
+        self.assertEqual(results["status"], "applied")
+        self.assertEqual(
+            {
+                key: results[key]
+                for key in (
+                    "spec",
+                    "workbook",
+                    "source_manifest",
+                    "output_manifest",
+                )
+            },
+            {
+                "spec": applied["spec"],
+                "workbook": spec["workbook"],
+                "source_manifest": spec["source_manifest"],
+                "output_manifest": applied["output_manifest"],
+            },
+        )
+        source_manifest = annotations / applied["source_manifest"]
+        output_manifest = annotations / applied["output_manifest"]
+        with source_manifest.open("r", encoding="utf-8-sig", newline="") as handle:
+            source_reader = csv.DictReader(handle)
+            source_fields = source_reader.fieldnames
+            source_rows = list(source_reader)
+        with output_manifest.open("r", encoding="utf-8-sig", newline="") as handle:
+            output_reader = csv.DictReader(handle)
+            output_fields = output_reader.fieldnames
+            output_rows = list(output_reader)
+
+        self.assertEqual(output_fields, source_fields)
+        self.assertEqual(len(source_rows), 73)
+        self.assertEqual(output_rows[: len(source_rows)], source_rows)
+        self.assertEqual(len(output_rows), len(source_rows) + len(results["actions"]))
+        self.assertEqual(
+            [
+                {
+                    "label": row["label"],
+                    "start_seconds": float(row["start_seconds"]),
+                    "end_seconds": float(row["end_seconds"]),
+                    "team_side": row["team_side"],
+                    "player_number": row["player_number"],
+                    "crop": [
+                        int(row["crop_x1"]),
+                        int(row["crop_y1"]),
+                        int(row["crop_x2"]),
+                        int(row["crop_y2"]),
+                    ],
+                }
+                for row in output_rows[len(source_rows) :]
+            ],
+            [
+                {
+                    key: action[key]
+                    for key in (
+                        "label",
+                        "start_seconds",
+                        "end_seconds",
+                        "team_side",
+                        "player_number",
+                        "crop",
+                    )
+                }
+                for action in results["actions"]
+            ],
+        )
+        for row, action in zip(
+            output_rows[len(source_rows) :], results["actions"], strict=True
+        ):
+            self.assertIn(action["workbook_cell"], row["notes"])
+            self.assertIn(action["input_time"], row["notes"])
+            self.assertIn(action["source_text"], row["notes"])
+
+        workbook_sha256 = hashlib.sha256(
+            (root / applied["workbook"]).read_bytes()
+        ).hexdigest()
+        source_manifest_sha256 = hashlib.sha256(source_manifest.read_bytes()).hexdigest()
+        output_manifest_sha256 = hashlib.sha256(output_manifest.read_bytes()).hexdigest()
+        self.assertEqual(
+            {applied["workbook_sha256"], spec["workbook_sha256"], results["workbook_sha256"]},
+            {workbook_sha256},
+        )
+        self.assertEqual(
+            {
+                applied["source_manifest_sha256"],
+                spec["source_manifest_sha256"],
+                results["source_manifest_sha256"],
+            },
+            {source_manifest_sha256},
+        )
+        self.assertEqual(
+            {applied["output_manifest_sha256"], results["output_manifest_sha256"]},
+            {output_manifest_sha256},
+        )
+
+        confirmations = results["interval_confirmations"]
+        self.assertEqual(len(confirmations), 6)
+        self.assertEqual(
+            [confirmation["interval_id"] for confirmation in confirmations],
+            ["B02-R01", "B02-R02", "B02-R03", "B02-R04", "B02-R05", "B02-R06"],
+        )
+        for confirmation in confirmations:
+            self.assertIs(confirmation["confirmed"], True)
+
+        self.assertEqual(
+            [note["interval_id"] for note in results["ignored_notes"]], ["B02-R05"]
+        )
+        self.assertNotIn("B02-R05", [action["interval_id"] for action in results["actions"]])
+
+        refinement = results["frame_refinements"]
+        self.assertEqual(len(refinement), 1)
+        self.assertEqual(refinement[0]["interval_id"], "B02-R04")
+        refined_windows = refinement[0]["refined_windows"]
+        self.assertEqual(
+            refined_windows,
+            [
+                {"label": "set", "start_seconds": 5655.9, "end_seconds": 5656.5},
+                {
+                    "label": "attack",
+                    "start_seconds": 5656.6,
+                    "end_seconds": 5657.2,
+                },
+            ],
+        )
+        reviewed_start, reviewed_end = refinement[0]["reviewed_range_seconds"]
+        refined_action_windows = [
+            {
+                key: action[key]
+                for key in ("label", "start_seconds", "end_seconds")
+            }
+            for action in results["actions"]
+            if action["interval_id"] == refinement[0]["interval_id"]
+            and reviewed_start <= action["start_seconds"]
+            and action["end_seconds"] <= reviewed_end
+        ]
+        self.assertEqual(refined_action_windows, refined_windows)
+        self.assertLess(refined_windows[0]["end_seconds"], refined_windows[1]["start_seconds"])
 
     def test_real_results_produce_expanded_manifest_and_baseline(self):
         root = Path(__file__).parents[1]
@@ -1015,23 +1188,26 @@ class ReviewQueueTests(unittest.TestCase):
                     root / "data" / "annotations" / "usa_germany_2024_match.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(match["annotation_manifest"], expanded_output.name)
-            self.assertEqual(match["annotation_status"], "expansion_batch_01_applied")
-            self.assertEqual(match["annotation_summary"]["records"], 73)
-            self.assertEqual(match["annotation_summary"]["duration_seconds"], 64.7)
             self.assertEqual(
-                match["annotation_summary"]["records_by_split"], {"train": 73}
+                match["annotation_manifest"],
+                "usa_germany_2024_annotations_expanded_batch_02.csv",
+            )
+            self.assertEqual(match["annotation_status"], "expansion_batch_02_applied")
+            self.assertEqual(match["annotation_summary"]["records"], 90)
+            self.assertEqual(match["annotation_summary"]["duration_seconds"], 80.9)
+            self.assertEqual(
+                match["annotation_summary"]["records_by_split"], {"train": 90}
             )
             self.assertEqual(
                 match["annotation_summary"]["records_by_label"],
                 {
-                    "attack": 3,
+                    "attack": 8,
                     "background": 39,
-                    "block": 10,
-                    "dig": 4,
-                    "receive": 4,
-                    "serve": 9,
-                    "set": 4,
+                    "block": 12,
+                    "dig": 6,
+                    "receive": 6,
+                    "serve": 11,
+                    "set": 8,
                 },
             )
             self.assertEqual(match["second_review"]["status"], "applied")
@@ -1082,9 +1258,7 @@ class ReviewQueueTests(unittest.TestCase):
                 },
             )
             strict_metrics = baseline["strict_seven_class_metrics"]
-            self.assertEqual(
-                strict_metrics["records"], match["annotation_summary"]["records"]
-            )
+            self.assertEqual(strict_metrics["records"], 73)
             self.assertEqual(strict_metrics["correct"], 46)
             self.assertEqual(strict_metrics["accuracy"], 0.630137)
             self.assertEqual(strict_metrics["macro_f1"], 0.344159)
@@ -1405,7 +1579,20 @@ class ReviewQueueTests(unittest.TestCase):
             self.assertEqual(results["summary"]["net_record_change"], 5)
             self.assertEqual(
                 results["summary"]["output_manifest_summary"],
-                match["annotation_summary"],
+                {
+                    "records": 73,
+                    "duration_seconds": 64.7,
+                    "records_by_split": {"train": 73},
+                    "records_by_label": {
+                        "attack": 3,
+                        "background": 39,
+                        "block": 10,
+                        "dig": 4,
+                        "receive": 4,
+                        "serve": 9,
+                        "set": 4,
+                    },
+                },
             )
             self.assertEqual(
                 results["output_manifest_sha256"],

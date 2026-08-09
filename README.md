@@ -59,7 +59,9 @@ Spike-Trace/
 │  ├─ *_second_review_results.json # 可审计的人工确认结果与来源快照
 │  ├─ *_annotations_second_reviewed.csv # 二次复核后的来源清单
 │  ├─ *_expansion_batch_*.json # 完整回合穷举补标批次规格/结果
+│  ├─ usa_germany_2024_expansion_batch_02_results.json # 第二批已应用结果与来源快照
 │  ├─ *_annotations_expanded_batch_*.csv # 应用补标后的训练清单
+│  ├─ usa_germany_2024_annotations_expanded_batch_02.csv # 当前 90 条训练清单
 │  └─ *_match.json               # 比赛信息、当前清单、复核状态与半场区间
 ├─ docs/
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
@@ -68,7 +70,7 @@ Spike-Trace/
 ├─ outputs/expansion-batch-01/
 │  └─ *_expansion_batch_01.xlsx  # 可跨设备填写并提交的完整回合补标工作簿
 ├─ outputs/expansion-batch-02/
-│  └─ *_expansion_batch_02.xlsx  # 第二批完整回合补标工作簿（纳入版本控制）
+│  └─ *_expansion_batch_02.xlsx  # 已填写并纳入版本控制的第二批完整回合补标工作簿
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -269,15 +271,18 @@ python -m unittest discover -s tests -v
 - 视频规格：1280x720、30 FPS、约 2 小时 8 分钟。
 - 首个试标注区间：`728.0-735.0` 秒，美国队位于远端半场。
 - 远端裁剪：`0,0,1280,430`；近端建议裁剪：`0,170,1280,720`。
-- 67 个候选窗口的首轮人工复核清单继续保留；17 条二次复核和第一批完整回合补标均已应用，
-  当前训练清单为 73 条，比赛状态为 `expansion_batch_01_applied`，第二批为 `prepared`。
-- 当前训练清单分布为：`background` 39、`block` 10、`receive` 4、`dig` 4、`serve` 9、
-  `set` 4、`attack` 3，总窗口时长 `64.7` 秒，全部属于 `train`。
+- 67 个候选窗口的首轮人工复核清单继续保留；17 条二次复核及两批完整回合补标均已应用，
+  当前训练清单为 90 条，比赛状态为 `expansion_batch_02_applied`。
+- 当前训练清单分布为：`attack` 8、`background` 39、`block` 12、`dig` 6、`receive` 6、
+  `serve` 11、`set` 8，总窗口时长 `80.9` 秒，全部属于 `train`。
 - 二次复核原位更新 16 条，并从记录 46 追加 1 条 `attack`；记录 21 的 `3660.5`
   秒小数边界和全部人工备注均保留。
 - 第一批完整回合已确认 6/6 段，应用 8 个新增动作并移除 3 个重复窗口；结果 JSON 保留
   工作簿哈希、单元格来源、原始备注、删除与保留记录快照。动作页为空的事实也已记录，
   不能把这批结果误解为模型自动标注。
+- 第二批完整回合已确认 6/6 段，动作页为空；从“完整回合”备注规范化新增 17 个美国队动作。
+  `B02-R05` 的 `background`（对手失误）只保留为忽略备注，未新增美国队动作；`B02-R04` 同秒
+  `set`/快攻经原视频 0.1 秒密集抽帧细化为 `5655.9-5656.5` 和 `5656.6-5657.2`，不重叠。
 
 比赛元数据的 `usa_side_segments` 现保存以下已确认的主动比赛区间：
 
@@ -304,7 +309,7 @@ python -m unittest discover -s tests -v
 
 ### 预训练权重兼容性基线
 
-2026-08-09 已在当前 73 条扩展清单上重跑上游六类 YOLO 权重；68 条二次复核清单的结果保留为直接对比基线：
+2026-08-09 已在第一批 73 条扩展清单上重跑上游六类 YOLO 权重；68 条二次复核清单的结果保留为直接对比基线：
 
 - 权重 SHA-256：`bfd7f2354ff15c91839cbe987a069d5f04b2311d296989487c87fb04bddef109`。
 - 环境：PyTorch `2.13.0+cpu`、Ultralytics `8.4.115`、CPU、每窗口 6 帧。
@@ -317,12 +322,12 @@ python -m unittest discover -s tests -v
 - 和 68 条结果相比，共同 65 个窗口的预测没有变化；去重移除的 3 条中有 1 条预测正确，
   新增 8 条中也只有 1 条预测正确，因此正确数保持 46，Accuracy 下降 `0.046334`。
 
-68 条基线 Accuracy `0.676471`、Macro F1 `0.353654` 和 67 条首轮历史结果仍保留；73 条结果的下降来自清单去重和新增困难正类，不能当作模型代码回归。全部数据仍来自同一场比赛，因此这只是零样本兼容性检查，不是正式模型成绩。完整评估和逐窗 CSV 保存在本地忽略目录 `outputs/pretrained-usa-germany-expanded-batch-01/`；可复现参数、产物哈希、当前指标、68 条历史摘要和差异保存在比赛元数据的 `pretrained_baseline` 中。
+68 条基线 Accuracy `0.676471`、Macro F1 `0.353654` 和 67 条首轮历史结果仍保留；73 条结果的下降来自清单去重和新增困难正类，不能当作模型代码回归。该外部预训练 YOLO 基线只对应第一批 73 条清单，第二批当前 90 条清单尚未重跑，不能混称。全部数据仍来自同一场比赛，因此这只是零样本兼容性检查，不是正式模型成绩。完整评估和逐窗 CSV 保存在本地忽略目录 `outputs/pretrained-usa-germany-expanded-batch-01/`；可复现参数、产物哈希、当前指标、68 条历史摘要和差异保存在比赛元数据的 `pretrained_baseline` 中。
 
-### 第二批完整回合补标（已准备）
+### 第二批完整回合补标（已应用）
 
 六段美国队半场边界已确认，第二批从每段各选一个新的完整回合，合计 6 段、85 秒，
-每段预留 8 个动作槽位；区间均避开当前 73 条清单窗口：
+每段预留 8 个动作槽位；区间均避开其来源的第一批 73 条清单窗口：
 
 | 批次编号 | 来源段 | 视频时间 | 美国队位置 |
 | --- | --- | --- | --- |
@@ -333,19 +338,28 @@ python -m unittest discover -s tests -v
 | `B02-R05` | `set_5_pre_switch` | `01:52:56-01:53:14` | 近端 `near` |
 | `B02-R06` | `set_5_post_switch` | `02:02:58-02:03:12` | 远端 `far` |
 
-规格为 `data/annotations/usa_germany_2024_expansion_batch_02.json`，填写入口为
-`outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx`。
-工作簿 SHA-256 为
-`33b15dad3efada0cea207cdb0b0f1bb6dfde8288c58fb6c53584c360071c1efc`。
-当前状态是 `prepared`，结果尚未应用到训练清单，也不是模型自动标注。
-下一步只需逐段完整播放，在“完整回合”页确认看完，在“新增动作”页填写缺少的美国队动作；
-动作时间按播放器显示的 `HH:MM:SS` 秒级填写，空白动作行会被忽略。
+第二批于 2026-08-10 应用：6/6 个完整回合均已确认。规格为
+`data/annotations/usa_germany_2024_expansion_batch_02.json`；已填写并纳入版本控制的工作簿为
+`outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx`，SHA-256 为
+`6054c3abc54d8ac1dda7cdfec0a8297501e6aee63c2239d4966b962529180a58`。其来源第一批清单
+`usa_germany_2024_annotations_expanded_batch_01.csv` 的 SHA-256 为
+`2ad5ce8d46e5f065c76d82d641f0fb824f5e8da9457df7bde5466d110cc12981`。
+
+“新增动作”页为空，17 个美国队动作均从“完整回合”备注规范化；`B02-R05` 的 `background`
+（对手失误）仅作为忽略备注，不新增美国队动作。`B02-R04` 同秒的 `set`/快攻经原视频
+0.1 秒密集抽帧细化为 `set 5655.9-5656.5`、`attack 5656.6-5657.2`，两个窗口不重叠。
+
+结果为 `data/annotations/usa_germany_2024_expansion_batch_02_results.json`，输出清单为
+`data/annotations/usa_germany_2024_annotations_expanded_batch_02.csv`，其 SHA-256 为
+`17fab8ffa9bf6d77c896491aa7da7e15920679ff9bda8cbb207259e89815ef2d`。当前清单共 90 条、
+80.9 秒：`attack` 8、`background` 39、`block` 12、`dig` 6、`receive` 6、`serve` 11、`set` 8，
+全部属于 `train`；原 73 条第一批清单保持不变。
 
 ## 当前限制
 
-当前只有一场真实比赛和 73 个训练窗口，没有可用于生产的模型权重。代码已经跑通
+当前只有一场真实比赛和 90 个训练窗口，没有可用于生产的模型权重。代码已经跑通
 自训练工程链路、外部 YOLO 权重评估和人工复核回写，但数据仍以 39 个 `background` 为主，
 `set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
 预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
-结果、一传到位率或上场时间。填写第二批工作簿并应用结果后，再继续从完整回合穷举补齐七类正样本；
-同时加入至少一场独立比赛作为验证集，再进行微调和正式比较。
+结果、一传到位率或上场时间。下一步继续扩大正类完整回合数据，并尽快加入另一场完整比赛作为
+独立验证集，再进行微调和正式比较。

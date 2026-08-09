@@ -6,7 +6,7 @@
   "source_manifest": "usa_germany_2024_annotations_expanded_batch_01.csv",
   "source_manifest_sha256": "2ad5ce8d46e5f065c76d82d641f0fb824f5e8da9457df7bde5466d110cc12981",
   "workbook": "outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx",
-  "workbook_sha256": "33b15dad3efada0cea207cdb0b0f1bb6dfde8288c58fb6c53584c360071c1efc",
+  "workbook_sha256": "6054c3abc54d8ac1dda7cdfec0a8297501e6aee63c2239d4966b962529180a58",
   "target_team": "USA",
   "annotation_mode": "exhaustive_full_rally",
   "selection_method": "one_new_rally_per_confirmed_side_segment",

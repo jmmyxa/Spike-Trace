@@ -7,22 +7,22 @@
   "width": 1280,
   "height": 720,
   "duration_seconds": 7687.333333333333,
-  "annotation_manifest": "usa_germany_2024_annotations_expanded_batch_01.csv",
-  "annotation_status": "expansion_batch_01_applied",
+  "annotation_manifest": "usa_germany_2024_annotations_expanded_batch_02.csv",
+  "annotation_status": "expansion_batch_02_applied",
   "annotation_summary": {
-    "records": 73,
-    "duration_seconds": 64.7,
+    "records": 90,
+    "duration_seconds": 80.9,
     "records_by_split": {
-      "train": 73
+      "train": 90
     },
     "records_by_label": {
-      "attack": 3,
+      "attack": 8,
       "background": 39,
-      "block": 10,
-      "dig": 4,
-      "receive": 4,
-      "serve": 9,
-      "set": 4
+      "block": 12,
+      "dig": 6,
+      "receive": 6,
+      "serve": 11,
+      "set": 8
     }
   },
   "pilot_interval": {
@@ -649,11 +649,12 @@
     "net_record_change": 5
   },
   "annotation_expansion_batch_02": {
-    "status": "prepared",
+    "status": "applied",
     "created_on": "2026-08-09",
+    "applied_on": "2026-08-10",
     "spec": "usa_germany_2024_expansion_batch_02.json",
     "workbook": "outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx",
-    "workbook_sha256": "33b15dad3efada0cea207cdb0b0f1bb6dfde8288c58fb6c53584c360071c1efc",
+    "workbook_sha256": "6054c3abc54d8ac1dda7cdfec0a8297501e6aee63c2239d4966b962529180a58",
     "source_manifest": "usa_germany_2024_annotations_expanded_batch_01.csv",
     "source_manifest_sha256": "2ad5ce8d46e5f065c76d82d641f0fb824f5e8da9457df7bde5466d110cc12981",
     "confirmed_side_segments": true,
@@ -671,8 +672,25 @@
     "interval_count": 6,
     "duration_seconds": 85.0,
     "action_slots_per_interval": 8,
-    "results": null,
-    "output_manifest": null
+    "results": "usa_germany_2024_expansion_batch_02_results.json",
+    "output_manifest": "usa_germany_2024_annotations_expanded_batch_02.csv",
+    "output_manifest_sha256": "17fab8ffa9bf6d77c896491aa7da7e15920679ff9bda8cbb207259e89815ef2d",
+    "confirmed_interval_count": 6,
+    "added_action_count": 17,
+    "added_duration_seconds": 16.2,
+    "added_records_by_label": {
+      "attack": 5,
+      "block": 2,
+      "dig": 2,
+      "receive": 2,
+      "serve": 2,
+      "set": 4
+    },
+    "removed_duplicate_count": 0,
+    "net_record_change": 17,
+    "ignored_note_count": 1,
+    "frame_refinement_count": 1,
+    "pretrained_baseline_status": "not_rerun_for_batch_02"
   },
-  "notes": "First-pass review is preserved in the second-reviewed source manifest. The focused 17-record receive/dig and timing review was completed and applied; record 46 added one attack window. Expansion batch 01 was confirmed across all six full rallies and added eight USA action windows from the workbook notes; the missed-ball attack was retained as an ignored audit entry, and three duplicate source windows were removed from the expanded output with snapshots preserved. The pretrained compatibility baseline was rerun on all 73 expanded windows with the same weights, versions, CPU device, and settings; the 68-window summary and the 65-window identity comparison are retained in pretrained_baseline. The six USA side segments were confirmed by the user on 2026-08-09, and expansion batch 02 is prepared as six new full-rally review windows. The expanded manifest remains same-match training data, not independent validation."
+  "notes": "First-pass review is preserved in the second-reviewed source manifest. The focused 17-record receive/dig and timing review was completed and applied; record 46 added one attack window. Expansion batch 01 was confirmed across all six full rallies and added eight USA action windows from the workbook notes; the missed-ball attack was retained as an ignored audit entry, and three duplicate source windows were removed from the expanded output with snapshots preserved. The pretrained compatibility baseline was rerun on the 73-window batch 01 manifest with the same weights, versions, CPU device, and settings; it has not been rerun on batch 02. The six USA side segments were confirmed by the user on 2026-08-09. Expansion batch 02 was confirmed on 2026-08-10 and added 17 USA action windows from workbook notes; the opponent-error background note was retained without adding a USA action, and one same-second set/quick-attack note was refined by dense frame review. The current 90-window manifest remains same-match training data, not independent validation."
 }
