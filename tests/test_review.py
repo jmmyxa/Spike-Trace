@@ -791,18 +791,36 @@ class ReviewQueueTests(unittest.TestCase):
                 / "annotations"
                 / "usa_germany_2024_annotations_second_reviewed.csv"
             )
+            expanded_output = (
+                root
+                / "data"
+                / "annotations"
+                / "usa_germany_2024_annotations_expanded_batch_01.csv"
+            )
             self.assertEqual(output.read_bytes(), committed_output.read_bytes())
             match = json.loads(
                 (
                     root / "data" / "annotations" / "usa_germany_2024_match.json"
                 ).read_text(encoding="utf-8")
             )
-            self.assertEqual(match["annotation_manifest"], committed_output.name)
-            self.assertEqual(match["annotation_status"], "second_pass_reviewed")
-            self.assertEqual(match["annotation_summary"]["records"], 68)
+            self.assertEqual(match["annotation_manifest"], expanded_output.name)
+            self.assertEqual(match["annotation_status"], "expansion_batch_01_applied")
+            self.assertEqual(match["annotation_summary"]["records"], 73)
+            self.assertEqual(match["annotation_summary"]["duration_seconds"], 64.7)
+            self.assertEqual(
+                match["annotation_summary"]["records_by_split"], {"train": 73}
+            )
             self.assertEqual(
                 match["annotation_summary"]["records_by_label"],
-                summary["records_by_label"],
+                {
+                    "attack": 3,
+                    "background": 39,
+                    "block": 10,
+                    "dig": 4,
+                    "receive": 4,
+                    "serve": 9,
+                    "set": 4,
+                },
             )
             self.assertEqual(match["second_review"]["status"], "applied")
             baseline = match["pretrained_baseline"]
@@ -891,9 +909,29 @@ class ReviewQueueTests(unittest.TestCase):
             expansion = match["annotation_expansion"]
             expansion_spec_path = root / "data" / "annotations" / expansion["spec"]
             expansion_spec = json.loads(expansion_spec_path.read_text(encoding="utf-8"))
-            self.assertEqual(expansion["status"], "pending_human_review")
+            self.assertEqual(expansion["status"], "applied")
             self.assertEqual(expansion["interval_count"], 6)
             self.assertEqual(expansion["duration_seconds"], 70.6)
+            self.assertEqual(
+                expansion["results"], "usa_germany_2024_expansion_batch_01_results.json"
+            )
+            self.assertEqual(expansion["output_manifest"], expanded_output.name)
+            self.assertEqual(
+                expansion["output_manifest_sha256"],
+                hashlib.sha256(expanded_output.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(expansion["confirmed_interval_count"], 6)
+            self.assertEqual(expansion["added_action_count"], 8)
+            self.assertEqual(expansion["added_duration_seconds"], 8.0)
+            self.assertEqual(
+                expansion["added_records_by_label"],
+                {"attack": 1, "block": 3, "dig": 1, "receive": 1, "set": 2},
+            )
+            self.assertEqual(expansion["removed_duplicate_count"], 3)
+            self.assertEqual(
+                expansion["removed_records_by_label"], {"block": 2, "dig": 1}
+            )
+            self.assertEqual(expansion["net_record_change"], 5)
             self.assertEqual(
                 expansion["source_interval_indices"], [19, 13, 11, 2, 6, 14]
             )
@@ -954,6 +992,94 @@ class ReviewQueueTests(unittest.TestCase):
                     for interval in expansion_spec["intervals"]
                 ),
                 expansion["duration_seconds"],
+            )
+
+            with expanded_output.open("r", encoding="utf-8-sig", newline="") as handle:
+                expanded_rows = list(csv.DictReader(handle))
+            self.assertEqual(len(expanded_rows), 73)
+            removed_record_indices = {22, 40, 52}
+            self.assertEqual(
+                expanded_rows[:-8],
+                [
+                    row
+                    for record_index, row in enumerate(rows, start=1)
+                    if record_index not in removed_record_indices
+                ],
+            )
+            self.assertEqual(
+                [row["label"] for row in expanded_rows[-8:]],
+                ["receive", "set", "attack", "block", "dig", "set", "block", "block"],
+            )
+            self.assertEqual(
+                [
+                    (row["start_seconds"], row["end_seconds"])
+                    for row in expanded_rows[-8:]
+                ],
+                [
+                    ("6945", "6946"),
+                    ("6946", "6947"),
+                    ("6948", "6949"),
+                    ("6951", "6952"),
+                    ("6952", "6953"),
+                    ("6953", "6954"),
+                    ("1323", "1324"),
+                    ("1327", "1328"),
+                ],
+            )
+            results = json.loads(
+                (
+                    root
+                    / "data"
+                    / "annotations"
+                    / "usa_germany_2024_expansion_batch_01_results.json"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(results["status"], "applied")
+            self.assertEqual(results["summary"]["added_action_count"], 8)
+            self.assertEqual(results["summary"]["removed_duplicate_count"], 3)
+            self.assertEqual(results["summary"]["net_record_change"], 5)
+            self.assertEqual(
+                results["summary"]["output_manifest_summary"],
+                match["annotation_summary"],
+            )
+            self.assertEqual(
+                results["output_manifest_sha256"],
+                hashlib.sha256(expanded_output.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(len(results["interval_confirmations"]), 6)
+            self.assertTrue(
+                all(item["confirmed"] for item in results["interval_confirmations"])
+            )
+            self.assertEqual(len(results["ignored_notes"]), 1)
+            self.assertIn("没碰到球", results["ignored_notes"][0]["source_text"])
+            removed_records = results["removed_source_records"]
+            self.assertEqual(
+                [item["remove_record_index"] for item in removed_records],
+                [22, 40, 52],
+            )
+            self.assertEqual(
+                [item["keep_record_index"] for item in removed_records],
+                [21, 39, 51],
+            )
+            for item in removed_records:
+                self.assertEqual(
+                    item["removed_source_snapshot"],
+                    rows[item["remove_record_index"] - 1],
+                )
+                self.assertEqual(
+                    item["kept_source_snapshot"],
+                    rows[item["keep_record_index"] - 1],
+                )
+            self.assertEqual(
+                results["workbook_sha256"],
+                hashlib.sha256(
+                    (
+                        root
+                        / "outputs"
+                        / "expansion-batch-01"
+                        / "usa_germany_2024_expansion_batch_01.xlsx"
+                    ).read_bytes()
+                ).hexdigest(),
             )
 
 
