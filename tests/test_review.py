@@ -690,7 +690,7 @@ class ReviewQueueTests(unittest.TestCase):
             [1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67],
         )
 
-    def test_real_results_produce_the_second_reviewed_manifest(self):
+    def test_real_results_produce_expanded_manifest_and_baseline(self):
         root = Path(__file__).parents[1]
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "annotations-second-reviewed.csv"
@@ -825,10 +825,11 @@ class ReviewQueueTests(unittest.TestCase):
             self.assertEqual(match["second_review"]["status"], "applied")
             baseline = match["pretrained_baseline"]
             self.assertEqual(baseline["status"], "completed")
-            self.assertEqual(baseline["manifest"], committed_output.name)
+            self.assertEqual(baseline["evaluated_on"], "2026-08-09")
+            self.assertEqual(baseline["manifest"], expanded_output.name)
             self.assertEqual(
                 baseline["manifest_sha256"],
-                hashlib.sha256(committed_output.read_bytes()).hexdigest(),
+                hashlib.sha256(expanded_output.read_bytes()).hexdigest(),
             )
             self.assertEqual(
                 baseline["weights_sha256"],
@@ -836,20 +837,52 @@ class ReviewQueueTests(unittest.TestCase):
             )
             self.assertEqual(
                 baseline["settings"],
-                {"frames_per_window": 6, "confidence_threshold": 0.25},
+                {
+                    "device": "cpu",
+                    "frames_per_window": 6,
+                    "confidence_threshold": 0.25,
+                },
+            )
+            self.assertEqual(
+                baseline["model_labels"],
+                ["ball", "block", "receive", "set", "spike", "serve"],
+            )
+            self.assertEqual(
+                baseline["external_label_mapping"],
+                {
+                    "ball": None,
+                    "block": "block",
+                    "receive": "receive",
+                    "set": "set",
+                    "spike": "attack",
+                    "serve": "serve",
+                },
+            )
+            self.assertEqual(
+                baseline["outputs"],
+                {
+                    "directory": "outputs/pretrained-usa-germany-expanded-batch-01",
+                    "report": "pretrained_evaluation.json",
+                    "report_sha256": "5191782323886fa1184bf301b0552f274c2342d6ef7bd7b7e849a127779d1cdf",
+                    "review_csv": "pretrained_review.csv",
+                    "review_csv_sha256": "74e8908e36c5967d6599be917ab03927964e25ef89f21ca5f3c50cecfb327945",
+                    "git_tracked": False,
+                },
             )
             strict_metrics = baseline["strict_seven_class_metrics"]
-            self.assertEqual(strict_metrics["records"], len(rows))
+            self.assertEqual(
+                strict_metrics["records"], match["annotation_summary"]["records"]
+            )
             self.assertEqual(strict_metrics["correct"], 46)
-            self.assertEqual(strict_metrics["accuracy"], 0.676471)
-            self.assertEqual(strict_metrics["macro_f1"], 0.353654)
+            self.assertEqual(strict_metrics["accuracy"], 0.630137)
+            self.assertEqual(strict_metrics["macro_f1"], 0.344159)
             self.assertEqual(
                 strict_metrics["per_class"],
                 {
                     "background": {
-                        "precision": 0.770833,
+                        "precision": 0.698113,
                         "recall": 0.948718,
-                        "f1": 0.850575,
+                        "f1": 0.804348,
                         "support": 39,
                     },
                     "serve": {
@@ -860,27 +893,27 @@ class ReviewQueueTests(unittest.TestCase):
                     },
                     "receive": {
                         "precision": 0.666667,
-                        "recall": 0.666667,
-                        "f1": 0.666667,
-                        "support": 3,
+                        "recall": 0.5,
+                        "f1": 0.571429,
+                        "support": 4,
                     },
                     "set": {
-                        "precision": 0.0,
-                        "recall": 0.0,
-                        "f1": 0.0,
-                        "support": 2,
+                        "precision": 0.166667,
+                        "recall": 0.25,
+                        "f1": 0.2,
+                        "support": 4,
                     },
                     "attack": {
                         "precision": 0.0,
                         "recall": 0.0,
                         "f1": 0.0,
-                        "support": 2,
+                        "support": 3,
                     },
                     "block": {
-                        "precision": 0.714286,
-                        "recall": 0.555556,
-                        "f1": 0.625,
-                        "support": 9,
+                        "precision": 0.666667,
+                        "recall": 0.4,
+                        "f1": 0.5,
+                        "support": 10,
                     },
                     "dig": {
                         "precision": 0.0,
@@ -891,20 +924,140 @@ class ReviewQueueTests(unittest.TestCase):
                 },
             )
             self.assertEqual(
+                baseline["strict_confusion_matrix"],
+                {
+                    "labels": [
+                        "background",
+                        "serve",
+                        "receive",
+                        "set",
+                        "attack",
+                        "block",
+                        "dig",
+                    ],
+                    "values": [
+                        [37, 0, 0, 1, 0, 1, 0],
+                        [7, 2, 0, 0, 0, 0, 0],
+                        [2, 0, 2, 0, 0, 0, 0],
+                        [2, 0, 1, 1, 0, 0, 0],
+                        [1, 1, 0, 1, 0, 0, 0],
+                        [3, 0, 0, 3, 0, 4, 0],
+                        [1, 0, 0, 0, 2, 1, 0],
+                    ],
+                },
+            )
+            self.assertEqual(
                 baseline["compatibility_six_class_metrics"],
                 {
                     "dig_mapped_to": "receive",
-                    "accuracy": 0.676471,
-                    "macro_f1": 0.368151,
+                    "accuracy": 0.630137,
+                    "macro_f1": 0.366886,
+                    "confusion_matrix": {
+                        "labels": [
+                            "background",
+                            "serve",
+                            "receive",
+                            "set",
+                            "attack",
+                            "block",
+                        ],
+                        "values": [
+                            [37, 0, 0, 1, 0, 1],
+                            [7, 2, 0, 0, 0, 0],
+                            [3, 0, 2, 0, 2, 1],
+                            [2, 0, 1, 1, 0, 0],
+                            [1, 1, 0, 1, 0, 0],
+                            [3, 0, 0, 3, 0, 4],
+                        ],
+                    },
                 },
             )
             self.assertEqual(
                 baseline["largest_error_groups"],
                 [
                     {"expected": "serve", "predicted": "background", "count": 7},
-                    {"expected": "block", "predicted": "set", "count": 4},
-                    {"expected": "dig", "predicted": "attack", "count": 2},
+                    {"expected": "block", "predicted": "background", "count": 3},
+                    {"expected": "block", "predicted": "set", "count": 3},
                 ],
+            )
+            previous_baseline = baseline["previous_baseline"]
+            self.assertEqual(previous_baseline["evaluated_on"], "2026-08-07")
+            self.assertEqual(previous_baseline["manifest"], committed_output.name)
+            self.assertEqual(
+                previous_baseline["manifest_sha256"],
+                hashlib.sha256(committed_output.read_bytes()).hexdigest(),
+            )
+            self.assertTrue(previous_baseline["same_weights_and_settings"])
+            self.assertEqual(
+                {
+                    key: previous_baseline["strict_seven_class_metrics"][key]
+                    for key in ("records", "correct", "accuracy", "macro_f1")
+                },
+                {
+                    "records": 68,
+                    "correct": 46,
+                    "accuracy": 0.676471,
+                    "macro_f1": 0.353654,
+                },
+            )
+            self.assertEqual(
+                previous_baseline["compatibility_six_class_metrics"],
+                {
+                    "dig_mapped_to": "receive",
+                    "accuracy": 0.676471,
+                    "macro_f1": 0.368151,
+                    "confusion_matrix": {
+                        "labels": [
+                            "background",
+                            "serve",
+                            "receive",
+                            "set",
+                            "attack",
+                            "block",
+                        ],
+                        "values": [
+                            [37, 0, 0, 1, 0, 1],
+                            [7, 2, 0, 0, 0, 0],
+                            [2, 0, 2, 0, 2, 1],
+                            [1, 0, 1, 0, 0, 0],
+                            [1, 1, 0, 0, 0, 0],
+                            [0, 0, 0, 4, 0, 5],
+                        ],
+                    },
+                },
+            )
+            self.assertEqual(
+                previous_baseline["strict_confusion_matrix"]["values"],
+                [
+                    [37, 0, 0, 1, 0, 1, 0],
+                    [7, 2, 0, 0, 0, 0, 0],
+                    [1, 0, 2, 0, 0, 0, 0],
+                    [1, 0, 1, 0, 0, 0, 0],
+                    [1, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 4, 0, 5, 0],
+                    [1, 0, 0, 0, 2, 1, 0],
+                ],
+            )
+            self.assertEqual(
+                baseline["comparison_to_previous"],
+                {
+                    "shared_record_count": 65,
+                    "shared_prediction_changes": 0,
+                    "removed_duplicate_record_count": 3,
+                    "removed_correct_count": 1,
+                    "added_record_count": 8,
+                    "added_correct_count": 1,
+                    "record_count_delta": 5,
+                    "correct_count_delta": 0,
+                    "accuracy_delta": -0.046334,
+                    "macro_f1_delta": -0.009495,
+                    "compatibility_accuracy_delta": -0.046334,
+                    "compatibility_macro_f1_delta": -0.001265,
+                    "interpretation": (
+                        "Dataset composition changed; this is not a model "
+                        "regression comparison."
+                    ),
+                },
             )
             expansion = match["annotation_expansion"]
             expansion_spec_path = root / "data" / "annotations" / expansion["spec"]

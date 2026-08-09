@@ -139,12 +139,12 @@ spiketrace train data\annotations.csv runs\r3d18-v01 `
 
 ```powershell
 spiketrace evaluate-pretrained `
-  data\annotations\usa_germany_2024_annotations_second_reviewed.csv `
+  data\annotations\usa_germany_2024_annotations_expanded_batch_01.csv `
   checkpoints\volleyball-actions.pt `
-  outputs\pretrained-usa-germany-second-reviewed `
+  outputs\pretrained-usa-germany-expanded-batch-01 `
   --frames-per-window 6 `
   --confidence-threshold 0.25 `
-  --device auto
+  --device cpu
 ```
 
 程序按清单中的时间和半场裁剪采样原始画幅，在每个窗口内选择置信度最高的有效动作。没有有效检测时输出 `background`。该 YOLO 权重不包含 `dig`，外部标签统一转换为：
@@ -221,7 +221,7 @@ spiketrace apply-review `
 
 第一批已完成：6/6 个回合确认，动作页为空，但 R19 和 R06 在“完整回合”备注中记录了 8 个明确动作。结果文件 `data/annotations/usa_germany_2024_expansion_batch_01_results.json` 保留了工作簿 SHA-256、单元格位置、原始备注和来源快照；明确写着“没碰到球”的 attack 未加入，R11、R02、R14 各移除一条后出现的重复窗口，同时保留不可变的 68 条来源清单。
 
-应用后的训练清单为 `data/annotations/usa_germany_2024_annotations_expanded_batch_01.csv`，共 73 条、64.7 秒：新增 `receive` 1、`set` 2、`attack` 1、`block` 3、`dig` 1，同时移除重复的 `block` 2 和 `dig` 1，净增 5 条。原 68 条二次复核清单和基线元数据保持不变；扩展清单仍全部属于同一场比赛的 `train`，不能当作独立验证集。
+应用后的训练清单为 `data/annotations/usa_germany_2024_annotations_expanded_batch_01.csv`，共 73 条、64.7 秒：新增 `receive` 1、`set` 2、`attack` 1、`block` 3、`dig` 1，同时移除重复的 `block` 2 和 `dig` 1，净增 5 条。原 68 条二次复核清单保持不变，历史基线摘要保留在比赛元数据中；扩展清单仍全部属于同一场比赛的 `train`，不能当作独立验证集。
 
 后续批次仍保留原工作簿路径和文件名：在“完整回合”页确认看完，在“新增动作”页填写动作和时间；若动作写在备注中，必须使用同样的绝对视频时间并明确标签，之后需由 Codex 或人工规范化，并把备注单元格作为来源单独记录。
 
@@ -281,18 +281,20 @@ python -m unittest discover -s tests -v
 
 ### 预训练权重兼容性基线
 
-2026-08-03 已完成上游六类 YOLO 权重的第一次本地实测；2026-08-07 在当前 68 条二次复核清单上完成新基线：
+2026-08-09 已在当前 73 条扩展清单上重跑上游六类 YOLO 权重；68 条二次复核清单的结果保留为直接对比基线：
 
 - 权重 SHA-256：`bfd7f2354ff15c91839cbe987a069d5f04b2311d296989487c87fb04bddef109`。
 - 环境：PyTorch `2.13.0+cpu`、Ultralytics `8.4.115`、CPU、每窗口 6 帧。
-- 使用当前清单、美国队半场裁剪和阈值 `0.25`：严格七类 Accuracy `0.676471`
-  （46/68），Macro F1 `0.353654`；六类兼容 Macro F1 `0.368151`。
-- 逐类 Recall：`background` 94.9%、`serve` 22.2%、`receive` 66.7%、`set` 0%、
-  `attack` 0%、`block` 55.6%、`dig` 0%。
-- 最大错分组为 `serve -> background` 7 条、`block -> set` 4 条、
-  `dig -> attack` 2 条。
+- 使用当前清单、美国队半场裁剪和阈值 `0.25`：严格七类 Accuracy `0.630137`
+  （46/73），Macro F1 `0.344159`；六类兼容 Macro F1 `0.366886`。
+- 逐类 Recall：`background` 94.9%、`serve` 22.2%、`receive` 50.0%、`set` 25.0%、
+  `attack` 0%、`block` 40.0%、`dig` 0%。
+- 最大错分组为 `serve -> background` 7 条、`block -> background` 3 条、
+  `block -> set` 3 条。
+- 和 68 条结果相比，共同 65 个窗口的预测没有变化；去重移除的 3 条中有 1 条预测正确，
+  新增 8 条中也只有 1 条预测正确，因此正确数保持 46，Accuracy 下降 `0.046334`。
 
-67 条首轮基线 Accuracy `0.776119`、Macro F1 `0.491001` 只作为历史记录；标签和窗口已经变化，不能与当前结果直接当作模型回归比较。新基线下降主要是二次复核补出了更多真实正类，暴露了旧权重对 `serve`、`set`、`attack` 和 `dig` 的不足。全部数据仍来自同一场比赛，因此这只是零样本兼容性检查，不是正式模型成绩。可复现参数和核心指标保存在比赛元数据的 `pretrained_baseline` 中。
+68 条基线 Accuracy `0.676471`、Macro F1 `0.353654` 和 67 条首轮历史结果仍保留；73 条结果的下降来自清单去重和新增困难正类，不能当作模型代码回归。全部数据仍来自同一场比赛，因此这只是零样本兼容性检查，不是正式模型成绩。完整评估和逐窗 CSV 保存在本地忽略目录 `outputs/pretrained-usa-germany-expanded-batch-01/`；可复现参数、产物哈希、当前指标、68 条历史摘要和差异保存在比赛元数据的 `pretrained_baseline` 中。
 
 ## 当前限制
 
