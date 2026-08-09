@@ -138,6 +138,134 @@
       "usa_side": "far"
     }
   ],
+  "usa_side_segments": [
+    {
+      "set_number": 1,
+      "segment_id": "set_1",
+      "phase": "full_set",
+      "start_seconds": 74.0,
+      "end_seconds": 1504.0,
+      "usa_side": "far",
+      "crop": [
+        0,
+        0,
+        1280,
+        430
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve around 00:01:14.5 and final rally around 00:25:04."
+    },
+    {
+      "set_number": 2,
+      "segment_id": "set_2",
+      "phase": "full_set",
+      "start_seconds": 1724.0,
+      "end_seconds": 3084.0,
+      "usa_side": "near",
+      "crop": [
+        0,
+        170,
+        1280,
+        720
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve around 00:28:44-00:28:46 and final rally around 00:51:24."
+    },
+    {
+      "set_number": 3,
+      "segment_id": "set_3",
+      "phase": "full_set",
+      "start_seconds": 3323.0,
+      "end_seconds": 4776.0,
+      "usa_side": "far",
+      "crop": [
+        0,
+        0,
+        1280,
+        430
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve around 00:55:23-00:55:25 and final rally around 01:19:36."
+    },
+    {
+      "set_number": 4,
+      "segment_id": "set_4",
+      "phase": "full_set",
+      "start_seconds": 5014.0,
+      "end_seconds": 6483.0,
+      "usa_side": "near",
+      "crop": [
+        0,
+        170,
+        1280,
+        720
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve around 01:23:34-01:23:36 and final rally around 01:48:03."
+    },
+    {
+      "set_number": 5,
+      "segment_id": "set_5_pre_switch",
+      "phase": "pre_switch",
+      "start_seconds": 6711.0,
+      "end_seconds": 7111.0,
+      "usa_side": "near",
+      "crop": [
+        0,
+        170,
+        1280,
+        720
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve around 01:51:51-01:51:54 and final rally before the side switch around 01:58:31."
+    },
+    {
+      "set_number": 5,
+      "segment_id": "set_5_post_switch",
+      "phase": "post_switch",
+      "start_seconds": 7194.0,
+      "end_seconds": 7675.0,
+      "usa_side": "far",
+      "crop": [
+        0,
+        0,
+        1280,
+        430
+      ],
+      "status": "candidate",
+      "requires_user_confirmation": true,
+      "time_precision_seconds": 1.0,
+      "boundary_tolerance_seconds": 1.0,
+      "boundary_semantics": "inclusive_candidate",
+      "confidence": "medium",
+      "evidence": "Visual frame review: first serve after the side switch around 01:59:54-01:59:56 and final rally around 02:07:55."
+    }
+  ],
   "second_review": {
     "status": "applied",
     "source_manifest": "usa_germany_2024_annotations.csv",

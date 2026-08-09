@@ -690,6 +690,119 @@ class ReviewQueueTests(unittest.TestCase):
             [1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67],
         )
 
+    def test_match_metadata_has_valid_candidate_usa_side_segments(self):
+        root = Path(__file__).parents[1]
+        match = json.loads(
+            (
+                root / "data" / "annotations" / "usa_germany_2024_match.json"
+            ).read_text(encoding="utf-8")
+        )
+
+        segments = match["usa_side_segments"]
+        self.assertEqual(
+            [segment["set_number"] for segment in segments],
+            [1, 2, 3, 4, 5, 5],
+        )
+        self.assertEqual(
+            [
+                (segment["start_seconds"], segment["end_seconds"])
+                for segment in segments
+            ],
+            [
+                (74.0, 1504.0),
+                (1724.0, 3084.0),
+                (3323.0, 4776.0),
+                (5014.0, 6483.0),
+                (6711.0, 7111.0),
+                (7194.0, 7675.0),
+            ],
+        )
+        self.assertEqual(
+            [segment["usa_side"] for segment in segments],
+            ["far", "near", "far", "near", "near", "far"],
+        )
+        self.assertEqual(
+            [segment["segment_id"] for segment in segments],
+            [
+                "set_1",
+                "set_2",
+                "set_3",
+                "set_4",
+                "set_5_pre_switch",
+                "set_5_post_switch",
+            ],
+        )
+        self.assertEqual(
+            [segment["phase"] for segment in segments],
+            ["full_set", "full_set", "full_set", "full_set", "pre_switch", "post_switch"],
+        )
+        self.assertEqual(
+            len({segment["segment_id"] for segment in segments}), len(segments)
+        )
+
+        crops_by_side = {
+            "far": [0, 0, 1280, 430],
+            "near": [0, 170, 1280, 720],
+        }
+        for index, segment in enumerate(segments):
+            self.assertEqual(segment["status"], "candidate")
+            self.assertTrue(segment["requires_user_confirmation"])
+            self.assertEqual(segment["time_precision_seconds"], 1.0)
+            self.assertEqual(segment["boundary_tolerance_seconds"], 1.0)
+            self.assertEqual(segment["boundary_semantics"], "inclusive_candidate")
+            self.assertIn(segment["confidence"], {"medium", "high"})
+            self.assertTrue(segment["evidence"])
+            self.assertEqual(segment["crop"], crops_by_side[segment["usa_side"]])
+            x1, y1, x2, y2 = segment["crop"]
+            self.assertTrue(0 <= x1 < x2 <= match["width"])
+            self.assertTrue(0 <= y1 < y2 <= match["height"])
+            self.assertLess(segment["start_seconds"], segment["end_seconds"])
+            self.assertLessEqual(segment["end_seconds"], match["duration_seconds"])
+            if index:
+                self.assertLessEqual(
+                    segments[index - 1]["end_seconds"], segment["start_seconds"]
+                )
+
+        set_five_segments = [
+            segment for segment in segments if segment["set_number"] == 5
+        ]
+        self.assertEqual(len(set_five_segments), 2)
+        self.assertEqual(
+            [segment["usa_side"] for segment in set_five_segments], ["near", "far"]
+        )
+        self.assertLess(
+            set_five_segments[0]["end_seconds"],
+            set_five_segments[1]["start_seconds"],
+        )
+
+        for reviewed in match["reviewed_intervals"]:
+            covering_segments = [
+                segment
+                for segment in segments
+                if segment["usa_side"] == reviewed["usa_side"]
+                and segment["start_seconds"] <= reviewed["start_seconds"]
+                and reviewed["end_seconds"] <= segment["end_seconds"]
+            ]
+            self.assertEqual(len(covering_segments), 1, reviewed)
+
+        current_manifest = (
+            root / "data" / "annotations" / match["annotation_manifest"]
+        )
+        with current_manifest.open("r", encoding="utf-8-sig", newline="") as handle:
+            current_rows = list(csv.DictReader(handle))
+        self.assertEqual(len(current_rows), match["annotation_summary"]["records"])
+        for row in current_rows:
+            start_seconds = float(row["start_seconds"])
+            end_seconds = float(row["end_seconds"])
+            covering_segments = [
+                segment
+                for segment in segments
+                if segment["usa_side"] == row["team_side"]
+                and segment["start_seconds"] <= start_seconds
+                and end_seconds <= segment["end_seconds"]
+            ]
+            self.assertEqual(len(covering_segments), 1, row)
+
     def test_real_results_produce_expanded_manifest_and_baseline(self):
         root = Path(__file__).parents[1]
         with tempfile.TemporaryDirectory() as temporary:
