@@ -15,6 +15,9 @@ outputs/*
 !outputs/expansion-batch-01/
 outputs/expansion-batch-01/*
 !outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx
+!outputs/expansion-batch-02/
+outputs/expansion-batch-02/*
+!outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx
 checkpoints/
 *.pt
 *.pth

@@ -3,6 +3,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from itertools import pairwise
 from pathlib import Path
 from unittest.mock import patch
 
@@ -690,7 +691,7 @@ class ReviewQueueTests(unittest.TestCase):
             [1, 19, 21, 22, 23, 27, 31, 32, 35, 39, 43, 46, 47, 53, 65, 66, 67],
         )
 
-    def test_match_metadata_has_valid_candidate_usa_side_segments(self):
+    def test_match_metadata_has_valid_confirmed_usa_side_segments(self):
         root = Path(__file__).parents[1]
         match = json.loads(
             (
@@ -745,8 +746,10 @@ class ReviewQueueTests(unittest.TestCase):
             "near": [0, 170, 1280, 720],
         }
         for index, segment in enumerate(segments):
-            self.assertEqual(segment["status"], "candidate")
-            self.assertTrue(segment["requires_user_confirmation"])
+            self.assertEqual(segment["status"], "confirmed")
+            self.assertIs(segment["requires_user_confirmation"], False)
+            self.assertEqual(segment["confirmation_source"], "user")
+            self.assertEqual(segment["confirmed_on"], "2026-08-09")
             self.assertEqual(segment["time_precision_seconds"], 1.0)
             self.assertEqual(segment["boundary_tolerance_seconds"], 1.0)
             self.assertEqual(segment["boundary_semantics"], "inclusive_candidate")
@@ -802,6 +805,102 @@ class ReviewQueueTests(unittest.TestCase):
                 and end_seconds <= segment["end_seconds"]
             ]
             self.assertEqual(len(covering_segments), 1, row)
+
+    def test_prepared_expansion_batch_02_matches_confirmed_side_segments(self):
+        root = Path(__file__).parents[1]
+        match = json.loads(
+            (
+                root / "data" / "annotations" / "usa_germany_2024_match.json"
+            ).read_text(encoding="utf-8")
+        )
+        prepared = match["annotation_expansion_batch_02"]
+        self.assertEqual(prepared["status"], "prepared")
+        self.assertEqual(prepared["created_on"], "2026-08-09")
+        self.assertIs(prepared["confirmed_side_segments"], True)
+        self.assertEqual(prepared["interval_count"], 6)
+        self.assertEqual(prepared["duration_seconds"], 85.0)
+        self.assertEqual(
+            prepared["source_segment_ids"],
+            [
+                "set_1",
+                "set_2",
+                "set_3",
+                "set_4",
+                "set_5_pre_switch",
+                "set_5_post_switch",
+            ],
+        )
+
+        spec_path = root / "data" / "annotations" / prepared["spec"]
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        workbook_path = root / prepared["workbook"]
+        self.assertTrue(workbook_path.is_file())
+        workbook_sha256 = hashlib.sha256(workbook_path.read_bytes()).hexdigest()
+        self.assertEqual(prepared["workbook_sha256"], workbook_sha256)
+        self.assertEqual(spec["workbook_sha256"], workbook_sha256)
+        self.assertEqual(
+            spec["source_manifest"], match["annotation_manifest"]
+        )
+        source_manifest = root / "data" / "annotations" / match["annotation_manifest"]
+        source_manifest_sha256 = hashlib.sha256(source_manifest.read_bytes()).hexdigest()
+        self.assertEqual(spec["source_manifest_sha256"], source_manifest_sha256)
+        self.assertEqual(prepared["source_manifest_sha256"], source_manifest_sha256)
+        self.assertEqual(spec["interval_count"], 6)
+        self.assertEqual(spec["action_slots_per_interval"], 8)
+        self.assertEqual(spec["annotation_mode"], "exhaustive_full_rally")
+        intervals = spec["intervals"]
+        self.assertEqual(
+            intervals,
+            sorted(intervals, key=lambda interval: interval["start_seconds"]),
+        )
+        for previous, current in pairwise(intervals):
+            self.assertLessEqual(
+                previous["end_seconds"], current["start_seconds"]
+            )
+        self.assertEqual(
+            [
+                (
+                    interval["interval_id"],
+                    interval["source_segment_id"],
+                    interval["start_seconds"],
+                    interval["end_seconds"],
+                    interval["usa_side"],
+                )
+                for interval in intervals
+            ],
+            [
+                ("B02-R01", "set_1", 837.0, 846.0, "far"),
+                ("B02-R02", "set_2", 2375.0, 2387.0, "near"),
+                ("B02-R03", "set_3", 4209.0, 4222.0, "far"),
+                ("B02-R04", "set_4", 5650.0, 5669.0, "near"),
+                ("B02-R05", "set_5_pre_switch", 6776.0, 6794.0, "near"),
+                ("B02-R06", "set_5_post_switch", 7378.0, 7392.0, "far"),
+            ],
+        )
+        segments_by_id = {
+            segment["segment_id"]: segment
+            for segment in match["usa_side_segments"]
+        }
+        with source_manifest.open("r", encoding="utf-8-sig", newline="") as handle:
+            current_rows = list(csv.DictReader(handle))
+        self.assertEqual(len(current_rows), 73)
+        for interval in intervals:
+            overlapping_rows = [
+                row
+                for row in current_rows
+                if float(row["start_seconds"]) < interval["end_seconds"]
+                and interval["start_seconds"] < float(row["end_seconds"])
+            ]
+            self.assertEqual([], overlapping_rows, interval["interval_id"])
+
+        for interval in intervals:
+            segment = segments_by_id[interval["source_segment_id"]]
+            self.assertEqual(segment["status"], "confirmed")
+            self.assertEqual(interval["usa_side"], segment["usa_side"])
+            self.assertGreaterEqual(
+                interval["start_seconds"], segment["start_seconds"]
+            )
+            self.assertLessEqual(interval["end_seconds"], segment["end_seconds"])
 
     def test_real_results_produce_expanded_manifest_and_baseline(self):
         root = Path(__file__).parents[1]

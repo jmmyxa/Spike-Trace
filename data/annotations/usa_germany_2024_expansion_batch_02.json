@@ -1,0 +1,108 @@
+{
+  "format_version": 1,
+  "batch_id": "usa-germany-2024-expansion-02",
+  "match_id": "usa-germany-2024-olympics",
+  "created_on": "2026-08-09",
+  "source_manifest": "usa_germany_2024_annotations_expanded_batch_01.csv",
+  "source_manifest_sha256": "2ad5ce8d46e5f065c76d82d641f0fb824f5e8da9457df7bde5466d110cc12981",
+  "workbook": "outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx",
+  "workbook_sha256": "33b15dad3efada0cea207cdb0b0f1bb6dfde8288c58fb6c53584c360071c1efc",
+  "target_team": "USA",
+  "annotation_mode": "exhaustive_full_rally",
+  "selection_method": "one_new_rally_per_confirmed_side_segment",
+  "time_precision_seconds": 1.0,
+  "priority_labels": ["set", "attack", "receive", "dig", "block"],
+  "action_slots_per_interval": 8,
+  "review_rules": {
+    "confirm_entire_interval": true,
+    "record_only_missing_usa_actions": true,
+    "blank_action_rows_are_ignored": true,
+    "input_time_format": "HH:MM:SS",
+    "existing_actions_remain_unchanged": true,
+    "do_not_add_false_or_review_status_columns": true
+  },
+  "interval_count": 6,
+  "duration_seconds": 85.0,
+  "source_segment_ids": [
+    "set_1",
+    "set_2",
+    "set_3",
+    "set_4",
+    "set_5_pre_switch",
+    "set_5_post_switch"
+  ],
+  "intervals": [
+    {
+      "interval_id": "B02-R01",
+      "source_segment_id": "set_1",
+      "set_number": 1,
+      "phase": "full_set",
+      "start_seconds": 837.0,
+      "end_seconds": 846.0,
+      "usa_side": "far",
+      "crop": [0, 0, 1280, 430],
+      "status": "prepared",
+      "reason": "New complete rally selected inside the confirmed first-set far-side segment, outside the current 73-row manifest."
+    },
+    {
+      "interval_id": "B02-R02",
+      "source_segment_id": "set_2",
+      "set_number": 2,
+      "phase": "full_set",
+      "start_seconds": 2375.0,
+      "end_seconds": 2387.0,
+      "usa_side": "near",
+      "crop": [0, 170, 1280, 720],
+      "status": "prepared",
+      "reason": "New complete rally selected inside the confirmed second-set near-side segment, outside the current 73-row manifest."
+    },
+    {
+      "interval_id": "B02-R03",
+      "source_segment_id": "set_3",
+      "set_number": 3,
+      "phase": "full_set",
+      "start_seconds": 4209.0,
+      "end_seconds": 4222.0,
+      "usa_side": "far",
+      "crop": [0, 0, 1280, 430],
+      "status": "prepared",
+      "reason": "New complete rally selected inside the confirmed third-set far-side segment, outside the current 73-row manifest."
+    },
+    {
+      "interval_id": "B02-R04",
+      "source_segment_id": "set_4",
+      "set_number": 4,
+      "phase": "full_set",
+      "start_seconds": 5650.0,
+      "end_seconds": 5669.0,
+      "usa_side": "near",
+      "crop": [0, 170, 1280, 720],
+      "status": "prepared",
+      "reason": "New complete rally selected inside the confirmed fourth-set near-side segment, outside the current 73-row manifest."
+    },
+    {
+      "interval_id": "B02-R05",
+      "source_segment_id": "set_5_pre_switch",
+      "set_number": 5,
+      "phase": "pre_switch",
+      "start_seconds": 6776.0,
+      "end_seconds": 6794.0,
+      "usa_side": "near",
+      "crop": [0, 170, 1280, 720],
+      "status": "prepared",
+      "reason": "New complete rally selected before the confirmed fifth-set side switch, outside the current 73-row manifest."
+    },
+    {
+      "interval_id": "B02-R06",
+      "source_segment_id": "set_5_post_switch",
+      "set_number": 5,
+      "phase": "post_switch",
+      "start_seconds": 7378.0,
+      "end_seconds": 7392.0,
+      "usa_side": "far",
+      "crop": [0, 0, 1280, 430],
+      "status": "prepared",
+      "reason": "New complete rally selected after the confirmed fifth-set side switch, outside the current 73-row manifest."
+    }
+  ]
+}
