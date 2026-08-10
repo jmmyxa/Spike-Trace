@@ -53,6 +53,8 @@ README 必须随模块或目录变更同步更新。当前结构和职责如下�
 ```text
 Spike-Trace/
 ├─ .gitattributes                # 固定标注 CSV 换行，保证跨设备字节哈希稳定
+├─ agent-lanes.md                # 持久 Agent Lane 注册表与互斥写入范围
+├─ .agent-lanes/                 # 各 Lane 的工作日志
 ├─ data/annotations/
 │  ├─ *_annotations.csv          # 保留的首轮人工复核清单
 │  ├─ *_second_review.json       # 二次复核请求规格
@@ -64,6 +66,9 @@ Spike-Trace/
 │  ├─ usa_germany_2024_annotations_expanded_batch_02.csv # 当前 90 条训练清单
 │  └─ *_match.json               # 比赛信息、当前清单、复核状态与半场区间
 ├─ docs/
+│  ├─ identity/                   # 球员身份与号码识别设计
+│  ├─ product/                    # 产品规划与前端体验设计
+│  ├─ data-platform/              # 数据平台与用户工作区设计
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
 │  └─ superpowers/               # 已确认的阶段设计与逐步实现计划
 ├─ examples/                     # 标注格式示例
@@ -90,6 +95,13 @@ Spike-Trace/
 ├─ tests/                        # 不依赖真实视频或外部权重的单元测试
 └─ tools/                        # 冒烟数据和人工复核辅助工具
 ```
+
+### 持久 Agent Lane
+
+当前项目拆分为三个长期协作任务：`player-identity` 负责美国队球员检测、跟踪和号码归属；
+`product-frontend` 负责总体产品规划、导航以及标注/分析前端；`data-workspace` 负责数据存储、
+版本审计、CSV/JSON 导入导出和账户/工作区数据契约。每个任务只能修改注册表中的自身范围，
+工作进展记录在 `.agent-lanes/*/worklog.md`；号码识别尚未进入实现阶段，先完成设计和数据契约。
 
 `data/annotations/*.csv` 固定使用 CRLF 换行；Python `csv` 写出的清单本身也采用这一格式。不要绕过 Git 属性手工转换这些文件的换行，否则用于基线和补标规格的 SHA-256 会变化。
 
