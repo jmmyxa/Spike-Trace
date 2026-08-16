@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass
+from decimal import ROUND_HALF_UP, Decimal
 
 from .constants import BACKGROUND_LABEL
 from .domain import ActionEvent, ActionWindow
@@ -14,6 +16,22 @@ class _EventCandidate:
     action: str
     confidences: list[float]
     window_indices: list[int]
+
+
+def seconds_to_milliseconds(seconds: float) -> int:
+    """Convert seconds to integer milliseconds using explicit half-up rounding."""
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+        raise TypeError("seconds must be numeric.")
+    try:
+        if not math.isfinite(seconds):
+            raise ValueError("seconds must be finite.")
+    except OverflowError as exc:
+        raise ValueError("seconds must be finite.") from exc
+    return int(
+        (Decimal(str(seconds)) * Decimal(1000)).to_integral_value(
+            rounding=ROUND_HALF_UP
+        )
+    )
 
 
 def merge_action_windows(
@@ -100,8 +118,8 @@ def merge_action_windows_with_provenance(
         event = ActionEvent(
             video_id=video_id,
             event_id=f"evt_{event_index:06d}",
-            start_ms=round(candidate.start_seconds * 1000),
-            end_ms=round(candidate.end_seconds * 1000),
+            start_ms=seconds_to_milliseconds(candidate.start_seconds),
+            end_ms=seconds_to_milliseconds(candidate.end_seconds),
             action=candidate.action,
             confidence=round(sum(candidate.confidences) / len(candidate.confidences), 6),
             team_side=None,

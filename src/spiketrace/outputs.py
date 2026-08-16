@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from .domain import ActionEvent, ActionWindow, VideoMetadata
+from .events import seconds_to_milliseconds
 
 EVENT_FIELDS = (
     "video_id",
@@ -122,3 +123,21 @@ def _validate_event_window_indices(
                     "Provenance window confidence must meet the configured threshold."
                 )
             assigned_indices.add(index)
+        member_windows = [windows[index] for index in indices]
+        expected_start_ms = min(
+            seconds_to_milliseconds(window.start_seconds)
+            for window in member_windows
+        )
+        expected_end_ms = max(
+            seconds_to_milliseconds(window.end_seconds) for window in member_windows
+        )
+        if event.start_ms != expected_start_ms or event.end_ms != expected_end_ms:
+            raise ValueError("Event bounds must match the provenance windows.")
+        expected_confidence = round(
+            sum(window.confidence for window in member_windows) / len(member_windows),
+            6,
+        )
+        if event.confidence != expected_confidence:
+            raise ValueError(
+                "Event confidence must equal the rounded mean of provenance windows."
+            )

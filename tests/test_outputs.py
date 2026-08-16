@@ -113,6 +113,24 @@ class InferenceOutputTests(unittest.TestCase):
                 },
             )
 
+    def test_rejects_event_bounds_that_do_not_match_members(self):
+        self.event = ActionEvent(
+            video_id="match", event_id="evt_000001", start_ms=1, end_ms=1000,
+            action="serve", confidence=0.85, team_side=None, player_number=None,
+            status="predicted", model_version="test-v1",
+        )
+        with self.assertRaises(ValueError):
+            self.write_outputs({"evt_000001": [0, 1]})
+
+    def test_rejects_event_confidence_that_is_not_member_mean(self):
+        self.event = ActionEvent(
+            video_id="match", event_id="evt_000001", start_ms=0, end_ms=1000,
+            action="serve", confidence=0.9, team_side=None, player_number=None,
+            status="predicted", model_version="test-v1",
+        )
+        with self.assertRaises(ValueError):
+            self.write_outputs({"evt_000001": [0, 1]})
+
 
 if __name__ == "__main__":
     unittest.main()

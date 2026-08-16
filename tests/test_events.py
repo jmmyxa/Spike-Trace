@@ -86,6 +86,15 @@ class MergeActionWindowsTests(unittest.TestCase):
         )
         self.assertEqual([event.action for event in events], ["serve", "receive"])
 
+    def test_uses_half_up_rounding_at_exact_half_millisecond(self):
+        events, _ = merge_action_windows_with_provenance(
+            [ActionWindow(0.0005, 1.0005, "serve", 0.9)],
+            video_id="match",
+            model_version="test-v1",
+            confidence_threshold=0.5,
+        )
+        self.assertEqual((events[0].start_ms, events[0].end_ms), (1, 1001))
+
 
 if __name__ == "__main__":
     unittest.main()

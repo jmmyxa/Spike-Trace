@@ -549,6 +549,22 @@ class DualCropReviewBuildTests(unittest.TestCase):
                     )
                     far_payload["events"].append(second_far)
 
+                # Source-event confidence is a declared mean of its members.
+                for payload in (far_payload, near_payload):
+                    windows_by_index = {
+                        item["window_index"]: item for item in payload["windows"]
+                    }
+                    for event in payload["events"]:
+                        members = [
+                            windows_by_index[index]
+                            for index in event["source_window_indices"]
+                        ]
+                        event["confidence"] = round(
+                            sum(item["confidence"] for item in members)
+                            / len(members),
+                            6,
+                        )
+
                 far_path, near_path = _write_inputs(
                     directory, far_payload, near_payload
                 )
@@ -652,6 +668,12 @@ class DualCropReviewBuildTests(unittest.TestCase):
                 near["events"][0].update(source_window_indices=[1]),
                 near["events"][1].update(source_window_indices=[0]),
             ),
+            "source event confidence mismatch": lambda far, near: far[
+                "events"
+            ][0].update(confidence=0.1),
+            "source event bounds mismatch": lambda far, near: far["events"][0].update(
+                end_ms=999
+            ),
             "duplicate event member ownership": lambda far, near: near["events"][
                 1
             ].update(source_window_indices=[0]),
@@ -697,6 +719,17 @@ class DualCropReviewBuildTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build_dual_crop_review(
                     far_path, near_path, directory / "nan", repo_root=ROOT
+                )
+
+    def test_rejects_huge_integer_as_contextual_value_error(self):
+        far_payload, near_payload = _load_fixtures()
+        far_payload["windows"][0]["confidence"] = 10**400
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            far_path, near_path = _write_inputs(directory, far_payload, near_payload)
+            with self.assertRaisesRegex(ValueError, "far window confidence"):
+                build_dual_crop_review(
+                    far_path, near_path, directory / "huge", repo_root=ROOT
                 )
 
     def test_handles_real_rangitoto_shape_without_window_by_event_scans(self):

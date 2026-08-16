@@ -8,11 +8,12 @@ import json
 import math
 import re
 from dataclasses import dataclass
-from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
 from .constants import SAMPLING_CONTRACT
+from .events import seconds_to_milliseconds
 
 _INFERENCE_ROOT_FIELDS = (
     "format_version", "video", "model_version", "settings", "events", "windows"
@@ -384,6 +385,7 @@ def _normalize_inference_payload(
             )
         member_starts: list[int] = []
         member_ends: list[int] = []
+        member_confidences: list[int | float] = []
         for index in member_indices:
             if index not in window_map:
                 raise ValueError(f"{side} event references a missing window.")
@@ -398,8 +400,16 @@ def _normalize_inference_payload(
             member_start, member_end = window_bounds[index]
             member_starts.append(member_start)
             member_ends.append(member_end)
+            member_confidences.append(member_window["confidence"])
+        expected_confidence = round(
+            sum(member_confidences) / len(member_confidences), 6
+        )
         if start_ms != min(member_starts) or end_ms != max(member_ends):
             raise ValueError(f"{side} event bounds do not match its member windows.")
+        if confidence != expected_confidence:
+            raise ValueError(
+                f"{side} event confidence does not match its member windows."
+            )
         events.append(
             {
                 "video_id": video_id,
@@ -993,10 +1003,7 @@ def _rounded_ratio(numerator: int, denominator: int) -> float:
 
 def _milliseconds(value: object, description: str) -> int:
     number = _finite_number(value, description, minimum=0)
-    decimal = Decimal(str(number))
-    return int(
-        (decimal * 1000 + Decimal("0.5")).to_integral_value(rounding=ROUND_FLOOR)
-    )
+    return seconds_to_milliseconds(number)
 
 
 def _normalize_path(raw_path: str | Path, repo_root: Path) -> str:
@@ -1082,7 +1089,11 @@ def _finite_number(
 ) -> int | float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{description} must be numeric.")  # noqa: TRY004
-    if not math.isfinite(value):
+    try:
+        finite = math.isfinite(value)
+    except OverflowError as exc:
+        raise ValueError(f"{description} must be finite.") from exc
+    if not finite:
         raise ValueError(f"{description} must be finite.")
     if minimum is not None and (value <= minimum if strict else value < minimum):
         raise ValueError(f"{description} is below its minimum.")

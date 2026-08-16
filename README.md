@@ -413,7 +413,7 @@ python -m unittest discover -s tests -v
   `receive` 8、`block` 4、`dig` 3。合并 JSON/CSV SHA-256 分别为
   `e79aba6e5eb3a1075819a290144198b7e393fceed94313cdf9fc171378a76e7e` /
   `96130e7f0c4ec2ba2e7ddd697ef7df9a98fd79c35557ae4e3782f35d6f2291d4`；最终 XLSX SHA-256 为
-  `99fd44f96c3f00238725db8aa41491f711ce0f553e2765eb9f9ecc345f19cd72`。
+  `19b899cab6d963daf266b1fe1a966a518c48d7c74bb86ee247cfca39e2d7c725`。
 
 重算、合并与工作簿验证命令如下：
 
