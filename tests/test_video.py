@@ -48,6 +48,14 @@ class WindowTimeTests(unittest.TestCase):
 
 
 class ClipSampleFrameIndexTests(unittest.TestCase):
+    def test_rounds_exact_half_frame_up(self):
+        self.assertEqual(
+            clip_sample_frame_indices(
+                0.0, 1.0, num_frames=1, fps=1.0, frame_count=2
+            ),
+            (1,),
+        )
+
     def test_uses_half_up_nearest_frames_for_thirty_fps_window(self):
         self.assertEqual(
             clip_sample_frame_indices(
