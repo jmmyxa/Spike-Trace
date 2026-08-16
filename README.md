@@ -83,9 +83,9 @@ Spike-Trace/
 ├─ outputs/expansion-batch-02/
 │  └─ *_expansion_batch_02.xlsx  # 已填写并纳入版本控制的第二批完整回合补标工作簿
 ├─ outputs/rangitoto-r3d18-bootstrap-review/
-│  ├─ merged_candidates.json     # 旧 floor-sampled 双裁剪结果，Task 5 重建前不可复核
-│  ├─ merged_candidates.csv      # 旧版便携表格，Task 5 重建前不可复核
-│  └─ rangitoto_action_review.xlsx # 旧版工作簿，Task 5 重建前不可复核
+│  ├─ merged_candidates.json     # format-2 自包含窗口证据；Task 5 重算后的最终 JSON
+│  ├─ merged_candidates.csv      # 与最终 JSON 一致的候选便携表格
+│  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的最终人工复核工作簿
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -108,7 +108,11 @@ Spike-Trace/
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
 │  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
-└─ tools/                        # 冒烟数据和人工复核辅助工具
+└─ tools/
+   ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览
+   ├─ verify_rangitoto_review.mjs # 独立验证工作簿结构、行数、空白输入与公式
+   ├─ test_rangitoto_review.mjs  # 四窗口 fixture 的可执行 XLSX 集成测试
+   └─ ...                        # 冒烟数据和其他人工复核辅助工具
 ```
 
 ### 持久 Agent Lane
@@ -307,17 +311,26 @@ spiketrace infer data\videos\match_020.mp4 runs\r3d18-v01\best.pt outputs\match_
 两路 v2 推理完成后，可生成并独立验证确定性的双裁剪复核材料：
 
 ```powershell
-spiketrace build-dual-crop-review outputs\rangitoto-far\events.json `
+.venv\Scripts\python.exe -m spiketrace build-dual-crop-review outputs\rangitoto-far\events.json `
   outputs\rangitoto-near\events.json outputs\rangitoto-r3d18-bootstrap-review `
   --repo-root .
-spiketrace verify-dual-crop-review `
+.venv\Scripts\python.exe -m spiketrace verify-dual-crop-review `
   outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json `
   --csv outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.csv
+node tools\build_rangitoto_review.mjs `
+  outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json `
+  outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx `
+  outputs\.rangitoto-review-build\previews
+node tools\verify_rangitoto_review.mjs `
+  outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json `
+  outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx
 ```
 
 构建结果嵌入规范化后的 far/near 输入、来源文件 SHA-256 和规范化 payload SHA-256；验证命令
 只依赖合并 JSON 即可重算候选、分组、主来源和可选 CSV。来源文件 SHA-256 仅作为 provenance
-保留，自包含验证器不会在没有原输入文件时声称重新验证该字节哈希。
+保留，自包含验证器不会在没有原输入文件时声称重新验证该字节哈希。完整推理仍需要本地视频
+和 checkpoint；合并 JSON 的自包含审计不需要它们。format-2 JSON 保存完整窗口证据，XLSX
+只保存由该 JSON 派生的人工复核行，不复制全量窗口表。
 
 ## 冒烟测试
 
@@ -386,11 +399,15 @@ python -m unittest discover -s tests -v
 ### Rangitoto 双裁剪候选复核（待人工复核）
 
 远端裁剪固定为 `0,0,1920,645`，近端裁剪固定为 `0,255,1920,1080`。仓库中此前记录的
-`16,448` 窗口/侧、`4,179` 来源事件、`2,876` 合并候选以及相应重复组、冲突组和动作分布，
-都来自旧的 floor-sampled、inference JSON v1 重建流程。它们只保留为历史规模证据，不再是
-可审计复核结果；`outputs/rangitoto-r3d18-bootstrap-review/` 内现有 JSON、CSV 和工作簿也不得
-继续用于人工复核。Task 5 必须按 `center-nearest-frame-v1` 重新执行两路推理，生成显式
-`source_window_indices` 的 v2 输入，再用上述构建和验证命令重建可信产物与计数。
+所有 floor-sampled / inference JSON v1 计数和产物均已失效，不得继续用于人工复核。Task 5
+必须按 `center-nearest-frame-v1` 重新执行两路推理，生成显式 `source_window_indices` 的 v2
+输入，再用上述构建和验证命令重建可信产物与计数。在 Task 5 完成前，不得从现有 Rangitoto
+输出目录引用候选数、来源事件数、重复组、冲突组或动作分布。
+
+人工只编辑工作簿的五个黄色列：`人工确认动作`、`人工开始时间`、`人工结束时间`、`人工侧别`
+和 `备注`。`人工确认动作` 非空即代表已复核，`background` 用于拒绝误检；没有额外状态列、
+勾选框或完成列。人工开始/结束时间填写数值秒，可读时间码只是只读显示文本。`receive` 仅指
+接对方发球，`dig` 仅指对方进攻后的防守起球；`far` / `near` 是视觉裁剪位置，不代表球队。
 
 该 bootstrap checkpoint 只用美国队对德国队同一场比赛的 90 个训练窗口训练。Rangitoto
 预测明显集中在 `set`/`attack`，现阶段只能用于发现候选，不能声明泛化准确率。只有完成整场

@@ -12,6 +12,7 @@ data/*
 !data/annotations/*.json
 runs/
 outputs/*
+outputs/.rangitoto-review-build/
 !outputs/expansion-batch-01/
 outputs/expansion-batch-01/*
 !outputs/expansion-batch-01/usa_germany_2024_expansion_batch_01.xlsx
