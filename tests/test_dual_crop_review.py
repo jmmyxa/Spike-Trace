@@ -331,6 +331,167 @@ class DualCropReviewBuildTests(unittest.TestCase):
                 },
             )
 
+    def test_exact_duplicate_and_conflict_predicate_boundaries(self):
+        cases = (
+            {
+                "name": "duplicate coverage only",
+                "far": ("attack", 0, 400),
+                "near": ("attack", 0, 2000),
+                "counts": (1, 1, 0, 1, 0),
+                "metrics": {
+                    "overlap_ms": 400,
+                    "union_ms": 2000,
+                    "shorter_ms": 400,
+                    "coverage_shorter": 1.0,
+                    "temporal_iou": 0.2,
+                    "center_gap_ms": 800,
+                },
+            },
+            {
+                "name": "duplicate center only at overlap 400 and center 500",
+                "far": ("attack", 0, 900),
+                "near": ("attack", 500, 1400),
+                "counts": (1, 1, 0, 1, 0),
+                "metrics": {
+                    "overlap_ms": 400,
+                    "union_ms": 1400,
+                    "shorter_ms": 900,
+                    "coverage_shorter": 0.444444,
+                    "temporal_iou": 0.285714,
+                    "center_gap_ms": 500,
+                },
+            },
+            {
+                "name": "conflict overlap only at overlap 400",
+                "far": ("block", 0, 400),
+                "near": ("attack", 0, 2000),
+                "counts": (2, 0, 1, 0, 1),
+                "metrics": {
+                    "overlap_ms": 400,
+                    "union_ms": 2000,
+                    "shorter_ms": 400,
+                    "coverage_shorter": 1.0,
+                    "temporal_iou": 0.2,
+                    "center_gap_ms": 800,
+                },
+            },
+            {
+                "name": "conflict center only at center 500",
+                "far": ("block", 0, 400),
+                "near": ("attack", 500, 900),
+                "counts": (2, 0, 1, 0, 1),
+                "metrics": {
+                    "overlap_ms": 0,
+                    "union_ms": 900,
+                    "shorter_ms": 400,
+                    "coverage_shorter": 0.0,
+                    "temporal_iou": 0.0,
+                    "center_gap_ms": 500,
+                },
+            },
+            {
+                "name": "overlap 399 fails",
+                "far": ("attack", 0, 399),
+                "near": ("attack", 0, 2000),
+                "counts": (2, 0, 0, 0, 0),
+                "metrics": None,
+            },
+            {
+                "name": "center gap 500.5 fails",
+                "far": ("attack", 0, 901),
+                "near": ("attack", 501, 1401),
+                "counts": (2, 0, 0, 0, 0),
+                "metrics": None,
+            },
+            {
+                "name": "coverage 0.5 passes",
+                "far": ("attack", 0, 800),
+                "near": ("attack", 400, 2000),
+                "counts": (1, 1, 0, 1, 0),
+                "metrics": {
+                    "overlap_ms": 400,
+                    "union_ms": 2000,
+                    "shorter_ms": 800,
+                    "coverage_shorter": 0.5,
+                    "temporal_iou": 0.2,
+                    "center_gap_ms": 800,
+                },
+            },
+            {
+                "name": "coverage below 0.5 fails",
+                "far": ("attack", 0, 801),
+                "near": ("attack", 401, 2001),
+                "counts": (2, 0, 0, 0, 0),
+                "metrics": None,
+            },
+        )
+
+        def set_candidate(payload, side, candidate):
+            action, start_ms, end_ms = candidate
+            event = copy.deepcopy(payload["events"][0])
+            event.update(
+                event_id=f"evt_{side}_boundary",
+                start_ms=start_ms,
+                end_ms=end_ms,
+                action=action,
+                confidence=0.9,
+                source_window_indices=[0],
+            )
+            payload["events"] = [event]
+            payload["windows"] = [
+                {
+                    "window_index": 0,
+                    "start_seconds": start_ms / 1000,
+                    "end_seconds": end_ms / 1000,
+                    "action": action,
+                    "confidence": 0.9,
+                }
+            ]
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for case in cases:
+                with self.subTest(case=case["name"]):
+                    case_dir = root / case["name"].replace(" ", "_")
+                    case_dir.mkdir()
+                    far_payload, near_payload = _load_fixtures()
+                    set_candidate(far_payload, "far", case["far"])
+                    set_candidate(near_payload, "near", case["near"])
+                    far_path, near_path = _write_inputs(
+                        case_dir, far_payload, near_payload
+                    )
+                    output_dir = case_dir / "review"
+                    payload = build_dual_crop_review(
+                        far_path, near_path, output_dir, repo_root=ROOT
+                    )
+                    verification = verify_dual_crop_review(
+                        output_dir / "merged_candidates.json",
+                        csv_path=output_dir / "merged_candidates.csv",
+                    )
+                    self.assertEqual(
+                        (
+                            len(payload["events"]),
+                            len(payload["duplicate_groups"]),
+                            len(payload["conflict_groups"]),
+                            verification["counts"]["duplicate_links"],
+                            verification["counts"]["conflict_links"],
+                        ),
+                        case["counts"],
+                    )
+                    if case["metrics"] is not None:
+                        group_name = (
+                            "duplicate_groups"
+                            if case["counts"][1] == 1
+                            else "conflict_groups"
+                        )
+                        link_name = (
+                            "links" if group_name == "duplicate_groups" else "source_links"
+                        )
+                        self.assertEqual(
+                            payload[group_name][0][link_name][0]["metrics"],
+                            case["metrics"],
+                        )
+
     def test_primary_selection_uses_every_declared_tie_breaker(self):
         cases = (
             ("event confidence", "near:evt_near_attack_dup"),
