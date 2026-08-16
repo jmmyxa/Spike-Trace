@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份、产品前端和数据平台的第一阶段设计。下一阶段优先用第二场完整比赛建立独立评估基线，同时实现可人工确认的球员轨迹与号码归属原型；前端和 SQLite 只围绕这条最小闭环逐步接入。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份、产品前端和数据平台的第一阶段设计。下一阶段先把第二场完整比赛的全量候选改为每轮 40 个短回合的主动学习批次，建立跨比赛训练素材；独立评估继续使用未参与训练的另一场完整比赛。号码归属、前端和 SQLite 仍只围绕动作模型闭环逐步接入。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -85,7 +85,7 @@ Spike-Trace/
 ├─ outputs/rangitoto-r3d18-bootstrap-review/
 │  ├─ merged_candidates.json     # format-2 自包含窗口证据；Task 5 重算后的最终 JSON
 │  ├─ merged_candidates.csv      # 与最终 JSON 一致的候选便携表格
-│  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的最终人工复核工作簿
+│  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的全量审计工作簿；不要求逐行填写
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -127,13 +127,15 @@ Spike-Trace/
 - [球员身份与号码归属设计](docs/identity/2026-08-10-design.md)
 - [MVP 产品工作流](docs/product/mvp-workflow-design.md)
 - [数据平台与工作区设计](docs/data-platform/README.md)
+- [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)
 
 下一阶段按以下顺序推进：
 
-1. 完成 Rangitoto 第二场比赛的候选复核，并按整场隔离为 `val` 或 `test`，建立可信动作模型基线。
-2. 在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
-3. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
-4. 最后接入本地浏览器界面、SQLite 保存和 CSV/JSON 导出，形成端到端 MVP。
+1. 从 Rangitoto 全量候选中每轮自动选择 40 个短回合，人工一次穷举片段内全部我方动作并迭代动作模型。
+2. 使用未加入训练的另一场完整比赛建立固定 `val`，以后再保留第三场完整比赛作为 `test`。
+3. 动作模型基线稳定后，在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
+4. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
+5. 最后接入本地浏览器界面、SQLite 保存和 CSV/JSON 导出，形成端到端 MVP。
 
 `data/annotations/*.csv` 固定使用 CRLF 换行；Python `csv` 写出的清单本身也采用这一格式。不要绕过 Git 属性手工转换这些文件的换行，否则用于基线和补标规格的 SHA-256 会变化。
 
@@ -184,6 +186,8 @@ spiketrace train data\annotations.csv runs\r3d18-v01 `
 
 默认情况下，训练清单必须同时包含 `train` 和 `val` 记录，`best.pt` 按验证集 Macro F1 选择。对于尚未拥有独立比赛验证集的明确 bootstrap 场景，可以显式加入 `--allow-train-only`；程序会跳过验证 loader 和验证 epoch，并按训练集 Macro F1 选择 `best.pt`。此时 `training_config.json` 和 `metrics.json` 会标记 `selection_split: "train"`、`generalization_metrics_available: false` 和 `allow_train_only: true`，每个 epoch 仅报告训练指标。
 
+这条 `--allow-train-only` 路径只是当前 bootstrap 兼容行为；主动学习实现必须改为固定轮数或使用独立验证信号，不能把训练集 Macro F1 当作模型选择或泛化证据。
+
 例如，当前 90 条已确认的美国队对德国队窗口全部正确保留在 `train` 分区，可先训练一个用于生成 Rangitoto 候选、供人工复核的 R3D-18 checkpoint：
 
 ```powershell
@@ -198,7 +202,7 @@ spiketrace train `
   --allow-train-only
 ```
 
-训练集指标不是独立准确率或泛化能力测量，不能作为模型成绩发布；这个 checkpoint 仅用于在 Rangitoto 视频中生成待人工复核的候选窗口。获得另一场完整比赛并建立独立 `val` 分区后，应恢复常规训练和验证流程。
+训练集指标不是独立准确率或泛化能力测量，不能作为模型成绩发布；这个 checkpoint 仅用于在 Rangitoto 视频中生成主动学习候选池。获得另一场完整比赛并建立独立 `val` 分区后，应恢复常规训练和验证流程。
 
 ## 评估预训练 YOLO 动作模型
 
@@ -236,7 +240,7 @@ spiketrace evaluate-pretrained `
 
 `compatibility_metrics` 只衡量旧六类模型发现宽泛防守触球候选的能力，不能覆盖人工 `dig` 真值，也不能作为七类部署成绩。
 
-当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。因此现阶段新增训练样本仍要先人工选出完整回合，再对回合内所有美国队动作做穷举标注。
+当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。下一步由主动学习选择器从整场候选池挑出短回合，再对短回合内所有我方动作做穷举标注；选择器完成前不开始新的大批量人工复核。
 
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
@@ -396,7 +400,7 @@ python -m unittest discover -s tests -v
 同一局内可以固定我方半场裁剪；第 5 局中途换边后必须切换裁剪。训练与验证必须使用
 不同的完整比赛，不能把本场不同局拆到不同数据集分区。
 
-### Rangitoto 双裁剪候选复核（待人工复核）
+### Rangitoto 双裁剪候选池与主动学习
 
 已按 `center-nearest-frame-v1` 完成一次全场双裁剪重算。远端裁剪为 `0,0,1920,645`，近端
 裁剪为 `0,255,1920,1080`；两路均为 format-2 显式 `source_window_indices` 输入，各有
@@ -415,6 +419,16 @@ python -m unittest discover -s tests -v
   `96130e7f0c4ec2ba2e7ddd697ef7df9a98fd79c35557ae4e3782f35d6f2291d4`；最终 XLSX SHA-256 为
   `19b899cab6d963daf266b1fe1a966a518c48d7c74bb86ee247cfca39e2d7c725`。
 
+这 2,942 条是低阈值全场扫描形成的审计候选池，不是 2,942 条人工待办。823 个重复组、
+495 个冲突组以及大量相邻滑窗会反复指向同一段比赛；候选置信度中位数为 `0.2929`，只有
+2 条达到 `0.5`。最终 JSON、CSV 和 XLSX 继续作为完整证据保留，但不要求填写全量工作簿。
+
+已确认采用[按短回合的主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)：
+每轮自动选择 40 个 10 至 20 秒短片，优先覆盖跨视角冲突、`receive` / `block` / `dig`
+少数候选、高置信度硬负、随机候选和双方均无候选的时间块。人工一次播放并穷举片段内全部
+我方动作，输入片段内相对秒数；系统再换算为原视频时间并生成累计训练清单。首轮不要求用户
+处理未被短片覆盖的其他候选，也不以清空历史候选为训练目标。
+
 重算、合并与工作簿验证命令如下：
 
 ```powershell
@@ -432,9 +446,10 @@ node tools\verify_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\
 接对方发球，`dig` 仅指对方进攻后的防守起球；`far` / `near` 是视觉裁剪位置，不代表球队。
 
 该 bootstrap checkpoint 只用美国队对德国队同一场比赛的 90 个训练窗口训练。Rangitoto
-预测明显集中在 `set`/`attack`，现阶段只能用于发现候选，不能声明泛化准确率。只有完成整场
-人工复核，并把 Rangitoto 作为与训练比赛完全隔离的 `val` 或 `test` 后，才能计算可信的
-Precision、Recall、Macro F1 和逐类混淆矩阵；不得先把 Rangitoto 真值混入训练集再报告测试成绩。
+预测明显集中在 `set`/`attack`，现阶段只能用于发现候选，不能声明泛化准确率。候选复核只能
+估计 Precision；必须额外穷举模型没有报动作的时间块才能发现漏报。如果主动学习标签加入训练，
+Rangitoto 就不能继续作为独立 `val` 或 `test`；可信的 Precision、Recall、Macro F1 和逐类
+混淆矩阵必须来自另一场从未参与训练和选样的完整比赛。
 
 ### 预训练权重兼容性基线
 
@@ -488,13 +503,14 @@ Precision、Recall、Macro F1 和逐类混淆矩阵；不得先把 Rangitoto 真
 
 当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
 Rangitoto 第二场完整比赛的 `center-nearest-frame-v1` 双裁剪 format-2 复核材料已经重建并可供
-人工复核：当前共有 2,942 个候选、4,282 个来源候选、823 个 duplicate groups 和 495 个
-conflict groups。下一步是完成人工复核，并将整场作为与训练比赛完全隔离的 `val` 或 `test`；
-在此之前不能把这些候选数当作准确率或泛化结果。代码已经跑通
+主动学习选样：当前共有 2,942 个候选、4,282 个来源候选、823 个 duplicate groups 和 495 个
+conflict groups。下一步是实现每轮 40 个短片的确定性选择、精简复核和累计训练清单；全量工作簿
+只作审计，不要求人工完成。在独立比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率
+或泛化结果。代码已经跑通
 自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并，但训练数据仍以
 39 个 `background` 为主，
 `set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
 预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
 结果、一传到位率或上场时间。继续添加同场训练窗口只能增加训练素材，无法证明模型泛化精度；
-完成人工复核并建立独立 `val` 或 `test` 真值后，再决定是否继续微调动作模型。与此同时，只在
-少量已确认回合上制作号码归属原型，验证“球员轨迹 -> 人工号码确认 -> 动作事件绑定”是否可行。
+完成一至三轮主动学习并建立独立 `val` 或 `test` 真值后，再根据逐类指标决定是否继续微调动作模型。
+号码归属、产品前端、账户和数据库实现继续暂停，直到动作模型闭环形成可验证基线。
