@@ -784,6 +784,69 @@ class FiveBucketSelectionTests(unittest.TestCase):
             ],
         )
 
+    def test_rejects_a_previous_selection_for_a_different_video(self):
+        self.select_fixture(filename="round-01.json")
+        other_video = self.root / "data" / "other.mp4"
+        other_video.write_bytes(b"other video")
+
+        def use_other_video(merged):
+            merged["video"]["path"] = "data/other.mp4"
+            for run in merged["input_runs"].values():
+                run["settings"]["video_sha256"] = sha256_file(other_video)
+
+        with self.assertRaisesRegex(ActiveLearningError, "same source video"):
+            self.select_fixture(
+                filename="cross-video-round-02.json",
+                round_number=2,
+                previous_selection_paths=[self.round_01_path],
+                merged_mutator=use_other_video,
+            )
+
+    def test_loader_rejects_a_clip_overlapping_a_persisted_previous_selection(self):
+        current = self.select_fixture(filename="round-02.json", round_number=2)
+        previous_path = self.root / "selections" / "task-1-round-01.json"
+        previous = make_valid_selection_payload(
+            {
+                "source": current["source"],
+                "video": current["video"],
+            }
+        )
+        previous["clips"] = [
+            {
+                "clip_id": f"clip-{ordinal:03d}",
+                "ordinal": ordinal,
+                "start_seconds": clip["start_seconds"],
+                "end_seconds": clip["end_seconds"],
+                "duration_seconds": clip["duration_seconds"],
+            }
+            for ordinal, clip in enumerate(current["clips"], start=1)
+        ]
+        with patch(
+            "spiketrace.active_learning_selection.verify_dual_crop_review",
+            return_value={"verified": True},
+        ):
+            write_review_selection(previous, previous_path, repo_root=self.root)
+
+        current["previous_selections"] = [
+            {
+                "path": "selections/task-1-round-01.json",
+                "sha256": sha256_file(previous_path),
+                "batch_id": previous["batch_id"],
+                "round_id": previous["round_id"],
+            }
+        ]
+        self.round_02_path.write_text(
+            json.dumps(current, indent=2) + "\n", encoding="utf-8"
+        )
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "previous selection"),
+        ):
+            load_review_selection(self.round_02_path, repo_root=self.root)
+
     def test_serializes_exact_clip_surface_and_retains_coalesced_hints(self):
         payload = self.select_fixture()
         self.assertEqual(
@@ -861,6 +924,123 @@ class FiveBucketSelectionTests(unittest.TestCase):
                     self.assertRaises(ActiveLearningError),
                 ):
                     load_review_selection(path, repo_root=self.root)
+
+    def test_loader_enforces_persisted_clip_duration_bounds(self):
+        mutations = (
+            ("min", "min_clip_seconds", 16.0),
+            ("max", "max_clip_seconds", 14.0),
+        )
+        for name, field, value in mutations:
+            with self.subTest(bound=name):
+                path = self.root / "selections" / f"duration-{name}.json"
+                self.select_fixture(filename=path.name)
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                payload["settings"][field] = value
+                path.write_text(
+                    json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+                )
+                with (
+                    patch(
+                        "spiketrace.active_learning_selection.verify_dual_crop_review",
+                        return_value={"verified": True},
+                    ),
+                    self.assertRaisesRegex(ActiveLearningError, "duration bounds"),
+                ):
+                    load_review_selection(path, repo_root=self.root)
+
+    def test_loader_enforces_the_persisted_anchor_gap(self):
+        path = self.root / "selections" / "persisted-anchor-gap.json"
+        self.select_fixture(filename=path.name)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["settings"]["min_anchor_gap_seconds"] = 30.0
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "anchor gap"),
+        ):
+            load_review_selection(path, repo_root=self.root)
+
+    def test_loader_requires_canonical_hint_ids_to_be_globally_unique(self):
+        path = self.root / "selections" / "duplicate-hint.json"
+        payload = self.select_fixture(filename=path.name)
+        target_index = next(
+            index
+            for index, clip in enumerate(payload["clips"])
+            if index > 0 and len(clip["candidate_hints"]) > 1
+        )
+        earlier_id = next(
+            hint["canonical_event_id"]
+            for clip in payload["clips"][:target_index]
+            for hint in clip["candidate_hints"]
+        )
+        target = payload["clips"][target_index]
+        target_hint = next(
+            hint
+            for hint in target["candidate_hints"]
+            if hint["canonical_event_id"] != target["anchor"]["canonical_event_id"]
+        )
+        target_hint["canonical_event_id"] = earlier_id
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "globally unique"),
+        ):
+            load_review_selection(path, repo_root=self.root)
+
+    def test_loader_matches_each_hint_to_its_merged_canonical_event(self):
+        path = self.root / "selections" / "hint-semantics.json"
+        payload = self.select_fixture(filename=path.name)
+        hint = next(
+            hint
+            for clip in payload["clips"]
+            for hint in clip["candidate_hints"]
+        )
+        hint["action"] = "tampered-action"
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "merged canonical event"),
+        ):
+            load_review_selection(path, repo_root=self.root)
+
+    def test_loader_reconstructs_minority_coverage_from_the_merged_source(self):
+        path = self.root / "selections" / "minority-coverage.json"
+        payload = self.select_fixture(filename=path.name)
+        payload["coverage"]["available_minority_candidate_ids"].pop()
+        payload["coverage"]["covered_minority_candidate_ids"].pop()
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "merged minority"),
+        ):
+            load_review_selection(path, repo_root=self.root)
+
+    def test_loader_reconstructs_scene_coverage_from_source_and_hints(self):
+        path = self.root / "selections" / "scene-coverage.json"
+        payload = self.select_fixture(filename=path.name)
+        payload["coverage"]["available_crop_scenes"] = ["far"]
+        payload["coverage"]["represented_crop_scenes"] = ["far"]
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "scene coverage"),
+        ):
+            load_review_selection(path, repo_root=self.root)
 
     def test_transfers_a_dual_view_shortfall_to_random_control(self):
         def leave_three_dual_candidates(merged):
@@ -1000,6 +1180,47 @@ class FiveBucketSelectionTests(unittest.TestCase):
                 merged_mutator=lengthen_one_minority_event,
             )
 
+    def test_names_every_unfittable_minority_candidate_in_one_error(self):
+        def lengthen_two_minority_events(merged):
+            bounds = {
+                "minority-receive-05": (900000, 940000),
+                "minority-block-05": (1000000, 1040000),
+            }
+            for event in merged["events"]:
+                if event["event_id"] in bounds:
+                    event["start_ms"], event["end_ms"] = bounds[event["event_id"]]
+
+        with self.assertRaisesRegex(
+            ActiveLearningError,
+            "minority-receive-05.*minority-block-05",
+        ):
+            self.select_fixture(
+                filename="multiple-unfittable-minority.json",
+                merged_mutator=lengthen_two_minority_events,
+            )
+
+    def test_skips_an_unfittable_nonminority_candidate(self):
+        def lengthen_nonminority_event(merged):
+            event = next(
+                event
+                for event in merged["events"]
+                if event["event_id"] == "tail-reserve-20"
+            )
+            event["start_ms"] = 570000
+            event["end_ms"] = 610000
+
+        payload = self.select_fixture(
+            filename="unfittable-nonminority.json",
+            merged_mutator=lengthen_nonminority_event,
+        )
+        hint_ids = {
+            hint["canonical_event_id"]
+            for clip in payload["clips"]
+            for hint in clip["candidate_hints"]
+        }
+        self.assertEqual(len(payload["clips"]), 40)
+        self.assertNotIn("tail-reserve-20", hint_ids)
+
     def test_rejects_when_both_available_scenes_are_not_in_candidate_hints(self):
         def leave_unselected_near_evidence(merged):
             for event in merged["events"]:
@@ -1087,6 +1308,36 @@ class FiveBucketSelectionTests(unittest.TestCase):
         )
         self.assertEqual(len(buckets_by_hint), len(set(buckets_by_hint)))
 
+    def test_agreement_bucket_accepts_high_confidence_duplicates_left_by_tail(self):
+        def make_agreement_candidates_high_confidence(merged):
+            for event in merged["events"]:
+                if (
+                    event["duplicate_group_id"] is not None
+                    and event["conflict_group_id"] is None
+                ):
+                    event["action"] = "set"
+                    event["confidence"] = 0.8
+
+        payload = self.select_fixture(
+            filename="high-confidence-agreement.json",
+            merged_mutator=make_agreement_candidates_high_confidence,
+        )
+        agreement_clips = [
+            clip
+            for clip in payload["clips"]
+            if clip["selection_bucket"] == "dual_view_agreement"
+        ]
+        self.assertEqual(len(agreement_clips), 4)
+        self.assertTrue(
+            all(
+                hint["duplicate_group_id"] is not None
+                and hint["action"] == "set"
+                and hint["confidence"] == 0.8
+                for clip in agreement_clips
+                for hint in clip["candidate_hints"]
+            )
+        )
+
     def test_dual_background_controls_use_five_second_continuous_intervals(self):
         payload = self.select_fixture(filename="background-intervals.json")
         background_clips = [
@@ -1102,6 +1353,34 @@ class FiveBucketSelectionTests(unittest.TestCase):
             )
             self.assertEqual(anchor["observed_sides"], ["far", "near"])
             self.assertEqual(clip["candidate_hints"], [])
+
+    def test_splits_a_long_continuous_background_run_into_multiple_controls(self):
+        def use_one_long_background_run(merged):
+            for run in merged["input_runs"].values():
+                run["windows"] = [
+                    {
+                        "window_index": 0,
+                        "start_seconds": 0.0,
+                        "end_seconds": 1200.0,
+                        "action": "background",
+                        "confidence": 0.99,
+                    }
+                ]
+
+        payload = self.select_fixture(
+            filename="long-background-run.json",
+            merged_mutator=use_one_long_background_run,
+        )
+        background_clips = [
+            clip
+            for clip in payload["clips"]
+            if clip["selection_bucket"] == "dual_background_control"
+        ]
+        self.assertEqual(len(background_clips), 4)
+        self.assertEqual(len({clip["time_stratum"] for clip in background_clips}), 4)
+        self.assertTrue(
+            all(5.0 <= clip["duration_seconds"] <= 30.0 for clip in background_clips)
+        )
 
     def test_merges_overlapping_nonrequired_clips_across_a_stratum_boundary(self):
         def overlap_tail_candidates(merged):
@@ -1130,6 +1409,37 @@ class FiveBucketSelectionTests(unittest.TestCase):
         )
         self.assertLessEqual(merged_clip["duration_seconds"], 30.0)
         self.assertEqual(len(payload["clips"]), 40)
+
+    def test_merges_three_overlapping_candidates_without_duplicate_reasons(self):
+        def overlap_three_tail_candidates(merged):
+            bounds = {
+                "tail-01": (214000, 215000),
+                "tail-02": (222000, 223000),
+                "tail-03": (229000, 230000),
+            }
+            for event in merged["events"]:
+                if event["event_id"] in bounds:
+                    event["start_ms"], event["end_ms"] = bounds[event["event_id"]]
+
+        payload = self.select_fixture(
+            filename="three-overlapping-tail-candidates.json",
+            merged_mutator=overlap_three_tail_candidates,
+        )
+        merged_clip = next(
+            clip
+            for clip in payload["clips"]
+            if {"tail-01", "tail-02", "tail-03"}.issubset(
+                {
+                    hint["canonical_event_id"]
+                    for hint in clip["candidate_hints"]
+                }
+            )
+        )
+        self.assertEqual(
+            len(merged_clip["selection_reasons"]),
+            len(set(merged_clip["selection_reasons"])),
+        )
+
 
 class SelectionCliTests(unittest.TestCase):
     def test_dispatches_every_selection_argument_and_preserves_prior_order(self):
@@ -1569,6 +1879,27 @@ class SelectionContractTests(unittest.TestCase):
         }
         self._write_selection(extensible)
         self.assertEqual(self._load_selection(), extensible)
+
+    def test_task_one_extensions_do_not_activate_task_two_validation(self):
+        mutations = {
+            "generic settings seed": lambda payload: payload["settings"].update(
+                seed=42
+            ),
+            "partial quota and coverage": lambda payload: (
+                payload["quota_summary"].append({"future_bucket": "review"}),
+                payload["coverage"].update(represented_time_strata=[0]),
+            ),
+            "single clip selection bucket": lambda payload: payload["clips"][
+                0
+            ].update(selection_bucket="future-review"),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(extension=name):
+                payload = copy.deepcopy(self.selection_payload)
+                mutate(payload)
+                self._write_selection(payload)
+                self.assertEqual(self._load_selection(), payload)
+                self.output_json.unlink()
 
 
 class SelectionVerifierIntegrationTests(unittest.TestCase):

@@ -87,7 +87,10 @@ Spike-Trace/
 │  ├─ merged_candidates.csv      # 与最终 JSON 一致的候选便携表格
 │  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的全量审计工作簿；不要求逐行填写
 ├─ src/spiketrace/
-│  ├─ active_learning_selection.py # 主动学习选片制品的信任链、严格校验与安全写入
+│  ├─ active_learning_selection.py # 主动学习选片的稳定公共入口
+│  ├─ _active_learning_selection_contract.py # 选片 schema、时间与设置纯函数
+│  ├─ _active_learning_selection_artifact.py # 来源信任链、制品校验与安全写入
+│  ├─ _active_learning_selector.py # 五桶候选生成与确定性编排
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
 │  ├─ domain.py                  # 标注、窗口、事件等数据对象

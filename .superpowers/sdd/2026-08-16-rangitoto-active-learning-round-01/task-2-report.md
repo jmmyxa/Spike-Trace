@@ -138,3 +138,89 @@ required extending that existing module and restricted the implementation
 files, so this task does not split selection generation from artifact
 validation. A later maintenance task should consider separating those
 responsibilities without changing the persisted contract.
+
+## Fix Round 1 (2026-08-17)
+
+### Status
+
+DONE
+
+### Findings and RED / GREEN evidence
+
+1. Long paired-background runs were passed whole to clip fitting. The RED test
+   failed on a 1,200-second continuous run with `The anchor cannot fit in a
+   legal review clip.` The selector now divides long intersections into
+   deterministic legal children; the new long-run test and existing short-run
+   test pass.
+2. Three overlapping non-required candidates appended the same merge reason
+   twice. The RED artifact failed loader validation because
+   `selection_reasons must be unique.` Merge reasons are now appended once;
+   the three-way and cross-stratum merge tests pass.
+3. The agreement pool incorrectly excluded high-confidence duplicates that
+   remained after the tail bucket. The RED test selected zero agreement clips
+   instead of four. Agreement eligibility now follows the duplicate/no-conflict
+   rule while reservation sets preserve exclusivity; priority and transfer
+   regressions pass.
+4. Fit failure stopped at the first required candidate and also aborted on an
+   optional candidate. The RED cases omitted `minority-block-05` from the
+   aggregate error and raised for `tail-reserve-20`. Unfittable optional events
+   are skipped, while every unfittable minority ID is collected into one
+   deterministic error. Four focused fit/error tests pass.
+5. Prior artifacts were trusted without a video-identity or loader-time interval
+   check. Both RED tests loaded without error. Generation and loading now compare
+   SHA-256-backed video identity and reject current/prior half-open interval
+   overlap. The two new trust tests and the existing prior-exclusion test pass.
+6. Task 2 loading trusted persisted semantic claims. Seven RED assertions loaded
+   successfully after mutations to custom duration bounds, anchor gap, global
+   hint identity, event semantics, minority coverage, or scene coverage. The
+   loader now reconstructs eligible canonical events from the pinned merged
+   payload and prior intervals, then validates every claim against that source.
+   All seven focused semantic checks pass.
+7. A generic Task 1 `settings.seed` or one clip `selection_bucket` activated
+   Task 2 validation in RED. Task 2 detection now uses complete settings,
+   quota, coverage, and clip-surface markers while still recognizing an artifact
+   with one damaged surface. Task 1 generic, partial future, and lone clip
+   extensions pass; malformed Task 2 surfaces remain rejected.
+
+### Module boundaries
+
+- `active_learning_selection.py` is the stable facade and retains the public
+  imports plus the CLI patch surface
+  `spiketrace.active_learning_selection.select_review_batch`.
+- `_active_learning_selection_contract.py` owns constants and pure schema,
+  settings, numeric, time, and interval helpers.
+- `_active_learning_selection_artifact.py` owns merged/prior reconstruction,
+  trust checks, paths, hashes, atomic JSON I/O, and loader validation.
+- `_active_learning_selector.py` owns candidate construction, ranking, merging,
+  five-bucket orchestration, and clip serialization.
+- Dependencies are one-way: artifact depends on contract; selector depends on
+  artifact and contract; the facade delegates to all three. The README program
+  tree documents the internal modules.
+
+### Complete verification
+
+Fresh commands after the split and README update:
+
+```text
+Selection module: Ran 55 tests in 1.001s, OK
+Full suite: Ran 149 tests in 3.454s, OK
+Ruff: All checks passed!
+compileall: exit code 0 (no output)
+git diff --check: exit code 0 (line-ending warnings only)
+```
+
+### Self-review
+
+- Confirmed deterministic JSON field order, SHA-256 ranking, integer-millisecond
+  decisions, atomic no-overwrite writes, and the Task 1 trust chain are retained.
+- Confirmed canonical hint IDs are unique across the batch and every hint matches
+  the verified merged event's timing, action, confidence, scenes, groups, and
+  source candidate IDs.
+- Confirmed persisted minimum/maximum durations and anchor gap are authoritative,
+  and prior intervals use half-open overlap semantics.
+- Confirmed the split preserves public imports, verifier mocking, CLI selector
+  mocking, and fault-injection coverage for atomic writes.
+
+### Concerns
+
+None remaining for Fix Round 1.
