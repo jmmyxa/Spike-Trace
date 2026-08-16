@@ -128,6 +128,18 @@ Spike-Trace/
 - [MVP 产品工作流](docs/product/mvp-workflow-design.md)
 - [数据平台与工作区设计](docs/data-platform/README.md)
 - [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)
+- [Rangitoto 首轮 40 段主动学习实现计划](docs/superpowers/plans/2026-08-16-rangitoto-active-learning-round-01.md)
+- [R3D-18 高效分阶段微调实现计划](docs/superpowers/plans/2026-08-16-action-model-efficient-finetuning.md)
+- [第二轮完整概率与不确定性选样实现计划](docs/superpowers/plans/2026-08-16-active-learning-round-two-scoring.md)
+
+上述三份实现计划已经确认，执行顺序固定为：先完成首轮 40 段复核闭环；人工结果和独立
+`val` 比赛就绪后实现并运行两阶段微调；只有新 checkpoint 生成后，才升级完整概率输出并
+制作第二轮 margin/entropy 复核批次。
+
+两阶段微调的训练模型固定从全新 Kinetics 权重开始；旧 bootstrap checkpoint 只用于同一
+`val` 上的独立对照。训练清单中每个 `train`、`val` 或 `test` 行都必须有真实比赛级
+`match_id`，并通过所有分区之间的比赛与视频内容防泄漏检查。微调还必须同时读取对应轮次的
+results JSON，核对权威累计清单哈希和派生清单的逐行前缀，不能只凭轮次名称字符串声明数据来源。
 
 下一阶段按以下顺序推进：
 
