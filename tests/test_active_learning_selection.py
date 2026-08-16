@@ -4,12 +4,14 @@ import copy
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from unittest.mock import patch
 
 from spiketrace.active_learning_selection import (
+    _relative_posix_path,
     load_review_selection,
     validate_merged_review_source,
     write_review_selection,
@@ -307,6 +309,27 @@ LITERAL_CLIPS = (
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def create_directory_link(link: Path, target: Path) -> str:
+    try:
+        link.symlink_to(target, target_is_directory=True)
+        return "symlink"
+    except OSError as symlink_error:
+        if os.name != "nt":
+            raise
+        completed = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise OSError(
+                "Could not create a directory symlink or junction: "
+                f"{completed.stderr or completed.stdout}"
+            ) from symlink_error
+        return "junction"
 
 
 def make_valid_selection_payload(source, clip_count=40):
@@ -650,20 +673,36 @@ class SelectionContractTests(unittest.TestCase):
         ):
             validate_merged_review_source(self.merged_json, repo_root=self.root)
 
-    def test_rejects_windows_drive_relative_pinned_paths(self):
-        merged = json.loads(self.merged_json.read_text(encoding="utf-8"))
-        merged["settings"]["input_runs"]["far"]["source_file"] = "C:secret.json"
-        self.merged_json.write_text(
-            json.dumps(merged, indent=2) + "\n", encoding="utf-8"
-        )
-        with (
-            patch(
-                "spiketrace.active_learning_selection.verify_dual_crop_review",
-                return_value={"verified": True},
-            ),
-            self.assertRaisesRegex(ActiveLearningError, "relative POSIX path"),
-        ):
-            validate_merged_review_source(self.merged_json, repo_root=self.root)
+    def test_rejects_windows_drive_paths_under_posix_host_semantics(self):
+        for value in ("C:secret.json", "C:/outside.json"):
+            with (
+                self.subTest(value=value),
+                patch("spiketrace.active_learning_selection.Path", PurePosixPath),
+                self.assertRaisesRegex(ActiveLearningError, "relative POSIX path"),
+            ):
+                _relative_posix_path(value, "source_file")
+
+    def test_rejects_inference_audit_link_escape_during_validate_and_load(self):
+        self._write_selection()
+        with tempfile.TemporaryDirectory() as outside_temporary:
+            outside = Path(outside_temporary).resolve()
+            (outside / "events.json").write_text("{}\n", encoding="utf-8")
+            inference_link = self.root / "outputs" / "inference"
+            link_kind = create_directory_link(inference_link, outside)
+            self.assertIn(link_kind, ("symlink", "junction"))
+
+            with (
+                patch(
+                    "spiketrace.active_learning_selection.verify_dual_crop_review",
+                    return_value={"verified": True},
+                ),
+                self.assertRaisesRegex(ActiveLearningError, "escapes repository root"),
+            ):
+                validate_merged_review_source(self.merged_json, repo_root=self.root)
+            with self.assertRaisesRegex(
+                ActiveLearningError, "escapes repository root"
+            ):
+                self._load_selection()
 
     def test_rejects_selection_pins_that_differ_from_the_merged_source(self):
         mutations = {

@@ -5,7 +5,7 @@ import json
 import math
 import os
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from .dual_crop_review import verify_dual_crop_review
@@ -117,8 +117,8 @@ def validate_merged_review_source(
             "settings.input_runs",
         )
         inference_runs = {
-            "far": _source_audit(audits["far"], "far inference run"),
-            "near": _source_audit(audits["near"], "near inference run"),
+            "far": _source_audit(audits["far"], "far inference run", root),
+            "near": _source_audit(audits["near"], "near inference run", root),
         }
         source = {
             "merged_json": _normalized_path(merged_path, root, "merged JSON"),
@@ -356,9 +356,10 @@ def _normalized_path(path: Path, root: Path, description: str) -> str:
 
 def _relative_posix_path(value: object, description: str) -> str:
     text = _nonempty_string(value, description)
-    candidate = Path(text)
+    candidate = PurePosixPath(text)
+    windows_candidate = PureWindowsPath(text)
     if (
-        candidate.drive
+        windows_candidate.drive
         or candidate.is_absolute()
         or "\\" in text
         or text.startswith("/")
@@ -391,13 +392,17 @@ def _sha256(value: object, description: str) -> str:
     return value
 
 
-def _source_audit(value: object, description: str) -> dict[str, str]:
+def _source_audit(
+    value: object, description: str, repo_root: Path
+) -> dict[str, str]:
     audit = _mapping(value, description)
     _require_exact_fields(audit, _INFERENCE_RUN_FIELDS, description)
+    source_file = _relative_posix_path(
+        audit["source_file"], f"{description} source_file"
+    )
+    _resolved_path(source_file, repo_root, f"{description} source_file")
     return {
-        "source_file": _relative_posix_path(
-            audit["source_file"], f"{description} source_file"
-        ),
+        "source_file": source_file,
         "source_file_sha256": _sha256(
             audit["source_file_sha256"], f"{description} source_file_sha256"
         ),
