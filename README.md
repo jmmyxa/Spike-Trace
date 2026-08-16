@@ -398,11 +398,33 @@ python -m unittest discover -s tests -v
 
 ### Rangitoto 双裁剪候选复核（待人工复核）
 
-远端裁剪固定为 `0,0,1920,645`，近端裁剪固定为 `0,255,1920,1080`。仓库中此前记录的
-所有 floor-sampled / inference JSON v1 计数和产物均已失效，不得继续用于人工复核。Task 5
-必须按 `center-nearest-frame-v1` 重新执行两路推理，生成显式 `source_window_indices` 的 v2
-输入，再用上述构建和验证命令重建可信产物与计数。在 Task 5 完成前，不得从现有 Rangitoto
-输出目录引用候选数、来源事件数、重复组、冲突组或动作分布。
+已按 `center-nearest-frame-v1` 完成一次全场双裁剪重算。远端裁剪为 `0,0,1920,645`，近端
+裁剪为 `0,255,1920,1080`；两路均为 format-2 显式 `source_window_indices` 输入，各有
+`16,448` 个稠密窗口。视频为 1920x1080、30 FPS、197,384 帧，SHA-256
+`0102bf5de66a86677581155d1d2e723621a2a45d5c74b0757a8a256387204fbf`；checkpoint SHA-256
+为 `bf88fb015ab61d68e49e499abff91693e94005bba777269bf573cf96d25f8200`。
+
+- far：1,483 个来源事件，`attack` 912、`set` 563、`block` 4、`serve` 2、`dig` 1、`receive` 1；
+  `events.json` SHA-256 为 `c43ba9b2eb4d065239e0158265d8362f18c7a93435a3c6846b7d70b5dfee3bcd`。
+- near：2,799 个来源事件，`attack` 1,324、`set` 1,102、`serve` 364、`receive` 7、`dig` 2；
+  `events.json` SHA-256 为 `0cecbe15f9ec2aa04d3eacb133bd1f5231855556977cfc9118fd90e96b07f92d`。
+- 合并结果：4,282 个来源候选、2,942 个复核候选、1,340 条 duplicate links（823 组）、
+  1,488 条 conflict links（495 组）；预测动作分布为 `attack` 1,202、`set` 1,361、`serve` 364、
+  `receive` 8、`block` 4、`dig` 3。合并 JSON/CSV SHA-256 分别为
+  `e79aba6e5eb3a1075819a290144198b7e393fceed94313cdf9fc171378a76e7e` /
+  `96130e7f0c4ec2ba2e7ddd697ef7df9a98fd79c35557ae4e3782f35d6f2291d4`；最终 XLSX SHA-256 为
+  `99fd44f96c3f00238725db8aa41491f711ce0f553e2765eb9f9ecc345f19cd72`。
+
+重算、合并与工作簿验证命令如下：
+
+```powershell
+.venv\Scripts\spiketrace.exe infer data\YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4 runs\rangitoto-r3d18-bootstrap\best.pt outputs\rangitoto-r3d18-bootstrap-center-nearest-v1\far --stride-seconds 0.4 --confidence-threshold 0.2 --batch-size 8 --device cuda --crop 0,0,1920,645
+.venv\Scripts\spiketrace.exe infer data\YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4 runs\rangitoto-r3d18-bootstrap\best.pt outputs\rangitoto-r3d18-bootstrap-center-nearest-v1\near --stride-seconds 0.4 --confidence-threshold 0.2 --batch-size 8 --device cuda --crop 0,255,1920,1080
+.venv\Scripts\spiketrace.exe build-dual-crop-review outputs\rangitoto-r3d18-bootstrap-center-nearest-v1\far\events.json outputs\rangitoto-r3d18-bootstrap-center-nearest-v1\near\events.json outputs\rangitoto-r3d18-bootstrap-review --repo-root .
+.venv\Scripts\spiketrace.exe verify-dual-crop-review outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json --csv outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.csv
+node tools\build_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx outputs\.rangitoto-review-build\previews
+node tools\verify_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx
+```
 
 人工只编辑工作簿的五个黄色列：`人工确认动作`、`人工开始时间`、`人工结束时间`、`人工侧别`
 和 `备注`。`人工确认动作` 非空即代表已复核，`background` 用于拒绝误检；没有额外状态列、
