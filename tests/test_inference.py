@@ -47,6 +47,7 @@ class InferenceTests(unittest.TestCase):
                 "window_seconds": 0.4,
                 "labels": ["background", "serve"],
                 "model_version": "test-v1",
+                "sampling_contract": "legacy-invalid-contract",
             }
             with patch(
                 "spiketrace.inference.load_checkpoint",

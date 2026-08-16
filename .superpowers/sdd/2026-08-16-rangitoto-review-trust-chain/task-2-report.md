@@ -187,3 +187,86 @@ Output: `All checks passed!`; `git diff --check` reported no whitespace errors.
 No known implementation concerns. The untracked
 `outputs/rangitoto-r3d18-bootstrap-review/` directory predates this task and is
 intentionally excluded from the commit.
+
+## Fix Round 1: Sampling Contract Cannot Be Polluted by a Checkpoint
+
+### Finding and Fix
+
+`src/spiketrace/inference.py` previously wrote
+`checkpoint.get("sampling_contract", SAMPLING_CONTRACT)` into inference JSON.
+That allowed a mocked, legacy, or otherwise incompatible checkpoint value to
+replace the repository-wide sampling contract in emitted evidence. The settings
+now always serialize `SAMPLING_CONTRACT` (`center-nearest-frame-v1`). Missing
+checkpoint fields remain compatible because the output no longer depends on that
+optional checkpoint value.
+
+### Files Changed
+
+- `src/spiketrace/inference.py`
+- `tests/test_inference.py`
+- `.superpowers/sdd/2026-08-16-rangitoto-review-trust-chain/task-2-report.md`
+
+### RED
+
+The inference fixture now supplies an explicit
+`"sampling_contract": "legacy-invalid-contract"` value and asserts that the
+serialized output remains `SAMPLING_CONTRACT`.
+
+Command:
+
+```powershell
+.venv\Scripts\python.exe -m unittest tests.test_inference -v
+```
+
+Output:
+
+```text
+Processed 5/5 windows
+AssertionError: 'legacy-invalid-contract' != 'center-nearest-frame-v1'
+Ran 1 test in 0.021s
+FAILED (failures=1)
+```
+
+### GREEN and Focused Verification
+
+Command:
+
+```powershell
+.venv\Scripts\python.exe -m unittest tests.test_inference -v
+```
+
+Output:
+
+```text
+Processed 5/5 windows
+Ran 1 test in 0.018s
+OK
+```
+
+Related Task 2 focused command:
+
+```powershell
+.venv\Scripts\python.exe -m unittest tests.test_events tests.test_outputs tests.test_inference -v
+```
+
+Output:
+
+```text
+Ran 12 tests in 0.026s
+OK
+```
+
+Style command:
+
+```powershell
+.venv\Scripts\ruff.exe check src\spiketrace\inference.py tests\test_inference.py
+git diff --check
+```
+
+Output: `All checks passed!`; `git diff --check` reported no whitespace errors.
+
+### Concerns
+
+No known concerns. The existing untracked
+`outputs/rangitoto-r3d18-bootstrap-review/` directory remains untouched and
+unstaged.

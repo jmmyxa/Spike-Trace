@@ -103,7 +103,7 @@ def infer_video(
         "min_event_seconds": min_event_seconds,
         "batch_size": batch_size,
         "crop": list(crop) if crop is not None else None,
-        "sampling_contract": checkpoint.get("sampling_contract", SAMPLING_CONTRACT),
+        "sampling_contract": SAMPLING_CONTRACT,
     }
     json_path, csv_path = write_inference_outputs(
         output_dir,
