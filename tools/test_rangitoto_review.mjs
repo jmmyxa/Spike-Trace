@@ -32,6 +32,25 @@ function run(executable, args, context) {
   return result;
 }
 
+function runVerifier(mergedJson, workbookPath) {
+  return spawnSync(
+    process.execPath,
+    [path.join(ROOT, "tools", "verify_rangitoto_review.mjs"), mergedJson, workbookPath],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: { ...process.env, PYTHONUTF8: "1" },
+    },
+  );
+}
+
+async function exportTamperedWorkbook(sourcePath, destinationPath, mutate) {
+  const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(sourcePath));
+  mutate(workbook);
+  const exported = await SpreadsheetFile.exportXlsx(workbook);
+  await exported.save(destinationPath);
+}
+
 function parseNdjson(ndjson) {
   return String(ndjson ?? "")
     .split(/\r?\n/)
@@ -68,6 +87,7 @@ async function main() {
     const mergedJson = path.join(mergedDir, "merged_candidates.json");
     const mergedCsv = path.join(mergedDir, "merged_candidates.csv");
     const workbookPath = path.join(temporaryRoot, "rangitoto_action_review.xlsx");
+    const previousWorkbookLink = path.join(temporaryRoot, "previous-workbook-link.xlsx");
     const previewDir = path.join(temporaryRoot, "previews");
     const farFixture = path.join(ROOT, "tests", "fixtures", "dual_crop_review", "far.json");
     const nearFixture = path.join(ROOT, "tests", "fixtures", "dual_crop_review", "near.json");
@@ -78,6 +98,9 @@ async function main() {
       "format-2 fixture build",
     );
     const merged = JSON.parse(await fs.readFile(mergedJson, "utf8"));
+    const previousWorkbookContents = Buffer.from("existing-review-workbook");
+    await fs.writeFile(workbookPath, previousWorkbookContents);
+    await fs.link(workbookPath, previousWorkbookLink);
 
     run(
       process.execPath,
@@ -88,6 +111,25 @@ async function main() {
       process.execPath,
       [path.join(ROOT, "tools", "verify_rangitoto_review.mjs"), mergedJson, workbookPath],
       "review workbook verification",
+    );
+    assert.ok(
+      (await fs.readFile(previousWorkbookLink)).equals(previousWorkbookContents),
+      "final workbook replacement must rename the verified temp file instead of overwriting the old file",
+    );
+
+    const rejectedMergedJson = path.join(temporaryRoot, "rejected-format-1.json");
+    const rejectedOutput = path.join(temporaryRoot, "existing-final.xlsx");
+    await fs.writeFile(rejectedMergedJson, JSON.stringify({ ...merged, format_version: 1 }));
+    await fs.writeFile(rejectedOutput, previousWorkbookContents);
+    const rejectedBuild = spawnSync(
+      process.execPath,
+      [path.join(ROOT, "tools", "build_rangitoto_review.mjs"), rejectedMergedJson, rejectedOutput, previewDir],
+      { cwd: ROOT, encoding: "utf8", env: { ...process.env, PYTHONUTF8: "1" } },
+    );
+    assert.notEqual(rejectedBuild.status, 0, "format-1 workbook build must fail");
+    assert.ok(
+      (await fs.readFile(rejectedOutput)).equals(previousWorkbookContents),
+      "a failed build must leave an existing final workbook intact",
     );
 
     const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(workbookPath));
@@ -104,6 +146,11 @@ async function main() {
 
     assert.deepEqual(candidateHeaders.slice(-5), MANUAL_HEADERS, "candidate sheet must end with five manual columns");
     assert.equal(candidateHeaders.filter((header) => MANUAL_HEADERS.includes(header)).length, 5, "manual headers must appear exactly once");
+    assert.equal(
+      candidateSheet.getRange("R3:V3").format.fill.color.hex,
+      "#FFF4CC",
+      "manual headers must use the same yellow fill as editable cells",
+    );
     assert.equal(candidateSheet.getRange(`A4:A${candidateLastRow}`).values.filter(([value]) => value !== null && value !== "").length, candidateCount);
     assert.equal(sourceSheet.getRange(`A4:A${sourceLastRow}`).values.filter(([value]) => value !== null && value !== "").length, sourceCount);
     assert.ok(
@@ -116,6 +163,48 @@ async function main() {
     }
     assert.deepEqual(validationValues(candidateSheet.getRange(`R4:R${candidateLastRow}`)), ACTIONS);
     assert.deepEqual(validationValues(candidateSheet.getRange(`U4:U${candidateLastRow}`)), SIDES);
+
+    const tamperCases = [
+      {
+        name: "candidate provenance",
+        mutate: (tampered) => { tampered.worksheets.getItem("候选动作").getRange("N4").values = [["tampered:source"]]; },
+      },
+      {
+        name: "source candidate ownership",
+        mutate: (tampered) => { tampered.worksheets.getItem("来源事件").getRange("A4").values = [["tampered-owner"]]; },
+      },
+      {
+        name: "source side",
+        mutate: (tampered) => { tampered.worksheets.getItem("来源事件").getRange("C4").values = [["tampered-side"]]; },
+      },
+      {
+        name: "source event ID",
+        mutate: (tampered) => { tampered.worksheets.getItem("来源事件").getRange("D4").values = [["tampered-event"]]; },
+      },
+      {
+        name: "source member indices",
+        mutate: (tampered) => { tampered.worksheets.getItem("来源事件").getRange("T4").values = [["999"]]; },
+      },
+      {
+        name: "appended candidate row",
+        mutate: (tampered) => {
+          tampered.worksheets.getItem("候选动作").getRange(`A${candidateLastRow + 1}`).values = [["extra-candidate"]];
+        },
+      },
+      {
+        name: "appended source row",
+        mutate: (tampered) => {
+          tampered.worksheets.getItem("来源事件").getRange(`A${sourceLastRow + 1}`).values = [["extra-source"]];
+        },
+      },
+    ];
+    const acceptedTampering = [];
+    for (const [index, tamperCase] of tamperCases.entries()) {
+      const tamperedPath = path.join(temporaryRoot, `tampered-${index}.xlsx`);
+      await exportTamperedWorkbook(workbookPath, tamperedPath, tamperCase.mutate);
+      if (runVerifier(mergedJson, tamperedPath).status === 0) acceptedTampering.push(tamperCase.name);
+    }
+    assert.deepEqual(acceptedTampering, [], `verifier accepted workbook tampering: ${acceptedTampering.join(", ")}`);
 
     const formulaErrors = await workbook.inspect({
       kind: "match",

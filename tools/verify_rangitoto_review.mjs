@@ -61,6 +61,156 @@ function normalizeBlank(value) {
   return value === undefined || value === "" ? null : value;
 }
 
+function sameArray(left, right) {
+  return Array.isArray(left) && Array.isArray(right)
+    && left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
+function formatTime(ms) {
+  const sign = ms < 0 ? "-" : "";
+  let remaining = Math.abs(ms);
+  const hours = Math.floor(remaining / 3_600_000);
+  remaining -= hours * 3_600_000;
+  const minutes = Math.floor(remaining / 60_000);
+  remaining -= minutes * 60_000;
+  const seconds = Math.floor(remaining / 1000);
+  const millis = remaining - seconds * 1000;
+  return `${sign}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
+}
+
+function normalizeRows(rows) {
+  return rows.map((row) => row.map(normalizeBlank));
+}
+
+function reconstructExpectedRows(payload) {
+  const sourceEventByCandidateId = new Map();
+  const windowBySideAndIndex = new Map();
+  const allSourceCandidateIds = new Set();
+
+  for (const side of ["far", "near"]) {
+    const run = payload.input_runs[side];
+    const windows = new Map();
+    for (const window of run.windows) {
+      invariant(Number.isInteger(window.window_index), `${side} window_index must be an integer.`);
+      invariant(!windows.has(window.window_index), `Duplicate ${side} window_index ${window.window_index}.`);
+      windows.set(window.window_index, window);
+    }
+    windowBySideAndIndex.set(side, windows);
+    for (const sourceEvent of run.events) {
+      const candidateId = `${side}:${sourceEvent.event_id}`;
+      invariant(!sourceEventByCandidateId.has(candidateId), `Duplicate source candidate ID ${candidateId}.`);
+      sourceEventByCandidateId.set(candidateId, sourceEvent);
+      allSourceCandidateIds.add(candidateId);
+    }
+  }
+
+  const candidateRows = [];
+  const sourceRows = [];
+  const referencedCandidateIds = new Set();
+  for (const event of payload.events) {
+    invariant(Array.isArray(event.source_event_refs) && event.source_event_refs.length > 0, `${event.event_id} has no source_event_refs.`);
+    const directCandidateIds = [];
+    let directWindowCount = 0;
+    let directWindowMaxConfidence = -Infinity;
+    for (const ref of event.source_event_refs) {
+      const expectedCandidateId = `${ref.side}:${ref.source_event_id}`;
+      invariant(ref.candidate_id === expectedCandidateId, `${event.event_id}: malformed candidate ID ${ref.candidate_id}.`);
+      invariant(!referencedCandidateIds.has(ref.candidate_id), `Source candidate ${ref.candidate_id} is referenced more than once.`);
+      const sourceEvent = sourceEventByCandidateId.get(ref.candidate_id);
+      invariant(sourceEvent, `${event.event_id}: source candidate ${ref.candidate_id} does not exist.`);
+      invariant(
+        sameArray(ref.member_window_indices, sourceEvent.source_window_indices),
+        `${event.event_id}: member windows differ for ${ref.candidate_id}.`,
+      );
+      invariant(
+        ref.selected_as_primary === (ref.candidate_id === event.primary_source_event_id),
+        `${event.event_id}: primary flag differs for ${ref.candidate_id}.`,
+      );
+
+      const windowIndex = windowBySideAndIndex.get(ref.side);
+      const memberWindows = ref.member_window_indices.map((index) => {
+        invariant(windowIndex.has(index), `${event.event_id}: ${ref.side} window ${index} does not exist.`);
+        return windowIndex.get(index);
+      });
+      const memberMaxConfidence = Math.max(...memberWindows.map((window) => window.confidence));
+      directWindowCount += memberWindows.length;
+      directWindowMaxConfidence = Math.max(directWindowMaxConfidence, memberMaxConfidence);
+      directCandidateIds.push(ref.candidate_id);
+      referencedCandidateIds.add(ref.candidate_id);
+
+      const run = payload.input_runs[ref.side];
+      sourceRows.push([
+        event.event_id,
+        ref.candidate_id,
+        ref.side,
+        sourceEvent.event_id,
+        sourceEvent.action,
+        sourceEvent.confidence,
+        sourceEvent.start_ms / 1000,
+        sourceEvent.end_ms / 1000,
+        formatTime(sourceEvent.start_ms),
+        formatTime(sourceEvent.end_ms),
+        ref.selected_as_primary ? "是" : "否",
+        event.duplicate_group_id,
+        event.conflict_group_id,
+        memberWindows.length,
+        memberMaxConfidence,
+        JSON.stringify(run.settings.crop),
+        sourceEvent.model_version,
+        sourceEvent.source,
+        sourceEvent.status,
+        ref.member_window_indices.join("|"),
+      ]);
+    }
+
+    invariant(sameArray(directCandidateIds, event.source_event_ids), `${event.event_id}: source candidate order differs.`);
+    invariant(directWindowCount === event.source_window_count, `${event.event_id}: source window count differs.`);
+    invariant(directWindowMaxConfidence === event.source_window_max_confidence, `${event.event_id}: source window max confidence differs.`);
+    candidateRows.push([
+      event.event_id,
+      event.video_id,
+      event.action,
+      formatTime(event.start_ms),
+      formatTime(event.end_ms),
+      event.start_ms / 1000,
+      event.end_ms / 1000,
+      event.side,
+      event.observed_sides.join("|"),
+      event.confidence,
+      event.conflict_group_id,
+      event.duplicate_group_id,
+      event.merge_decision,
+      directCandidateIds.join("|"),
+      event.source_window_count,
+      event.source_window_max_confidence,
+      event.review_reason,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  }
+
+  assert.deepEqual(
+    [...referencedCandidateIds].sort(),
+    [...allSourceCandidateIds].sort(),
+    "Canonical refs must cover every embedded source event exactly once.",
+  );
+  invariant(sourceRows.length === allSourceCandidateIds.size, "Source row count differs from embedded source event count.");
+  return { candidateRows, sourceRows };
+}
+
+function assertExactUsedRange(sheet, rowCount, columnCount, context) {
+  const usedRange = sheet.getUsedRange();
+  assert.deepEqual(
+    [usedRange.rowIndex, usedRange.columnIndex, usedRange.rowCount, usedRange.columnCount],
+    [0, 0, rowCount, columnCount],
+    `${context}: used range must be exact`,
+  );
+}
+
 function validationValues(range, context) {
   const validation = range.dataValidation;
   const values = validation?.rule?.values ?? validation?.values;
@@ -95,23 +245,31 @@ export function validateMergedShape(payload) {
 
 export async function verifyWorkbook(payload, workbook, context = "workbook") {
   validateMergedShape(payload);
+  const expected = reconstructExpectedRows(payload);
   const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
   assert.deepEqual(sheetNamesFromInspection(sheetInspection), SHEET_NAMES, `${context}: sheet order/names`);
 
-  const candidateCount = payload.events.length;
-  const sourceCount = payload.input_runs.far.events.length + payload.input_runs.near.events.length;
+  const candidateCount = expected.candidateRows.length;
+  const sourceCount = expected.sourceRows.length;
   const candidateLastRow = candidateCount + 3;
   const sourceLastRow = sourceCount + 3;
   const candidates = workbook.worksheets.getItem("候选动作");
   const sources = workbook.worksheets.getItem("来源事件");
 
+  assertExactUsedRange(candidates, candidateLastRow, CANDIDATE_HEADERS.length, `${context}: candidate sheet`);
+  assertExactUsedRange(sources, sourceLastRow, SOURCE_HEADERS.length, `${context}: source sheet`);
   assert.deepEqual(candidates.getRange("A3:V3").values[0], CANDIDATE_HEADERS, `${context}: candidate headers`);
   assert.deepEqual(sources.getRange("A3:T3").values[0], SOURCE_HEADERS, `${context}: source headers`);
-  const candidateIds = candidates.getRange(`A4:A${candidateLastRow}`).values.map(([value]) => value);
-  assert.deepEqual(candidateIds, payload.events.map((event) => event.event_id), `${context}: candidate rows`);
-  const sourceIds = sources.getRange(`B4:B${sourceLastRow}`).values.map(([value]) => value);
-  invariant(sourceIds.length === sourceCount && sourceIds.every(Boolean), `${context}: source row count`);
-  invariant(new Set(sourceIds).size === sourceCount, `${context}: source candidate IDs must be unique.`);
+  assert.deepEqual(
+    normalizeRows(candidates.getRange(`A4:V${candidateLastRow}`).values),
+    normalizeRows(expected.candidateRows),
+    `${context}: candidate projection`,
+  );
+  assert.deepEqual(
+    normalizeRows(sources.getRange(`A4:T${sourceLastRow}`).values),
+    normalizeRows(expected.sourceRows),
+    `${context}: source projection`,
+  );
 
   for (const row of candidates.getRange(`R4:V${candidateLastRow}`).values) {
     assert.deepEqual(row.map(normalizeBlank), [null, null, null, null, null], `${context}: manual cells must be blank`);

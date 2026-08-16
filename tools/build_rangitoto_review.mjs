@@ -334,7 +334,9 @@ function buildWorkbook(payload, projection) {
   );
   candidates.getRange("A3:V3").values = [CANDIDATE_HEADERS];
   candidates.getRange(`A4:V${candidateLastRow}`).values = projection.candidateRows;
-  styleHeader(candidates.getRange("A3:V3"));
+  styleHeader(candidates.getRange("A3:Q3"));
+  styleHeader(candidates.getRange("R3:V3"), COLORS.yellow);
+  candidates.getRange("R3:V3").format.font = { bold: true, color: COLORS.yellowDark };
   styleBody(candidates.getRange(`A4:V${candidateLastRow}`));
   const candidateTable = candidates.tables.add(`A3:V${candidateLastRow}`, true, "RangitotoCandidateReview");
   candidateTable.style = "TableStyleMedium2";
@@ -472,7 +474,7 @@ async function main() {
     const exported = await SpreadsheetFile.exportXlsx(workbook);
     await exported.save(temporaryXlsxPath);
     const verification = await verifyWorkbookFile(mergedJsonPath, temporaryXlsxPath);
-    await fs.copyFile(temporaryXlsxPath, outputXlsxPath);
+    await fs.rename(temporaryXlsxPath, outputXlsxPath);
     console.log(JSON.stringify({ output: outputXlsxPath, previews, ...verification }));
   } finally {
     await fs.rm(temporaryXlsxPath, { force: true });
