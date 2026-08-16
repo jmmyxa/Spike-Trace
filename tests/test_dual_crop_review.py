@@ -50,6 +50,33 @@ def _write_inputs(directory, far_payload, near_payload):
 
 
 class DualCropReviewBuildTests(unittest.TestCase):
+    def test_normalizes_runtime_repo_checkpoint_to_repo_relative_path(self):
+        far_payload, near_payload = _load_fixtures()
+        runtime_checkpoint = str(ROOT / "runs" / "rangitoto-test" / "best.pt")
+        far_payload["settings"]["checkpoint"] = runtime_checkpoint
+        near_payload["settings"]["checkpoint"] = runtime_checkpoint
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            far_path, near_path = _write_inputs(
+                directory, far_payload, near_payload
+            )
+            payload = build_dual_crop_review(
+                far_path,
+                near_path,
+                directory / "review",
+                repo_root=ROOT,
+            )
+
+        self.assertEqual(
+            payload["input_runs"]["far"]["settings"]["checkpoint"],
+            "runs/rangitoto-test/best.pt",
+        )
+        self.assertEqual(
+            payload["input_runs"]["near"]["settings"]["checkpoint"],
+            "runs/rangitoto-test/best.pt",
+        )
+
     def test_builds_exact_deterministic_merge_and_csv(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory) / "review"
