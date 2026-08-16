@@ -1,3 +1,5 @@
+import hashlib
+import importlib.metadata
 import json
 import tempfile
 import unittest
@@ -35,8 +37,10 @@ class InferenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             temporary_path = Path(temporary_directory)
             video_path = temporary_path / "fixture.avi"
+            checkpoint_path = temporary_path / "checkpoint.pt"
             output_dir = temporary_path / "outputs"
             _write_test_video(video_path)
+            checkpoint_path.write_bytes(b"checkpoint fixture")
             checkpoint = {
                 "num_frames": 2,
                 "image_size": 4,
@@ -57,7 +61,7 @@ class InferenceTests(unittest.TestCase):
                 try:
                     result = infer_video(
                         video_path,
-                        temporary_path / "checkpoint.pt",
+                        checkpoint_path,
                         output_dir,
                         stride_seconds=0.2,
                         confidence_threshold=0.0,
@@ -68,14 +72,36 @@ class InferenceTests(unittest.TestCase):
 
             self.assertEqual(result["window_count"], 5)
             payload = json.loads((output_dir / "events.json").read_text(encoding="utf-8"))
+            self.assertEqual(payload["format_version"], 2)
             self.assertEqual(
                 [(item["start_seconds"], item["end_seconds"]) for item in payload["windows"]],
                 [(0.0, 0.4), (0.2, 0.6), (0.4, 0.8), (0.6, 1.0), (0.8, 1.2)],
             )
             self.assertEqual({item["action"] for item in payload["windows"]}, {"serve"})
             self.assertEqual(
+                payload["events"][0]["source_window_indices"], [0, 1, 2, 3, 4]
+            )
+            self.assertEqual(
+                [item["window_index"] for item in payload["windows"]], [0, 1, 2, 3, 4]
+            )
+            self.assertEqual(
                 payload["settings"]["sampling_contract"], SAMPLING_CONTRACT
             )
+            self.assertEqual(
+                payload["settings"]["checkpoint_sha256"],
+                hashlib.sha256(checkpoint_path.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(
+                payload["settings"]["video_sha256"],
+                hashlib.sha256(video_path.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(payload["settings"]["opencv_version"], str(cv2.__version__))
+            self.assertEqual(payload["settings"]["torch_version"], str(torch.__version__))
+            self.assertEqual(
+                payload["settings"]["torchvision_version"],
+                importlib.metadata.version("torchvision"),
+            )
+            self.assertEqual(payload["settings"]["video"], payload["video"])
 
 
 if __name__ == "__main__":

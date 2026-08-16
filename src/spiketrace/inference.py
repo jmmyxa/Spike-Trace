@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import hashlib
+import importlib.metadata
 from pathlib import Path
+
+import cv2
 
 from .constants import SAMPLING_CONTRACT
 from .domain import ActionWindow
-from .events import merge_action_windows
+from .events import merge_action_windows_with_provenance
 from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
 from .outputs import write_inference_outputs
 from .video import (
@@ -73,7 +77,7 @@ def infer_video(
         completed += len(batch_times)
         print(f"Processed {completed}/{len(times)} windows", flush=True)
 
-    events = merge_action_windows(
+    events, event_window_indices = merge_action_windows_with_provenance(
         windows,
         video_id=metadata.path.stem,
         model_version=model_version,
@@ -84,6 +88,14 @@ def infer_video(
     settings = {
         "device": selected_device,
         "checkpoint": str(Path(checkpoint_path).expanduser().resolve()),
+        "checkpoint_sha256": _file_sha256(checkpoint_path),
+        "video_sha256": _file_sha256(metadata.path),
+        "opencv_version": str(cv2.__version__),
+        "torch_version": str(torch.__version__),
+        "torchvision_version": importlib.metadata.version("torchvision"),
+        "video": metadata.to_dict(),
+        "num_frames": num_frames,
+        "image_size": image_size,
         "window_seconds": window_seconds,
         "stride_seconds": stride_seconds,
         "confidence_threshold": confidence_threshold,
@@ -100,6 +112,7 @@ def infer_video(
         events=events,
         windows=windows,
         settings=settings,
+        event_window_indices=event_window_indices,
     )
     return {
         "video": metadata.to_dict(),
@@ -109,3 +122,11 @@ def infer_video(
         "events_json": str(json_path),
         "events_csv": str(csv_path),
     }
+
+
+def _file_sha256(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).expanduser().resolve().open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
