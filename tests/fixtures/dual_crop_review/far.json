@@ -1,0 +1,113 @@
+{
+  "format_version": 2,
+  "video": {
+    "path": "E:\\external-video\\rangitoto.mp4",
+    "fps": 25.0,
+    "frame_count": 250000,
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 10000.0
+  },
+  "model_version": "rangitoto-test-v1",
+  "settings": {
+    "device": "cuda",
+    "checkpoint": "E:\\Spike-Trace\\runs\\rangitoto-test\\best.pt",
+    "checkpoint_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "video_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "opencv_version": "4.13.0",
+    "torch_version": "2.13.0",
+    "torchvision_version": "0.28.0",
+    "video": {
+      "path": "E:\\external-video\\rangitoto.mp4",
+      "fps": 25.0,
+      "frame_count": 250000,
+      "width": 1920,
+      "height": 1080,
+      "duration_seconds": 10000.0
+    },
+    "num_frames": 16,
+    "image_size": 112,
+    "window_seconds": 1.0,
+    "stride_seconds": 0.4,
+    "confidence_threshold": 0.2,
+    "merge_gap_seconds": 0.25,
+    "min_event_seconds": 0.2,
+    "batch_size": 8,
+    "crop": [0, 0, 1920, 645],
+    "sampling_contract": "center-nearest-frame-v1"
+  },
+  "events": [
+    {
+      "video_id": "rangitoto",
+      "event_id": "evt_far_serve",
+      "start_ms": 0,
+      "end_ms": 1000,
+      "action": "serve",
+      "confidence": 0.9,
+      "team_side": null,
+      "player_number": null,
+      "status": "predicted",
+      "model_version": "rangitoto-test-v1",
+      "source": "sliding_window",
+      "source_window_indices": [0]
+    },
+    {
+      "video_id": "rangitoto",
+      "event_id": "evt_far_attack",
+      "start_ms": 2000,
+      "end_ms": 3000,
+      "action": "attack",
+      "confidence": 0.8,
+      "team_side": null,
+      "player_number": null,
+      "status": "predicted",
+      "model_version": "rangitoto-test-v1",
+      "source": "sliding_window",
+      "source_window_indices": [1]
+    },
+    {
+      "video_id": "rangitoto",
+      "event_id": "evt_far_block",
+      "start_ms": 4000,
+      "end_ms": 5000,
+      "action": "block",
+      "confidence": 0.7,
+      "team_side": null,
+      "player_number": null,
+      "status": "predicted",
+      "model_version": "rangitoto-test-v1",
+      "source": "sliding_window",
+      "source_window_indices": [2]
+    }
+  ],
+  "windows": [
+    {
+      "window_index": 0,
+      "start_seconds": 0.0,
+      "end_seconds": 1.0,
+      "action": "serve",
+      "confidence": 0.9
+    },
+    {
+      "window_index": 1,
+      "start_seconds": 2.0,
+      "end_seconds": 3.0,
+      "action": "attack",
+      "confidence": 0.8
+    },
+    {
+      "window_index": 2,
+      "start_seconds": 4.0,
+      "end_seconds": 5.0,
+      "action": "block",
+      "confidence": 0.7
+    },
+    {
+      "window_index": 3,
+      "start_seconds": 6.0,
+      "end_seconds": 7.0,
+      "action": "background",
+      "confidence": 0.99
+    }
+  ]
+}

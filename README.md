@@ -83,13 +83,14 @@ Spike-Trace/
 ├─ outputs/expansion-batch-02/
 │  └─ *_expansion_batch_02.xlsx  # 已填写并纳入版本控制的第二批完整回合补标工作簿
 ├─ outputs/rangitoto-r3d18-bootstrap-review/
-│  ├─ merged_candidates.json     # Rangitoto 双裁剪合并结果、来源证据和分组规则
-│  ├─ merged_candidates.csv      # 与 JSON 候选逐行对应的便携表格
-│  └─ rangitoto_action_review.xlsx # 跨设备人工复核工作簿
+│  ├─ merged_candidates.json     # 旧 floor-sampled 双裁剪结果，Task 5 重建前不可复核
+│  ├─ merged_candidates.csv      # 旧版便携表格，Task 5 重建前不可复核
+│  └─ rangitoto_action_review.xlsx # 旧版工作簿，Task 5 重建前不可复核
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
 │  ├─ domain.py                  # 标注、窗口、事件等数据对象
+│  ├─ dual_crop_review.py         # 确定性双裁剪合并、自包含验证与 JSON/CSV 输出
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
 │  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
@@ -102,7 +103,11 @@ Spike-Trace/
 │  ├─ timecode.py                # 视频秒数与可读时间互转
 │  ├─ training.py                # R3D-18/Tiny3D 训练与验证
 │  └─ video.py                   # 视频检查、原画幅帧采样和片段采样
-├─ tests/                        # 不依赖真实视频或外部权重的单元测试
+├─ tests/
+│  ├─ fixtures/dual_crop_review/ # 四窗口 far/near inference JSON v2 字面 fixture
+│  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
+│  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
+│  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
 └─ tools/                        # 冒烟数据和人工复核辅助工具
 ```
 
@@ -294,7 +299,25 @@ spiketrace infer data\videos\match_020.mp4 runs\r3d18-v01\best.pt outputs\match_
 
 `crop_x1` 至 `crop_y2` 用于只保留目标球队所在半场。四项全部留空表示使用完整画面；推理时使用相同的 `--crop`。完整比赛发生换边时，应按局次分别推理对应半场。
 
-输出目录包含 `events.json` 和带 UTF-8 BOM 的 `events.csv`。JSON 同时保留每个滑窗的原始预测，方便以后校对和重新合并事件。
+输出目录包含 `events.json` 和带 UTF-8 BOM 的 `events.csv`。`events.json` 使用格式版本
+`2`：`windows` 为每个滑窗保存唯一、稠密的 `window_index`，每个事件通过非空且严格递增的
+`source_window_indices` 明确引用自己的成员窗口。窗口区间为半开区间，采样合同固定为
+`center-nearest-frame-v1`；双裁剪合并只接受这种 v2 显式成员关系，不会从动作和时间重建旧版成员。
+
+两路 v2 推理完成后，可生成并独立验证确定性的双裁剪复核材料：
+
+```powershell
+spiketrace build-dual-crop-review outputs\rangitoto-far\events.json `
+  outputs\rangitoto-near\events.json outputs\rangitoto-r3d18-bootstrap-review `
+  --repo-root .
+spiketrace verify-dual-crop-review `
+  outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json `
+  --csv outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.csv
+```
+
+构建结果嵌入规范化后的 far/near 输入、来源文件 SHA-256 和规范化 payload SHA-256；验证命令
+只依赖合并 JSON 即可重算候选、分组、主来源和可选 CSV。来源文件 SHA-256 仅作为 provenance
+保留，自包含验证器不会在没有原输入文件时声称重新验证该字节哈希。
 
 ## 冒烟测试
 
@@ -362,26 +385,12 @@ python -m unittest discover -s tests -v
 
 ### Rangitoto 双裁剪候选复核（待人工复核）
 
-已使用 `runs/rangitoto-r3d18-bootstrap/best.pt` 扫描 Rangitoto 全场视频。远端裁剪为
-`0,0,1920,645`，近端裁剪为 `0,255,1920,1080`；两路都使用 `1.0s` 窗、`0.4s`
-步长和 `0.2` 阈值，各覆盖 `16,448` 个滑窗。far 输入产生 `1,430` 个事件，near 输入产生
-`2,749` 个事件，共 `4,179` 个来源事件。
-
-双裁剪合并后共有 `2,876` 个候选：`810` 个同动作跨侧重复组被合并，涉及 `1,303`
-条重复链接；`474` 个不同动作跨侧冲突组保留为多行，涉及 `1,431` 条冲突链接和
-`1,832` 个冲突候选。所有 `4,179` 个来源事件都能从合并结果反向追溯。候选动作分布为：
-`attack` 1,166、`block` 2、`dig` 4、`receive` 7、`serve` 373、`set` 1,324。
-
-可跨设备同步的复核材料保存在 `outputs/rangitoto-r3d18-bootstrap-review/`：
-
-- `merged_candidates.json`：完整合并结果、来源窗口、输入 SHA-256、重复组和冲突组。
-- `merged_candidates.csv`：与 JSON 的 2,876 个候选逐行对应。
-- `rangitoto_action_review.xlsx`：只需填写黄色列“人工确认动作、人工开始时间、人工结束时间、人工侧别、备注”。
-
-人工确认动作非空即代表该行已复核；填写 `background` 表示没有有效动作。时间允许只填写到秒。
-不同动作冲突会以相同 `conflict_group_id` 保留为多行，需要分别判断。`receive` 仅指接发球，
-`dig` 指针对对方进攻的防守起球。当前尚未指定画面中哪队是“我方”；`far`/`near` 只代表
-画面远端/近端，不代表球队。
+远端裁剪固定为 `0,0,1920,645`，近端裁剪固定为 `0,255,1920,1080`。仓库中此前记录的
+`16,448` 窗口/侧、`4,179` 来源事件、`2,876` 合并候选以及相应重复组、冲突组和动作分布，
+都来自旧的 floor-sampled、inference JSON v1 重建流程。它们只保留为历史规模证据，不再是
+可审计复核结果；`outputs/rangitoto-r3d18-bootstrap-review/` 内现有 JSON、CSV 和工作簿也不得
+继续用于人工复核。Task 5 必须按 `center-nearest-frame-v1` 重新执行两路推理，生成显式
+`source_window_indices` 的 v2 输入，再用上述构建和验证命令重建可信产物与计数。
 
 该 bootstrap checkpoint 只用美国队对德国队同一场比赛的 90 个训练窗口训练。Rangitoto
 预测明显集中在 `set`/`attack`，现阶段只能用于发现候选，不能声明泛化准确率。只有完成整场
@@ -439,9 +448,10 @@ Precision、Recall、Macro F1 和逐类混淆矩阵；不得先把 Rangitoto 真
 ## 当前限制
 
 当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
-Rangitoto 第二场完整比赛已经完成双裁剪候选扫描，但尚未人工复核，因此还不能作为独立
-验证集或准确率依据。代码已经跑通自训练工程链路、外部 YOLO 权重评估、整场顺序推理、
-双裁剪候选合并和人工复核工作簿生成，但训练数据仍以 39 个 `background` 为主，
+Rangitoto 第二场完整比赛的旧双裁剪扫描已经失效，必须先由 Task 5 依照当前采样与 v2
+provenance 合同重建，之后仍需人工复核，才能作为独立验证集或准确率依据。代码已经跑通
+自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并，但训练数据仍以
+39 个 `background` 为主，
 `set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
 预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
 结果、一传到位率或上场时间。继续添加同场训练窗口只能增加训练素材，无法证明模型泛化精度；

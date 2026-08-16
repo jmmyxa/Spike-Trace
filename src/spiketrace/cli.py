@@ -108,6 +108,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--device", choices=("auto", "cpu", "cuda", "mps"), default="auto"
     )
 
+    dual_crop_parser = subparsers.add_parser(
+        "build-dual-crop-review",
+        help="Build deterministic far/near review artifacts from inference JSON v2.",
+    )
+    dual_crop_parser.add_argument("far_json", type=Path)
+    dual_crop_parser.add_argument("near_json", type=Path)
+    dual_crop_parser.add_argument("output_dir", type=Path)
+    dual_crop_parser.add_argument("--repo-root", type=Path, required=True)
+
+    verify_dual_crop_parser = subparsers.add_parser(
+        "verify-dual-crop-review",
+        help="Recompute and verify a deterministic dual-crop review artifact.",
+    )
+    verify_dual_crop_parser.add_argument("merged_json", type=Path)
+    verify_dual_crop_parser.add_argument("--csv", type=Path)
+
     pretrained_parser = subparsers.add_parser(
         "evaluate-pretrained",
         help="Evaluate pretrained YOLO action weights against an annotation CSV.",
@@ -195,6 +211,21 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             device=args.device,
             crop=args.crop,
         )
+
+    if args.command == "build-dual-crop-review":
+        from .dual_crop_review import build_dual_crop_review
+
+        return build_dual_crop_review(
+            args.far_json,
+            args.near_json,
+            args.output_dir,
+            repo_root=args.repo_root,
+        )
+
+    if args.command == "verify-dual-crop-review":
+        from .dual_crop_review import verify_dual_crop_review
+
+        return verify_dual_crop_review(args.merged_json, csv_path=args.csv)
 
     if args.command == "evaluate-pretrained":
         from .pretrained import evaluate_pretrained_model
