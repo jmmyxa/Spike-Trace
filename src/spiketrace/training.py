@@ -114,6 +114,7 @@ def train_action_model(
     device: str = "auto",
     seed: int = 42,
     num_workers: int = 0,
+    allow_train_only: bool = False,
 ) -> dict[str, object]:
     torch = require_torch()
     if epochs <= 0 or batch_size <= 0 or learning_rate <= 0:
@@ -127,8 +128,10 @@ def train_action_model(
     val_records = [record for record in records if record.split == "val"]
     if not train_records:
         raise ValueError("The manifest must contain at least one train record.")
-    if not val_records:
+    if not val_records and not allow_train_only:
         raise ValueError("The manifest must contain at least one val record.")
+    selection_split = "val" if val_records else "train"
+    generalization_metrics_available = bool(val_records)
 
     labels = list(ACTION_LABELS)
     output = Path(output_dir).expanduser().resolve()
@@ -139,9 +142,6 @@ def train_action_model(
     train_dataset = VideoClipDataset(
         train_records, labels=labels, num_frames=num_frames, image_size=image_size
     )
-    val_dataset = VideoClipDataset(
-        val_records, labels=labels, num_frames=num_frames, image_size=image_size
-    )
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
@@ -149,13 +149,18 @@ def train_action_model(
         num_workers=num_workers,
         pin_memory=selected_device == "cuda",
     )
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=num_workers,
-        pin_memory=selected_device == "cuda",
-    )
+    val_loader = None
+    if val_records:
+        val_dataset = VideoClipDataset(
+            val_records, labels=labels, num_frames=num_frames, image_size=image_size
+        )
+        val_loader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=selected_device == "cuda",
+        )
 
     model = create_model(model_name, len(labels), pretrained=pretrained).to(
         selected_device
@@ -187,6 +192,9 @@ def train_action_model(
         "window_seconds": window_seconds,
         "device": selected_device,
         "seed": seed,
+        "allow_train_only": allow_train_only,
+        "selection_split": selection_split,
+        "generalization_metrics_available": generalization_metrics_available,
         "labels": labels,
         "action_label_schema_version": ACTION_LABEL_SCHEMA_VERSION,
     }
@@ -200,18 +208,22 @@ def train_action_model(
         train_loss, train_targets, train_predictions = _run_epoch(
             model, train_loader, criterion, selected_device, optimizer
         )
-        val_loss, val_targets, val_predictions = _run_epoch(
-            model, val_loader, criterion, selected_device
-        )
         train_metrics = classification_metrics(train_targets, train_predictions, labels)
-        val_metrics = classification_metrics(val_targets, val_predictions, labels)
         epoch_result = {
             "epoch": epoch,
             "train_loss": round(train_loss, 6),
-            "val_loss": round(val_loss, 6),
             "train": train_metrics,
-            "val": val_metrics,
+            "selection_split": selection_split,
         }
+        selection_metrics = train_metrics
+        if val_loader is not None:
+            val_loss, val_targets, val_predictions = _run_epoch(
+                model, val_loader, criterion, selected_device
+            )
+            val_metrics = classification_metrics(val_targets, val_predictions, labels)
+            epoch_result["val_loss"] = round(val_loss, 6)
+            epoch_result["val"] = val_metrics
+            selection_metrics = val_metrics
         history.append(epoch_result)
         print(json.dumps(epoch_result, ensure_ascii=False))
 
@@ -227,13 +239,17 @@ def train_action_model(
             metrics=epoch_result,
         )
         save_checkpoint(checkpoint, output / "latest.pt")
-        if float(val_metrics["macro_f1"]) > best_macro_f1:
-            best_macro_f1 = float(val_metrics["macro_f1"])
+        if float(selection_metrics["macro_f1"]) > best_macro_f1:
+            best_macro_f1 = float(selection_metrics["macro_f1"])
             save_checkpoint(checkpoint, output / "best.pt")
 
     report = {
         "config": config,
         "best_macro_f1": best_macro_f1,
+        "best_selection_macro_f1": best_macro_f1,
+        "selection_split": selection_split,
+        "generalization_metrics_available": generalization_metrics_available,
+        "allow_train_only": allow_train_only,
         "history": history,
         "best_checkpoint": str(output / "best.pt"),
         "latest_checkpoint": str(output / "latest.pt"),

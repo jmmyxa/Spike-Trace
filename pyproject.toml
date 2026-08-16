@@ -9,7 +9,7 @@ description = "Train and run volleyball action recognition models on match video
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-  { name = "Jimmyxia25" }
+  { name = "jmmyxa" }
 ]
 dependencies = [
   "numpy>=1.26,<3",

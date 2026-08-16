@@ -18,7 +18,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 - 比赛元数据保存美国队每局近端/远端的已确认有效比赛区间和对应半场裁剪。
 - 训练集/验证集损失、逐类 Precision/Recall/F1 和混淆矩阵。
 - 可复现 checkpoint，包含标签、预处理参数、指标和模型版本。
-- 整场视频滑动窗口推理、动作事件合并、JSON/CSV 导出。
+- 整场视频滑动窗口推理（单次顺序解码整段视频）、动作事件合并、JSON/CSV 导出。
 
 ## 环境安装
 
@@ -82,13 +82,17 @@ Spike-Trace/
 │  └─ *_expansion_batch_01.xlsx  # 可跨设备填写并提交的完整回合补标工作簿
 ├─ outputs/expansion-batch-02/
 │  └─ *_expansion_batch_02.xlsx  # 已填写并纳入版本控制的第二批完整回合补标工作簿
+├─ outputs/rangitoto-r3d18-bootstrap-review/
+│  ├─ merged_candidates.json     # Rangitoto 双裁剪合并结果、来源证据和分组规则
+│  ├─ merged_candidates.csv      # 与 JSON 候选逐行对应的便携表格
+│  └─ rangitoto_action_review.xlsx # 跨设备人工复核工作簿
 ├─ src/spiketrace/
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
 │  ├─ domain.py                  # 标注、窗口、事件等数据对象
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
-│  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理
+│  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
 │  ├─ manifest.py                # 标注 CSV 加载、校验与摘要
 │  ├─ metrics.py                 # 分类指标和混淆矩阵
 │  ├─ ml.py                      # PyTorch 模型、设备和 checkpoint
@@ -117,7 +121,7 @@ Spike-Trace/
 
 下一阶段按以下顺序推进：
 
-1. 引入第二场完整比赛，并按比赛隔离为 `val` 或 `test`，建立可信动作模型基线。
+1. 完成 Rangitoto 第二场比赛的候选复核，并按整场隔离为 `val` 或 `test`，建立可信动作模型基线。
 2. 在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
 3. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
 4. 最后接入本地浏览器界面、SQLite 保存和 CSV/JSON 导出，形成端到端 MVP。
@@ -168,6 +172,24 @@ spiketrace train data\annotations.csv runs\r3d18-v01 `
 - `latest.pt`：最后一个 epoch 的权重。
 - `training_config.json`：训练配置和数据集摘要。
 - `metrics.json`：每个 epoch 的完整评估结果。
+
+默认情况下，训练清单必须同时包含 `train` 和 `val` 记录，`best.pt` 按验证集 Macro F1 选择。对于尚未拥有独立比赛验证集的明确 bootstrap 场景，可以显式加入 `--allow-train-only`；程序会跳过验证 loader 和验证 epoch，并按训练集 Macro F1 选择 `best.pt`。此时 `training_config.json` 和 `metrics.json` 会标记 `selection_split: "train"`、`generalization_metrics_available: false` 和 `allow_train_only: true`，每个 epoch 仅报告训练指标。
+
+例如，当前 90 条已确认的美国队对德国队窗口全部正确保留在 `train` 分区，可先训练一个用于生成 Rangitoto 候选、供人工复核的 R3D-18 checkpoint：
+
+```powershell
+spiketrace train `
+  data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv `
+  runs\rangitoto-r3d18-bootstrap `
+  --model r3d18 `
+  --model-version rangitoto-r3d18-bootstrap-v0.1 `
+  --pretrained `
+  --epochs 20 `
+  --batch-size 4 `
+  --allow-train-only
+```
+
+训练集指标不是独立准确率或泛化能力测量，不能作为模型成绩发布；这个 checkpoint 仅用于在 Rangitoto 视频中生成待人工复核的候选窗口。获得另一场完整比赛并建立独立 `val` 分区后，应恢复常规训练和验证流程。
 
 ## 评估预训练 YOLO 动作模型
 
@@ -338,6 +360,34 @@ python -m unittest discover -s tests -v
 同一局内可以固定我方半场裁剪；第 5 局中途换边后必须切换裁剪。训练与验证必须使用
 不同的完整比赛，不能把本场不同局拆到不同数据集分区。
 
+### Rangitoto 双裁剪候选复核（待人工复核）
+
+已使用 `runs/rangitoto-r3d18-bootstrap/best.pt` 扫描 Rangitoto 全场视频。远端裁剪为
+`0,0,1920,645`，近端裁剪为 `0,255,1920,1080`；两路都使用 `1.0s` 窗、`0.4s`
+步长和 `0.2` 阈值，各覆盖 `16,448` 个滑窗。far 输入产生 `1,430` 个事件，near 输入产生
+`2,749` 个事件，共 `4,179` 个来源事件。
+
+双裁剪合并后共有 `2,876` 个候选：`810` 个同动作跨侧重复组被合并，涉及 `1,303`
+条重复链接；`474` 个不同动作跨侧冲突组保留为多行，涉及 `1,431` 条冲突链接和
+`1,832` 个冲突候选。所有 `4,179` 个来源事件都能从合并结果反向追溯。候选动作分布为：
+`attack` 1,166、`block` 2、`dig` 4、`receive` 7、`serve` 373、`set` 1,324。
+
+可跨设备同步的复核材料保存在 `outputs/rangitoto-r3d18-bootstrap-review/`：
+
+- `merged_candidates.json`：完整合并结果、来源窗口、输入 SHA-256、重复组和冲突组。
+- `merged_candidates.csv`：与 JSON 的 2,876 个候选逐行对应。
+- `rangitoto_action_review.xlsx`：只需填写黄色列“人工确认动作、人工开始时间、人工结束时间、人工侧别、备注”。
+
+人工确认动作非空即代表该行已复核；填写 `background` 表示没有有效动作。时间允许只填写到秒。
+不同动作冲突会以相同 `conflict_group_id` 保留为多行，需要分别判断。`receive` 仅指接发球，
+`dig` 指针对对方进攻的防守起球。当前尚未指定画面中哪队是“我方”；`far`/`near` 只代表
+画面远端/近端，不代表球队。
+
+该 bootstrap checkpoint 只用美国队对德国队同一场比赛的 90 个训练窗口训练。Rangitoto
+预测明显集中在 `set`/`attack`，现阶段只能用于发现候选，不能声明泛化准确率。只有完成整场
+人工复核，并把 Rangitoto 作为与训练比赛完全隔离的 `val` 或 `test` 后，才能计算可信的
+Precision、Recall、Macro F1 和逐类混淆矩阵；不得先把 Rangitoto 真值混入训练集再报告测试成绩。
+
 ### 预训练权重兼容性基线
 
 2026-08-09 已在第一批 73 条扩展清单上重跑上游六类 YOLO 权重；68 条二次复核清单的结果保留为直接对比基线：
@@ -388,10 +438,13 @@ python -m unittest discover -s tests -v
 
 ## 当前限制
 
-当前只有一场真实比赛和 90 个训练窗口，没有可用于生产的模型权重。代码已经跑通
-自训练工程链路、外部 YOLO 权重评估和人工复核回写，但数据仍以 39 个 `background` 为主，
+当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
+Rangitoto 第二场完整比赛已经完成双裁剪候选扫描，但尚未人工复核，因此还不能作为独立
+验证集或准确率依据。代码已经跑通自训练工程链路、外部 YOLO 权重评估、整场顺序推理、
+双裁剪候选合并和人工复核工作簿生成，但训练数据仍以 39 个 `background` 为主，
 `set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
 预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
 结果、一传到位率或上场时间。继续添加同场训练窗口只能增加训练素材，无法证明模型泛化精度；
-因此下一步先加入另一场完整比赛作为独立验证集，再决定是否继续微调动作模型。与此同时，只在
-少量已确认回合上制作号码归属原型，验证“球员轨迹 -> 人工号码确认 -> 动作事件绑定”是否可行。
+因此下一步先完成 Rangitoto 候选复核并将整场保留为独立 `val` 或 `test`，再决定是否继续微调
+动作模型。与此同时，只在少量已确认回合上制作号码归属原型，验证“球员轨迹 -> 人工号码确认
+-> 动作事件绑定”是否可行。

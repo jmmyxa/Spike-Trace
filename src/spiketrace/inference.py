@@ -6,7 +6,11 @@ from .domain import ActionWindow
 from .events import merge_action_windows
 from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
 from .outputs import write_inference_outputs
-from .video import inspect_video, iter_window_times, sample_video_clip
+from .video import (
+    inspect_video,
+    iter_sequential_video_clip_batches,
+    iter_window_times,
+)
 
 
 def infer_video(
@@ -42,19 +46,16 @@ def infer_video(
         )
     )
     windows: list[ActionWindow] = []
-    for batch_start in range(0, len(times), batch_size):
-        batch_times = times[batch_start : batch_start + batch_size]
-        tensors = []
-        for start, end in batch_times:
-            frames = sample_video_clip(
-                metadata.path,
-                start,
-                end,
-                num_frames=num_frames,
-                image_size=image_size,
-                crop=crop,
-            )
-            tensors.append(frames_to_tensor(frames))
+    completed = 0
+    for batch_times, clips in iter_sequential_video_clip_batches(
+        metadata.path,
+        times,
+        num_frames=num_frames,
+        image_size=image_size,
+        batch_size=batch_size,
+        crop=crop,
+    ):
+        tensors = [frames_to_tensor(clip) for clip in clips]
         batch = torch.stack(tensors).to(selected_device)
         with torch.no_grad():
             probabilities = torch.softmax(model(batch), dim=1).detach().cpu()
@@ -68,7 +69,7 @@ def infer_video(
                     confidence=round(float(score), 6),
                 )
             )
-        completed = min(batch_start + len(batch_times), len(times))
+        completed += len(batch_times)
         print(f"Processed {completed}/{len(times)} windows", flush=True)
 
     events = merge_action_windows(

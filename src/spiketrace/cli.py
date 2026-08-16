@@ -82,6 +82,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train_parser.add_argument("--seed", type=int, default=42)
     train_parser.add_argument("--num-workers", type=int, default=0)
+    train_parser.add_argument(
+        "--allow-train-only",
+        action="store_true",
+        help="Train without validation records; use training metrics for checkpoint selection.",
+    )
 
     infer_parser = subparsers.add_parser(
         "infer", help="Run sliding-window inference on a complete video."
@@ -172,6 +177,7 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             device=args.device,
             seed=args.seed,
             num_workers=args.num_workers,
+            allow_train_only=args.allow_train_only,
         )
 
     if args.command == "infer":

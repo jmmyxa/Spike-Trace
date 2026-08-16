@@ -18,6 +18,11 @@ outputs/expansion-batch-01/*
 !outputs/expansion-batch-02/
 outputs/expansion-batch-02/*
 !outputs/expansion-batch-02/usa_germany_2024_expansion_batch_02.xlsx
+!outputs/rangitoto-r3d18-bootstrap-review/
+outputs/rangitoto-r3d18-bootstrap-review/*
+!outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json
+!outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.csv
+!outputs/rangitoto-r3d18-bootstrap-review/rangitoto_action_review.xlsx
 checkpoints/
 *.pt
 *.pth
