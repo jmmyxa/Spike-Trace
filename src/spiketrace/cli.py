@@ -26,6 +26,13 @@ def _positive_float(value: str) -> float:
     return parsed
 
 
+def _time_strata(value: str) -> int:
+    parsed = int(value)
+    if parsed < 10:
+        raise argparse.ArgumentTypeError("value must be at least 10")
+    return parsed
+
+
 def _crop(value: str) -> tuple[int, int, int, int]:
     try:
         coordinates = tuple(int(item.strip()) for item in value.split(","))
@@ -123,6 +130,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_dual_crop_parser.add_argument("merged_json", type=Path)
     verify_dual_crop_parser.add_argument("--csv", type=Path)
+
+    selection_parser = subparsers.add_parser(
+        "select-review-batch",
+        help="Select a deterministic 40-clip active-learning review batch.",
+    )
+    selection_parser.add_argument("merged_json", type=Path)
+    selection_parser.add_argument("output_json", type=Path)
+    selection_parser.add_argument("--repo-root", type=Path, required=True)
+    selection_parser.add_argument("--round-number", type=_positive_int, default=1)
+    selection_parser.add_argument("--seed", type=int, default=42)
+    selection_parser.add_argument(
+        "--preferred-clip-seconds", type=_positive_float, default=15.0
+    )
+    selection_parser.add_argument(
+        "--min-clip-seconds", type=_positive_float, default=5.0
+    )
+    selection_parser.add_argument(
+        "--max-clip-seconds", type=_positive_float, default=30.0
+    )
+    selection_parser.add_argument(
+        "--min-anchor-gap-seconds", type=_positive_float, default=5.0
+    )
+    selection_parser.add_argument("--time-strata", type=_time_strata, default=10)
+    selection_parser.add_argument(
+        "--previous-selection", type=Path, action="append", default=[]
+    )
 
     pretrained_parser = subparsers.add_parser(
         "evaluate-pretrained",
@@ -226,6 +259,23 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         from .dual_crop_review import verify_dual_crop_review
 
         return verify_dual_crop_review(args.merged_json, csv_path=args.csv)
+
+    if args.command == "select-review-batch":
+        from .active_learning_selection import select_review_batch
+
+        return select_review_batch(
+            args.merged_json,
+            args.output_json,
+            repo_root=args.repo_root,
+            round_number=args.round_number,
+            seed=args.seed,
+            preferred_clip_seconds=args.preferred_clip_seconds,
+            min_clip_seconds=args.min_clip_seconds,
+            max_clip_seconds=args.max_clip_seconds,
+            min_anchor_gap_seconds=args.min_anchor_gap_seconds,
+            time_strata=args.time_strata,
+            previous_selection_paths=args.previous_selection,
+        )
 
     if args.command == "evaluate-pretrained":
         from .pretrained import evaluate_pretrained_model
