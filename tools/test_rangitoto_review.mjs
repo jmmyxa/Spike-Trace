@@ -81,6 +81,11 @@ function validationValues(range) {
 
 async function main() {
   await fs.access(PYTHON);
+  const readme = await fs.readFile(path.join(ROOT, "README.md"), "utf8");
+  for (const stalePhrase of ["旧双裁剪扫描已经失效", "必须先由 Task 5", "因此下一步先完成 Rangitoto 候选复核"]) {
+    assert.equal(readme.includes(stalePhrase), false, `README must not retain stale status phrase: ${stalePhrase}`);
+  }
+  assert.match(readme, /nearest-v1[\s\S]*2,942[\s\S]*人工复核/);
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), "spiketrace-rangitoto-review-"));
   try {
     const mergedDir = path.join(temporaryRoot, "merged");
@@ -140,6 +145,7 @@ async function main() {
     const sourceCount = Object.values(merged.input_runs).reduce((total, inputRun) => total + inputRun.events.length, 0);
     const candidateSheet = workbook.worksheets.getItem("候选动作");
     const sourceSheet = workbook.worksheets.getItem("来源事件");
+    const overviewSheet = workbook.worksheets.getItem("概览");
     const candidateLastRow = candidateCount + 3;
     const sourceLastRow = sourceCount + 3;
     const candidateHeaders = candidateSheet.getRange("A3:V3").values[0];
@@ -163,6 +169,36 @@ async function main() {
     }
     assert.deepEqual(validationValues(candidateSheet.getRange(`R4:R${candidateLastRow}`)), ACTIONS);
     assert.deepEqual(validationValues(candidateSheet.getRange(`U4:U${candidateLastRow}`)), SIDES);
+
+    assert.ok(candidateSheet.getRange("B:B").format.columnWidthPx >= 240, "candidate video ID column must be wide enough for wrapped values");
+    assert.equal(candidateSheet.getRange("B4:B10").format.wrapText, true, "candidate video IDs must wrap");
+    assert.ok(candidateSheet.getRange("4:4").format.rowHeightPx >= 60, "candidate rows must leave room for wrapped video IDs");
+    assert.equal(candidateSheet.getRange("B4").values[0][0], merged.events[0].video_id, "candidate video ID must remain full text");
+    assert.ok(sourceSheet.getRange("T:T").format.columnWidthPx >= 400, "source member-index column must be wide enough for wrapped values");
+    assert.equal(sourceSheet.getRange("T4:T10").format.wrapText, true, "source member indexes must wrap");
+    const sourceMemberIndexValues = sourceSheet.getRange(`T4:T${sourceLastRow}`).values;
+    const expectedMemberIndexValues = merged.events.flatMap((event) =>
+      event.source_event_refs.map((reference) => reference.member_window_indices.join("|")),
+    );
+    assert.deepEqual(
+      sourceMemberIndexValues.map(([value]) => value),
+      expectedMemberIndexValues,
+      "source member-index text must remain complete after layout formatting",
+    );
+    const longestSourceRow = sourceMemberIndexValues.reduce(
+      (best, [value], index) => (value.length > best.length ? { length: value.length, row: index + 4 } : best),
+      { length: 0, row: 4 },
+    );
+    assert.ok(sourceSheet.getRange(`${longestSourceRow.row}:${longestSourceRow.row}`).format.rowHeightPx >= 72, "source rows must leave room for wrapped member indexes");
+    assert.ok(
+      sourceMemberIndexValues.every(([value]) => typeof value === "string"),
+      "source member-index values must remain full text strings",
+    );
+    assert.equal(overviewSheet.getRange("B14:I15").format.wrapText, true, "overview provenance must wrap");
+    assert.ok(overviewSheet.getRange("14:14").format.rowHeightPx >= 60, "overview provenance rows must leave room for wrapped values");
+    for (const column of ["B", "C", "G", "H", "I"]) {
+      assert.ok(overviewSheet.getRange(`${column}:${column}`).format.columnWidthPx >= 200, `overview ${column} provenance column must be wide enough`);
+    }
 
     const tamperCases = [
       {

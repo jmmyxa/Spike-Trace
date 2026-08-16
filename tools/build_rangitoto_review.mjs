@@ -322,9 +322,9 @@ function buildWorkbook(payload, projection) {
   ];
   styleHeader(overview.getRange("A13:I13"), COLORS.navy);
   styleBody(overview.getRange("A14:I18"));
-  overview.getRange("B14:C18").format.wrapText = true;
-  overview.getRange("14:18").format.rowHeightPx = 38;
-  setWidths(overview, { A: 82, B: 300, C: 340, D: 76, E: 76, F: 140, G: 180, H: 170, I: 190 });
+  overview.getRange("B14:I18").format.wrapText = true;
+  overview.getRange("14:18").format.rowHeightPx = 64;
+  setWidths(overview, { A: 82, B: 360, C: 420, D: 76, E: 76, F: 160, G: 220, H: 220, I: 240 });
 
   addTitle(
     candidates,
@@ -360,13 +360,14 @@ function buildWorkbook(payload, projection) {
   candidates.freezePanes.freezeRows(3);
   candidates.freezePanes.freezeColumns(2);
   setWidths(candidates, {
-    A: 132, B: 104, C: 86, D: 126, E: 126, F: 98, G: 98, H: 82, I: 96, J: 92, K: 104,
+    A: 132, B: 250, C: 86, D: 126, E: 126, F: 98, G: 98, H: 82, I: 96, J: 92, K: 104,
     L: 104, M: 250, N: 320, O: 96, P: 116, Q: 360, R: 132, S: 116, T: 116, U: 94, V: 230,
   });
+  candidates.getRange(`B4:B${candidateLastRow}`).format.wrapText = true;
   candidates.getRange(`M4:N${candidateLastRow}`).format.wrapText = true;
   candidates.getRange(`Q4:Q${candidateLastRow}`).format.wrapText = true;
   candidates.getRange(`V4:V${candidateLastRow}`).format.wrapText = true;
-  candidates.getRange(`4:${candidateLastRow}`).format.rowHeightPx = 46;
+  candidates.getRange(`4:${candidateLastRow}`).format.rowHeightPx = 64;
 
   addTitle(
     sources,
@@ -388,9 +389,14 @@ function buildWorkbook(payload, projection) {
   sources.freezePanes.freezeColumns(2);
   setWidths(sources, {
     A: 132, B: 216, C: 72, D: 196, E: 86, F: 92, G: 92, H: 92, I: 126, J: 126,
-    K: 80, L: 104, M: 104, N: 104, O: 118, P: 148, Q: 190, R: 116, S: 100, T: 132,
+    K: 80, L: 104, M: 104, N: 104, O: 118, P: 148, Q: 190, R: 116, S: 100, T: 400,
   });
-  sources.getRange(`4:${sourceLastRow}`).format.rowHeightPx = 32;
+  sources.getRange(`T4:T${sourceLastRow}`).format.wrapText = true;
+  for (const [index, row] of projection.sourceRows.entries()) {
+    const memberIndexText = row[19];
+    const estimatedLines = Math.ceil(memberIndexText.length / 54);
+    sources.getRange(`${index + 4}:${index + 4}`).format.rowHeightPx = Math.max(72, estimatedLines * 18 + 20);
+  }
 
   addTitle(
     labels,
