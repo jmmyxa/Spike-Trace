@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from spiketrace.constants import ACTION_LABEL_SCHEMA_VERSION
+from spiketrace.constants import ACTION_LABEL_SCHEMA_VERSION, SAMPLING_CONTRACT
 from spiketrace.ml import load_checkpoint
 from spiketrace.training import train_action_model
 
@@ -159,6 +159,7 @@ class TrainingConfigTests(unittest.TestCase):
         self.assertEqual(
             config["action_label_schema_version"], ACTION_LABEL_SCHEMA_VERSION
         )
+        self.assertEqual(config["sampling_contract"], SAMPLING_CONTRACT)
 
 
 class TrainingCommandTests(unittest.TestCase):

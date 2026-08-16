@@ -8,6 +8,7 @@ import cv2
 import numpy as np
 import torch
 
+from spiketrace.constants import SAMPLING_CONTRACT
 from spiketrace.inference import infer_video
 
 
@@ -72,6 +73,9 @@ class InferenceTests(unittest.TestCase):
                 [(0.0, 0.4), (0.2, 0.6), (0.4, 0.8), (0.6, 1.0), (0.8, 1.2)],
             )
             self.assertEqual({item["action"] for item in payload["windows"]}, {"serve"})
+            self.assertEqual(
+                payload["settings"]["sampling_contract"], SAMPLING_CONTRACT
+            )
 
 
 if __name__ == "__main__":

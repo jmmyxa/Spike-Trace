@@ -5,7 +5,7 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
-from .constants import ACTION_LABEL_SCHEMA_VERSION, ACTION_LABELS
+from .constants import ACTION_LABEL_SCHEMA_VERSION, ACTION_LABELS, SAMPLING_CONTRACT
 from .domain import AnnotationRecord
 from .manifest import load_manifest, summarize_manifest
 from .metrics import classification_metrics
@@ -197,6 +197,7 @@ def train_action_model(
         "generalization_metrics_available": generalization_metrics_available,
         "labels": labels,
         "action_label_schema_version": ACTION_LABEL_SCHEMA_VERSION,
+        "sampling_contract": SAMPLING_CONTRACT,
     }
     (output / "training_config.json").write_text(
         json.dumps(config, ensure_ascii=False, indent=2), encoding="utf-8"

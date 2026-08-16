@@ -7,7 +7,11 @@ from typing import Any
 
 import numpy as np
 
-from .constants import ACTION_LABEL_SCHEMA_VERSION, CHECKPOINT_FORMAT_VERSION
+from .constants import (
+    ACTION_LABEL_SCHEMA_VERSION,
+    CHECKPOINT_FORMAT_VERSION,
+    SAMPLING_CONTRACT,
+)
 from .errors import CheckpointError
 
 KINETICS_MEAN = (0.43216, 0.394666, 0.37645)
@@ -108,6 +112,7 @@ def make_checkpoint(
     window_seconds: float,
     epoch: int,
     metrics: dict[str, object],
+    sampling_contract: str = SAMPLING_CONTRACT,
 ) -> dict[str, Any]:
     return {
         "format_version": CHECKPOINT_FORMAT_VERSION,
@@ -115,6 +120,7 @@ def make_checkpoint(
         "model_version": model_version,
         "labels": list(labels),
         "action_label_schema_version": ACTION_LABEL_SCHEMA_VERSION,
+        "sampling_contract": sampling_contract,
         "num_frames": num_frames,
         "image_size": image_size,
         "window_seconds": window_seconds,
@@ -167,6 +173,10 @@ def load_checkpoint(checkpoint_path: str | Path, *, device: str):
         raise CheckpointError(
             f"Unsupported checkpoint format: {checkpoint['format_version']}"
         )
+    checkpoint = dict(checkpoint)
+    sampling_contract = checkpoint.setdefault("sampling_contract", SAMPLING_CONTRACT)
+    if sampling_contract != SAMPLING_CONTRACT:
+        raise CheckpointError(f"Unsupported sampling contract: {sampling_contract}")
 
     labels = checkpoint["labels"]
     model = create_model(checkpoint["model_name"], len(labels), pretrained=False)

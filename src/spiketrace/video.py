@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from math import isfinite
+from math import floor, isfinite
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +17,41 @@ class _PendingClip:
     frame_indices: tuple[int, ...]
     frames: list[np.ndarray | None]
     next_frame_slot: int = 0
+
+
+def clip_sample_frame_indices(
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    num_frames: int,
+    fps: float,
+    frame_count: int,
+) -> tuple[int, ...]:
+    if (
+        not isfinite(start_seconds)
+        or not isfinite(end_seconds)
+        or not isfinite(fps)
+        or start_seconds < 0
+        or end_seconds <= start_seconds
+        or num_frames <= 0
+        or fps <= 0
+        or frame_count <= 0
+    ):
+        raise VideoError("Sampling parameters are invalid.")
+    duration = end_seconds - start_seconds
+    return tuple(
+        min(
+            frame_count - 1,
+            max(
+                0,
+                floor(
+                    (start_seconds + (index + 0.5) * duration / num_frames) * fps
+                    + 0.5
+                ),
+            ),
+        )
+        for index in range(num_frames)
+    )
 
 
 def _cv2():
@@ -77,26 +112,26 @@ def sample_video_frames(
     if not capture.isOpened():
         raise VideoError(f"OpenCV could not open video: {path}")
 
-    frames: list[np.ndarray] = []
-    sample_times = np.linspace(
-        start_seconds,
-        end_seconds,
-        num=num_frames,
-        endpoint=False,
-        dtype=np.float64,
-    )
-    sample_times += (end_seconds - start_seconds) / (2 * num_frames)
-
     try:
-        for timestamp in sample_times:
-            capture.set(cv2.CAP_PROP_POS_MSEC, float(timestamp * 1000.0))
+        fps = float(capture.get(cv2.CAP_PROP_FPS))
+        frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_indices = clip_sample_frame_indices(
+            start_seconds,
+            end_seconds,
+            num_frames=num_frames,
+            fps=fps,
+            frame_count=frame_count,
+        )
+        frames: list[np.ndarray] = []
+        for frame_index in frame_indices:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
             ok, frame = capture.read()
             if not ok or frame is None:
                 if frames:
                     frames.append(frames[-1].copy())
                     continue
                 raise VideoError(
-                    f"Could not decode frame at {timestamp:.3f}s from {path}"
+                    f"Could not decode frame {frame_index} from {path}"
                 )
             if crop is not None:
                 x1, y1, x2, y2 = crop
@@ -234,17 +269,12 @@ def iter_sequential_video_clip_batches(
                 raise VideoError("Windows must be ordered by nondecreasing start and end time.")
             previous_start = start_seconds
             previous_end = end_seconds
-            sample_times = np.linspace(
+            frame_indices = clip_sample_frame_indices(
                 start_seconds,
                 end_seconds,
-                num=num_frames,
-                endpoint=False,
-                dtype=np.float64,
-            )
-            sample_times += (end_seconds - start_seconds) / (2 * num_frames)
-            frame_indices = tuple(
-                min(frame_count - 1, max(0, int(np.floor(timestamp * fps + 1e-9))))
-                for timestamp in sample_times
+                num_frames=num_frames,
+                fps=fps,
+                frame_count=frame_count,
             )
             return _PendingClip(
                 times=(start_seconds, end_seconds),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .constants import SAMPLING_CONTRACT
 from .domain import ActionWindow
 from .events import merge_action_windows
 from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
@@ -90,6 +91,7 @@ def infer_video(
         "min_event_seconds": min_event_seconds,
         "batch_size": batch_size,
         "crop": list(crop) if crop is not None else None,
+        "sampling_contract": checkpoint.get("sampling_contract", SAMPLING_CONTRACT),
     }
     json_path, csv_path = write_inference_outputs(
         output_dir,
