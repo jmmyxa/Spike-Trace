@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import spiketrace.review_batch as review_batch_module
 from spiketrace.active_learning_selection import (
     validate_merged_review_source,
     write_review_selection,
@@ -123,6 +124,12 @@ class ReviewProxyBatchTests(unittest.TestCase):
             )
         self.output_dir = self.root / "review-batch"
 
+    def _write_raw_selection(self, payload: dict[str, object]) -> None:
+        self.selection.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
     def _write_proxy_side_effect(self, _video, output_path, _start, _end, **_kwargs):
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,6 +213,64 @@ class ReviewProxyBatchTests(unittest.TestCase):
             build_review_proxies(self.selection, self.output_dir, repo_root=self.root)
 
         self.assertEqual(calls, 1)
+        self.assertFalse(self.output_dir.exists())
+        self.assertEqual(list(self.root.glob(".review-batch.tmp-*")), [])
+
+    def test_selection_swap_between_parse_and_hash_is_rejected(self):
+        real_snapshot = review_batch_module._load_selection_snapshot
+        swapped = False
+        tampered = copy.deepcopy(self.selection_payload)
+        tampered["clips"][0]["clip_id"] = "rewritten-clip-001"
+
+        def snapshot_then_swap(path, repo_root):
+            nonlocal swapped
+            result = real_snapshot(path, repo_root)
+            if not swapped:
+                swapped = True
+                self._write_raw_selection(tampered)
+            return result
+
+        with (
+            mock.patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            mock.patch(
+                "spiketrace.review_batch._load_selection_snapshot",
+                side_effect=snapshot_then_swap,
+            ),
+            mock.patch(
+                "spiketrace.review_batch.write_proxy_video",
+                side_effect=self._write_proxy_side_effect,
+            ),
+            self.assertRaises(ActiveLearningError),
+        ):
+            build_review_proxies(self.selection, self.output_dir, repo_root=self.root)
+
+        self.assertFalse(self.output_dir.exists())
+        self.assertEqual(list(self.root.glob(".review-batch.tmp-*")), [])
+
+    def test_rejects_traversal_clip_ids_before_staging_or_proxy_write(self):
+        malicious = copy.deepcopy(self.selection_payload)
+        malicious["clips"][0]["clip_id"] = "../../outside"
+        self._write_raw_selection(malicious)
+        outside = self.root / "outside.mp4"
+
+        with (
+            mock.patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            mock.patch(
+                "spiketrace.review_batch.write_proxy_video",
+                side_effect=self._write_proxy_side_effect,
+            ) as write_proxy,
+            self.assertRaises(ActiveLearningError),
+        ):
+            build_review_proxies(self.selection, self.output_dir, repo_root=self.root)
+
+        write_proxy.assert_not_called()
+        self.assertFalse(outside.exists())
         self.assertFalse(self.output_dir.exists())
         self.assertEqual(list(self.root.glob(".review-batch.tmp-*")), [])
 

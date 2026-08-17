@@ -8,7 +8,8 @@ import tempfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
-from .active_learning_selection import load_review_selection
+from . import _active_learning_selection_artifact as _selection_artifact
+from . import active_learning_selection as _selection_api
 from .errors import ActiveLearningError
 from .video import write_proxy_video
 
@@ -28,34 +29,32 @@ def build_review_proxies(
     if output.exists():
         raise ActiveLearningError(f"Output directory already exists: {output}")
 
-    output.parent.mkdir(parents=True, exist_ok=True)
     staging = output.parent / f".{output.name}.tmp-{os.getpid()}"
     if staging.exists():
         raise ActiveLearningError(f"Staging directory already exists: {staging}")
 
-    selection = load_review_selection(selection_file, repo_root=root)
-    selection_sha256 = _sha256_file(selection_file)
+    snapshot = _load_selection_snapshot(selection_file, root)
+    selection = snapshot["selection"]
+    selection_sha256 = snapshot["sha256"]
     normalized_selection_path = _normalized_path(selection_file, root, "selection JSON")
     video = _mapping(selection["video"], "selection video")
     video_path = _resolved_path(video["path"], root, "source video")
     clips = list(selection["clips"])
     if len(clips) != 40:
         raise ActiveLearningError("Selection must contain exactly 40 clips.")
+    planned_clips = _plan_clip_outputs(clips, staging)
 
     clip_metadata: list[dict[str, object]] = []
     try:
+        output.parent.mkdir(parents=True, exist_ok=True)
         (staging / "clips").mkdir(parents=True)
-        for raw_clip in clips:
-            _revalidate_selection(
+        for clip, relative_proxy_path, proxy_path in planned_clips:
+            clip_id = _safe_clip_id(clip["clip_id"])
+            _revalidate_selection_snapshot(
                 selection_file,
                 root,
                 selection_sha256=selection_sha256,
-                video=video,
             )
-            clip = _mapping(raw_clip, "selection clip")
-            clip_id = _nonempty_string(clip["clip_id"], "clip_id")
-            relative_proxy_path = f"clips/{clip_id}.mp4"
-            proxy_path = staging / relative_proxy_path
             metadata = write_proxy_video(
                 video_path,
                 proxy_path,
@@ -120,18 +119,67 @@ def build_review_proxies(
     }
 
 
-def _revalidate_selection(
+def _load_selection_snapshot(selection_file: Path, repo_root: Path) -> dict[str, Any]:
+    try:
+        raw = selection_file.read_bytes()
+    except OSError as exc:
+        raise ActiveLearningError(f"Cannot read selection JSON: {selection_file}") from exc
+    selection = _selection_artifact._validate_selection_payload(
+        _selection_artifact._load_json_bytes(raw, description="selection JSON"),
+        repo_root,
+        require_video=True,
+        verifier=_selection_api.verify_dual_crop_review,
+    )
+    return {"selection": selection, "sha256": _sha256_bytes(raw)}
+
+
+def _revalidate_selection_snapshot(
     selection_file: Path,
     repo_root: Path,
     *,
     selection_sha256: str,
-    video: dict[str, object],
 ) -> None:
-    if _sha256_file(selection_file) != selection_sha256:
+    current = _load_selection_snapshot(selection_file, repo_root)
+    if current["sha256"] != selection_sha256:
         raise ActiveLearningError("Selection SHA-256 changed during proxy build.")
-    current = load_review_selection(selection_file, repo_root=repo_root)
-    if current["video"] != video:
-        raise ActiveLearningError("Selection video fields changed during proxy build.")
+
+
+def _plan_clip_outputs(
+    clips: list[object], staging: Path
+) -> list[tuple[dict[str, Any], str, Path]]:
+    clip_directory = staging / "clips"
+    planned: list[tuple[dict[str, Any], str, Path]] = []
+    for raw_clip in clips:
+        clip = _mapping(raw_clip, "selection clip")
+        clip_id = _safe_clip_id(clip["clip_id"])
+        relative_proxy_path = f"clips/{clip_id}.mp4"
+        proxy_path = (staging / relative_proxy_path).resolve()
+        try:
+            proxy_path.relative_to(clip_directory.resolve())
+        except ValueError as exc:
+            raise ActiveLearningError(
+                f"clip_id would write outside the proxy staging directory: {clip_id}"
+            ) from exc
+        planned.append((clip, relative_proxy_path, proxy_path))
+    return planned
+
+
+def _safe_clip_id(value: object) -> str:
+    clip_id = _nonempty_string(value, "clip_id")
+    posix = PurePosixPath(clip_id)
+    windows = PureWindowsPath(clip_id)
+    if (
+        clip_id in (".", "..")
+        or posix.is_absolute()
+        or windows.drive
+        or "/" in clip_id
+        or "\\" in clip_id
+        or len(posix.parts) != 1
+    ):
+        raise ActiveLearningError(
+            f"clip_id must be a filename-safe identifier: {clip_id}"
+        )
+    return clip_id
 
 
 def _validate_proxy_entries(
@@ -179,6 +227,10 @@ def _sha256_file(path: Path) -> str:
     except OSError as exc:
         raise ActiveLearningError(f"Cannot hash file: {path}") from exc
     return digest.hexdigest()
+
+
+def _sha256_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
 
 
 def _resolved_path(value: str | Path | object, root: Path, description: str) -> Path:
