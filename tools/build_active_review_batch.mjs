@@ -131,7 +131,7 @@ function pythonExecutable(root) {
   return process.platform === "win32" ? path.join(root, ".venv", "Scripts", "python.exe") : path.join(root, ".venv", "bin", "python");
 }
 
-export async function buildActiveReviewBatch(selectionPath, outputDir, previewDir, { rename = fs.rename, buildProxies } = {}) {
+export async function buildActiveReviewBatch(selectionPath, outputDir, previewDir, { rename = fs.rename } = {}) {
   const root = process.cwd();
   invariant(await fs.stat(path.join(root, "pyproject.toml")).then(() => true).catch(() => false), "Run this command from the repository root containing pyproject.toml.");
   const selection = path.resolve(root, selectionPath);
@@ -146,12 +146,8 @@ export async function buildActiveReviewBatch(selectionPath, outputDir, previewDi
   let outputPublished = false;
   try {
     await fs.mkdir(path.dirname(output), { recursive: true });
-    if (buildProxies) {
-      await buildProxies({ selectionPath: selection, outputDir: staging, repoRoot: root });
-    } else {
-      const result = spawnSync(pythonExecutable(root), ["-m", "spiketrace", "build-review-clips", selection, staging, "--repo-root", root], { cwd: root, encoding: "utf8", env: { ...process.env, PYTHONUTF8: "1" } });
-      invariant(result.status === 0, `Proxy build failed (${result.status}).\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
-    }
+    const result = spawnSync(pythonExecutable(root), ["-m", "spiketrace", "build-review-clips", selection, staging, "--repo-root", root], { cwd: root, encoding: "utf8", env: { ...process.env, PYTHONUTF8: "1" } });
+    invariant(result.status === 0, `Proxy build failed (${result.status}).\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
     const { selection: payload } = await verifyProxyBatch(selection, staging, { repoRoot: root });
     const workbook = createReviewWorkbook(payload);
     await renderPreviews(workbook, previewStaging);

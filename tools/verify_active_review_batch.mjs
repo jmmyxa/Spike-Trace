@@ -55,8 +55,13 @@ function pathInside(root, value, label) {
   return resolved;
 }
 
-function sheetNames(workbook) {
-  return SHEET_NAMES.map((_, index) => workbook.worksheets.getItemAt(index).name);
+function inspectedSheetNames(inspection) {
+  return String(inspection.ndjson ?? "")
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .map((record) => record?.name)
+    .filter((name) => typeof name === "string");
 }
 
 function listValidation(range, context) {
@@ -83,6 +88,7 @@ function exactUsedRange(sheet, rowCount, columnCount, context) {
 export function selectionProjection(selection) {
   invariant(selection?.format_version === 1, "Selection must use format version 1.");
   invariant(Array.isArray(selection.clips) && selection.clips.length === 40, "Selection must contain exactly 40 clips.");
+  const clipIds = new Set();
   const clipRows = [];
   const actionRows = [];
   const hintRows = [];
@@ -90,6 +96,8 @@ export function selectionProjection(selection) {
     invariant(clip && typeof clip === "object", `Clip ${index + 1} must be an object.`);
     const clipId = clip.clip_id;
     invariant(typeof clipId === "string" && clipId.length > 0, `Clip ${index + 1} has no clip_id.`);
+    invariant(!clipIds.has(clipId), `Clip IDs must be unique; duplicate ${clipId}.`);
+    clipIds.add(clipId);
     invariant(clip.ordinal === index + 1, `Clip ${clipId} ordinal must be ${index + 1}.`);
     const duration = clip.duration_seconds;
     invariant(Number.isFinite(duration) && duration > 0, `Clip ${clipId} duration must be positive.`);
@@ -178,7 +186,8 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const absoluteWorkbook = path.resolve(workbookPath);
   const { selection, manifest, projection } = await verifyProxyBatch(selectionPath, path.dirname(absoluteWorkbook));
   const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(absoluteWorkbook));
-  assert.deepEqual(sheetNames(workbook), SHEET_NAMES, "Workbook sheet order must be exact.");
+  const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
+  assert.deepEqual(inspectedSheetNames(sheetInspection), SHEET_NAMES, "Workbook sheet order/count must be exact.");
   const clips = workbook.worksheets.getItem("短片清单");
   const actions = workbook.worksheets.getItem("人工动作");
   const hints = workbook.worksheets.getItem("候选提示");
@@ -196,13 +205,24 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const actionValues = normalizeRows(actions.getRange("A4:I483").values);
   assert.deepEqual(actionValues.map((row) => [row[0], row[1], row[3]]), projection.actionRows.map((row) => [row[0], row[1], row[3]]), "Action read-only values");
   for (const [index, clip] of selection.clips.entries()) {
-    const actionRow = index * ACTION_SLOTS_PER_CLIP + 4;
-    assert.equal(actions.getRange(`C${actionRow}`).formulas[0][0], `=HYPERLINK("clips/${clip.clip_id}.mp4","播放")`, `Action hyperlink ${clip.clip_id}`);
     assert.equal(clips.getRange(`C${index + 4}`).formulas[0][0], `=HYPERLINK("clips/${clip.clip_id}.mp4","播放")`, `Clip hyperlink ${clip.clip_id}`);
+  }
+  for (const [index, row] of projection.actionRows.entries()) {
+    assert.equal(actions.getRange(`C${index + 4}`).formulas[0][0], `=HYPERLINK("clips/${row[0]}.mp4","播放")`, `Action hyperlink row ${index + 4}`);
   }
   assert.deepEqual(listValidation(actions.getRange("E4:E483"), "Action"), ACTIONS);
   wholeNumberValidation(actions.getRange("F4:G483"), "Action time");
   assert.deepEqual(listValidation(actions.getRange("H4:H483"), "Action side"), SIDES);
+  assert.deepEqual(labels.getRange("A3:B10").values, [
+    ["规则", "说明"],
+    ["receive / dig", "receive 仅指接对方发球的一传；dig 仅指对方进攻后的防守起球。"],
+    ["相对秒", "片段内开始秒和结束秒必须填写非负整数，单位是相对当前短片的秒。"],
+    ["background", "background 必须单独使用，且开始秒与结束秒两个单元格都必须保持空白。"],
+    ["人工侧别", "background 仍须选择当前 far 或 near 的球队裁剪；far/near 只表示画面远端/近端裁剪，不表示球队身份。"],
+    ["完成方式", "没有状态列、审核列或 checkbox；填写人工确认动作即是人工记录。"],
+    ["容量", "每个短片固定 12 个动作槽。若 12 槽都不足，请不要覆盖现有行，应请求扩容版本。"],
+    ["代理文件", "代理短片无音频且已降分辨率，只用于便携复核。"],
+  ], "Label instructions");
   assertManualRows(actions, { allowManualValues });
   await scanFormulaErrors(workbook, "Workbook");
   return { batch_id: manifest.batch_id, clip_count: selection.clips.length };
