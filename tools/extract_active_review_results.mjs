@@ -4,8 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 
-import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
-
 import {
   ACTION_SLOTS_PER_CLIP,
   ACTIONS,
@@ -104,18 +102,20 @@ async function publishJson(outputPath, payload, io = {}) {
   }
 }
 
-export async function extractActiveReviewResults(selectionPath, workbookPath, outputPath, { io } = {}) {
-  await verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues: true });
-  const selectionBytes = await fs.readFile(selectionPath);
-  const workbookBytes = await fs.readFile(workbookPath);
-  const selection = JSON.parse(selectionBytes.toString("utf8"));
+async function assertStableInput(filePath, expectedBytes, label) {
+  const actualBytes = await fs.readFile(filePath);
+  invariant(Buffer.compare(actualBytes, expectedBytes) === 0, `${label} changed during extraction.`);
+}
+
+export async function extractActiveReviewResults(selectionPath, workbookPath, outputPath, { io, afterVerification } = {}) {
+  const verified = await verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues: true });
+  if (afterVerification) await afterVerification();
+  const { selection, selectionBytes, workbookBytes, actionRows } = verified;
   invariant(Array.isArray(selection.clips) && selection.clips.length === 40, "Selection must contain exactly 40 clips.");
 
-  const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(path.resolve(workbookPath)));
-  const values = workbook.worksheets.getItem("人工动作").getRange("E4:I483").values;
   const clips = selection.clips.map((clip, clipIndex) => {
     const offset = clipIndex * ACTION_SLOTS_PER_CLIP;
-    const actions = normalizeClipActions(clip, values.slice(offset, offset + ACTION_SLOTS_PER_CLIP));
+    const actions = normalizeClipActions(clip, actionRows.slice(offset, offset + ACTION_SLOTS_PER_CLIP).map((row) => row.slice(4)));
     return {
       clip_id: clip.clip_id,
       ordinal: clip.ordinal,
@@ -135,6 +135,8 @@ export async function extractActiveReviewResults(selectionPath, workbookPath, ou
     time_precision_seconds: 1,
     clips,
   };
+  await assertStableInput(selectionPath, selectionBytes, "Selection");
+  await assertStableInput(workbookPath, workbookBytes, "Workbook");
   await publishJson(outputPath, draft, io);
   return draft;
 }

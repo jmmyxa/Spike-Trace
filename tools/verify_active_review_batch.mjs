@@ -123,10 +123,10 @@ export function selectionProjection(selection) {
   return { clipRows, actionRows, hintRows };
 }
 
-export async function verifyProxyBatch(selectionPath, batchDir, { repoRoot = process.cwd() } = {}) {
+export async function verifyProxyBatch(selectionPath, batchDir, { repoRoot = process.cwd(), selectionBytes: suppliedSelectionBytes } = {}) {
   const absoluteSelection = path.resolve(selectionPath);
   const absoluteBatch = path.resolve(batchDir);
-  const selectionBytes = await fs.readFile(absoluteSelection);
+  const selectionBytes = suppliedSelectionBytes ?? await fs.readFile(absoluteSelection);
   const selection = JSON.parse(selectionBytes.toString("utf8"));
   const projection = selectionProjection(selection);
   const manifestPath = path.join(absoluteBatch, "proxy-manifest.json");
@@ -148,6 +148,27 @@ export async function verifyProxyBatch(selectionPath, batchDir, { repoRoot = pro
     invariant(await sha256File(proxyPath) === entry.sha256, `Proxy SHA-256 does not match ${entry.path}.`);
   }
   return { selection, manifest, projection };
+}
+
+async function importWorkbookSnapshot(workbookPath, workbookBytes) {
+  const temporary = path.join(
+    path.dirname(workbookPath),
+    `.${path.basename(workbookPath)}.snapshot-${process.pid}-${crypto.randomUUID()}`,
+  );
+  let handle;
+  try {
+    handle = await fs.open(temporary, "wx");
+    await handle.writeFile(workbookBytes);
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    return await SpreadsheetFile.importXlsx(await FileBlob.load(temporary));
+  } finally {
+    if (handle) await handle.close().catch(() => undefined);
+    await fs.unlink(temporary).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+  }
 }
 
 export async function scanFormulaErrors(workbook, context = "workbook") {
@@ -183,9 +204,12 @@ function assertManualRows(sheet, { allowManualValues }) {
 }
 
 export async function verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues = false } = {}) {
+  const absoluteSelection = path.resolve(selectionPath);
   const absoluteWorkbook = path.resolve(workbookPath);
-  const { selection, manifest, projection } = await verifyProxyBatch(selectionPath, path.dirname(absoluteWorkbook));
-  const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(absoluteWorkbook));
+  const selectionBytes = await fs.readFile(absoluteSelection);
+  const workbookBytes = await fs.readFile(absoluteWorkbook);
+  const { selection, manifest, projection } = await verifyProxyBatch(absoluteSelection, path.dirname(absoluteWorkbook), { selectionBytes });
+  const workbook = await importWorkbookSnapshot(absoluteWorkbook, workbookBytes);
   const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
   assert.deepEqual(inspectedSheetNames(sheetInspection), SHEET_NAMES, "Workbook sheet order/count must be exact.");
   const clips = workbook.worksheets.getItem("短片清单");
@@ -202,7 +226,8 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   assert.deepEqual(normalizeRows(clips.getRange("A4:B43").values), projection.clipRows.map((row) => row.slice(0, 2)), "Clip identifiers");
   assert.deepEqual(normalizeRows(clips.getRange("D4:K43").values), projection.clipRows.map((row) => row.slice(3)), "Clip read-only values");
   assert.deepEqual(normalizeRows(hints.getRange(`A4:J${3 + projection.hintRows.length}`).values), projection.hintRows, "Hint read-only values");
-  const actionValues = normalizeRows(actions.getRange("A4:I483").values);
+  const actionRows = actions.getRange("A4:I483").values;
+  const actionValues = normalizeRows(actionRows);
   assert.deepEqual(actionValues.map((row) => [row[0], row[1], row[3]]), projection.actionRows.map((row) => [row[0], row[1], row[3]]), "Action read-only values");
   for (const [index, clip] of selection.clips.entries()) {
     assert.equal(clips.getRange(`C${index + 4}`).formulas[0][0], `=HYPERLINK("clips/${clip.clip_id}.mp4","播放")`, `Clip hyperlink ${clip.clip_id}`);
@@ -225,7 +250,14 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   ], "Label instructions");
   assertManualRows(actions, { allowManualValues });
   await scanFormulaErrors(workbook, "Workbook");
-  return { batch_id: manifest.batch_id, clip_count: selection.clips.length };
+  const result = { batch_id: manifest.batch_id, clip_count: selection.clips.length };
+  Object.defineProperties(result, {
+    selection: { value: selection },
+    selectionBytes: { value: selectionBytes },
+    workbookBytes: { value: workbookBytes },
+    actionRows: { value: actionRows },
+  });
+  return result;
 }
 
 async function main() {

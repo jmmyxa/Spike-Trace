@@ -178,6 +178,11 @@ async function assertNoTemporarySibling(directory, outputName) {
   assert.equal(entries.some((entry) => entry.startsWith(`.${outputName}.tmp-`)), false, "temporary draft sibling must be removed");
 }
 
+async function assertNoSnapshotSibling(directory, inputName) {
+  const entries = await fs.readdir(directory);
+  assert.equal(entries.some((entry) => entry.startsWith(`.${inputName}.snapshot-`)), false, "input snapshot sibling must be removed");
+}
+
 async function main() {
   const fixtureDir = path.join(ROOT, "tests", ".active-review-fixture");
   const outputDir = path.join(fixtureDir, "batch");
@@ -339,6 +344,35 @@ async function main() {
     });
     assert.deepEqual(await fs.readFile(racingOutput), racingBytes, "racing output bytes must be preserved");
     await assertNoTemporarySibling(fixtureDir, path.basename(racingOutput));
+
+    const originalSelectionBytes = await fs.readFile(selectionPath);
+    const racedSelection = path.join(fixtureDir, "raced-selection.json");
+    await fs.copyFile(selectionPath, racedSelection);
+    await rewriteJson(racedSelection, (selection) => { selection.batch_id = "raced-selection"; });
+    const racedSelectionOutput = path.join(fixtureDir, "raced-selection-draft.json");
+    await assert.rejects(() => extractActiveReviewResults(selectionPath, completedWorkbook, racedSelectionOutput, {
+      afterVerification: async () => fs.copyFile(racedSelection, selectionPath),
+    }), undefined, "selection replacement after verification must be rejected");
+    await fs.writeFile(selectionPath, originalSelectionBytes);
+    assert.deepEqual(await fs.readFile(selectionPath), originalSelectionBytes, "selection bytes must remain unchanged after race cleanup");
+    assert.equal(await fs.stat(racedSelectionOutput).then(() => true).catch(() => false), false, "selection race must not publish a draft");
+    await assertNoTemporarySibling(fixtureDir, path.basename(racedSelectionOutput));
+    await assertNoSnapshotSibling(path.dirname(selectionPath), path.basename(selectionPath));
+
+    const originalWorkbookBytes = await fs.readFile(completedWorkbook);
+    const racedWorkbook = path.join(outputDir, "raced-review.xlsx");
+    await writeCompletedWorkbook(workbookPath, racedWorkbook, async (book) => {
+      book.worksheets.getItem("人工动作").getRange("E4:I4").values = [["attack", 0, 1, "near", "raced"]];
+    });
+    const racedWorkbookOutput = path.join(fixtureDir, "raced-workbook-draft.json");
+    await assert.rejects(() => extractActiveReviewResults(selectionPath, completedWorkbook, racedWorkbookOutput, {
+      afterVerification: async () => fs.copyFile(racedWorkbook, completedWorkbook),
+    }), undefined, "workbook replacement after verification must be rejected");
+    await fs.writeFile(completedWorkbook, originalWorkbookBytes);
+    assert.deepEqual(await fs.readFile(completedWorkbook), originalWorkbookBytes, "workbook bytes must remain unchanged after race cleanup");
+    assert.equal(await fs.stat(racedWorkbookOutput).then(() => true).catch(() => false), false, "workbook race must not publish a draft");
+    await assertNoTemporarySibling(fixtureDir, path.basename(racedWorkbookOutput));
+    await assertNoSnapshotSibling(path.dirname(completedWorkbook), path.basename(completedWorkbook));
 
     const duplicatedSelection = path.join(fixtureDir, "duplicate-selection.json");
     const duplicatedBatch = path.join(fixtureDir, "duplicate-batch");
