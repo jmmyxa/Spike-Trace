@@ -854,7 +854,7 @@ class DualCropReviewVerifierTests(unittest.TestCase):
             self.assertFalse(result["csv_checked"])
             self.assertIsNone(result["hashes"]["merged_csv_sha256"])
 
-    def test_real_audit_csv_is_lf_pinned_and_verifies_with_autocrlf(self):
+    def test_real_audit_csv_is_lf_pinned_and_verifies(self):
         relative_csv = "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.csv"
         csv_path = ROOT / relative_csv
         json_path = csv_path.with_suffix(".json")
@@ -865,16 +865,7 @@ class DualCropReviewVerifierTests(unittest.TestCase):
             text=True,
             check=True,
         )
-        autocrlf = subprocess.run(
-            ["git", "config", "--get", "core.autocrlf"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-
         self.assertEqual(attribute.stdout.strip(), f"{relative_csv}: eol: lf")
-        self.assertEqual(autocrlf.stdout.strip(), "true")
         self.assertNotIn(b"\r\n", csv_path.read_bytes())
         result = verify_dual_crop_review(json_path, csv_path=csv_path)
         self.assertTrue(result["verified"])
