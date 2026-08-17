@@ -14,6 +14,7 @@ import {
   verifyWorkbookFile,
 } from "./verify_active_review_batch.mjs";
 import { buildActiveReviewBatch } from "./build_active_review_batch.mjs";
+import { extractActiveReviewResults } from "./extract_active_review_results.mjs";
 
 assert.deepEqual(SHEET_NAMES, ["短片清单", "人工动作", "候选提示", "标签说明"]);
 assert.deepEqual(ACTIONS, ["background", "serve", "receive", "set", "attack", "block", "dig"]);
@@ -148,6 +149,35 @@ async function rewriteJson(filePath, mutate) {
   await fs.writeFile(filePath, JSON.stringify(payload, null, 2));
 }
 
+async function writeCompletedWorkbook(sourcePath, destinationPath, mutate = undefined) {
+  await exportWorkbook(sourcePath, destinationPath, async (workbook) => {
+    const actions = workbook.worksheets.getItem("人工动作");
+    for (let clipIndex = 0; clipIndex < 40; clipIndex += 1) {
+      actions.getRange(`E${4 + clipIndex * ACTION_SLOTS_PER_CLIP}:I${4 + clipIndex * ACTION_SLOTS_PER_CLIP}`).values = [["background", null, null, "near", ""]];
+    }
+    actions.getRange("E4:I5").values = [
+      ["receive", 1, 2, "far", "接发球"],
+      ["set", 3, 4, "far", ""],
+    ];
+    if (mutate) await mutate(workbook);
+  });
+}
+
+async function assertWorkbookUnchanged(workbookPath, before) {
+  assert.deepEqual(await fs.readFile(workbookPath), before, "extraction must not edit the completed workbook");
+}
+
+async function assertRejectedExtraction(selectionPath, workbookPath, outputPath, description, options = undefined) {
+  const before = await fs.readFile(workbookPath);
+  await assert.rejects(() => extractActiveReviewResults(selectionPath, workbookPath, outputPath, options), undefined, description);
+  await assertWorkbookUnchanged(workbookPath, before);
+}
+
+async function assertNoTemporarySibling(directory, outputName) {
+  const entries = await fs.readdir(directory);
+  assert.equal(entries.some((entry) => entry.startsWith(`.${outputName}.tmp-`)), false, "temporary draft sibling must be removed");
+}
+
 async function main() {
   const fixtureDir = path.join(ROOT, "tests", ".active-review-fixture");
   const outputDir = path.join(fixtureDir, "batch");
@@ -211,6 +241,104 @@ async function main() {
     await fs.rm(missingProxy);
     await rejects(selectionPath, workbookPath, "missing proxy");
     await fs.writeFile(missingProxy, savedProxy);
+
+    const completedWorkbook = path.join(outputDir, "completed-review.xlsx");
+    const draftPath = path.join(fixtureDir, "review-draft.json");
+    await writeCompletedWorkbook(workbookPath, completedWorkbook);
+    const selectionBytes = await fs.readFile(selectionPath);
+    const completedBytes = await fs.readFile(completedWorkbook);
+    const draft = await extractActiveReviewResults(selectionPath, completedWorkbook, draftPath);
+    assert.deepEqual(draft.clips[0].actions, [
+      { action: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "接发球" },
+      { action: "set", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "far", note: "" },
+    ]);
+    assert.deepEqual(draft.clips[1].actions, [
+      { action: "background", relative_start_seconds: 0, relative_end_seconds: draft.clips[1].source_end_seconds - draft.clips[1].source_start_seconds, team_side: "near", note: "" },
+    ]);
+    assert.equal(draft.time_precision_seconds, 1);
+    assert.equal(draft.selection_sha256, digest(selectionBytes));
+    assert.equal(draft.workbook.sha256, digest(completedBytes));
+    assert.deepEqual(JSON.parse(await fs.readFile(draftPath, "utf8")), draft);
+    await assertWorkbookUnchanged(completedWorkbook, completedBytes);
+    const cliDraftPath = path.join(fixtureDir, "review-draft-cli.json");
+    const cliResult = spawnSync(process.execPath, ["tools/extract_active_review_results.mjs", selectionPath, completedWorkbook, cliDraftPath], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    assert.equal(cliResult.status, 0, `extraction CLI failed (${cliResult.status})\nstdout:\n${cliResult.stdout}\nstderr:\n${cliResult.stderr}`);
+    assert.deepEqual(JSON.parse(await fs.readFile(cliDraftPath, "utf8")), draft);
+    await assertWorkbookUnchanged(completedWorkbook, completedBytes);
+
+    const rejectionCases = [
+      ["incomplete clip", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [[null, null, null, null, null]]],
+      ["orphan manual cells", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [[null, 1, null, null, null]]],
+      ["fractional seconds", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", 1.5, 2, "far", ""]]],
+      ["NaN seconds", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", Number.NaN, 2, "far", ""]]],
+      ["infinite seconds", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", 1, Number.POSITIVE_INFINITY, "far", ""]]],
+      ["missing background side", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["background", null, null, null, ""]]],
+      ["all action slots populated", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I39").values = Array.from({ length: 12 }, () => ["background", null, null, "near", ""])],
+      ["timed background", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["background", 1, 2, "near", ""]]],
+      ["partially timed background", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["background", 1, null, "near", ""]]],
+      ["background mixed with action", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I29").values = [["background", null, null, "near", ""], ["attack", 1, 2, "near", ""]]],
+      ["time outside clip", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", 0, 6, "far", ""]]],
+      ["equal start and end", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", 2, 2, "far", ""]]],
+      ["invalid side", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["attack", 1, 2, "middle", ""]]],
+      ["invalid action", async (book) => book.worksheets.getItem("人工动作").getRange("E28:I28").values = [["tip", 1, 2, "far", ""]]],
+      ["tampered read-only cell", async (book) => book.worksheets.getItem("人工动作").getRange("A28").values = [["reordered-clip"]]],
+    ];
+    for (const [name, mutate] of rejectionCases) {
+      const rejectedWorkbook = path.join(outputDir, `rejected-${name.replaceAll(" ", "-")}.xlsx`);
+      const rejectedOutput = path.join(fixtureDir, `rejected-${name.replaceAll(" ", "-")}.json`);
+      await writeCompletedWorkbook(workbookPath, rejectedWorkbook, mutate);
+      await assertRejectedExtraction(selectionPath, rejectedWorkbook, rejectedOutput, name);
+      assert.equal(await fs.stat(rejectedOutput).then(() => true).catch(() => false), false, `${name} must not publish a draft`);
+    }
+
+    const mismatchSelection = path.join(fixtureDir, "mismatch-selection.json");
+    await fs.copyFile(selectionPath, mismatchSelection);
+    await rewriteJson(mismatchSelection, (selection) => { selection.batch_id = "mismatched-batch"; });
+    await assertRejectedExtraction(mismatchSelection, completedWorkbook, path.join(fixtureDir, "mismatch.json"), "selection mismatch");
+
+    const existingOutput = await fs.readFile(draftPath);
+    await assertRejectedExtraction(selectionPath, completedWorkbook, draftPath, "existing output");
+    assert.deepEqual(await fs.readFile(draftPath), existingOutput, "existing draft bytes must be preserved");
+
+    const atomicCases = [
+      ["temporary-write", {
+        open: async (...args) => {
+          const handle = await fs.open(...args);
+          return { writeFile: async () => { throw new Error("injected write failure"); }, sync: handle.sync.bind(handle), close: handle.close.bind(handle) };
+        },
+      }],
+      ["sync", {
+        open: async (...args) => {
+          const handle = await fs.open(...args);
+          return { writeFile: handle.writeFile.bind(handle), sync: async () => { throw new Error("injected sync failure"); }, close: handle.close.bind(handle) };
+        },
+      }],
+      ["hard-link", { link: async () => { throw new Error("injected hard-link failure"); } }],
+    ];
+    for (const [name, io] of atomicCases) {
+      const output = path.join(fixtureDir, `atomic-${name}.json`);
+      await assertRejectedExtraction(selectionPath, completedWorkbook, output, `injected ${name} failure`, { io });
+      assert.equal(await fs.stat(output).then(() => true).catch(() => false), false, `${name} failure must not publish a draft`);
+      await assertNoTemporarySibling(fixtureDir, path.basename(output));
+    }
+
+    const racingOutput = path.join(fixtureDir, "atomic-racing-link.json");
+    const racingBytes = Buffer.from("racing writer bytes", "utf8");
+    await assertRejectedExtraction(selectionPath, completedWorkbook, racingOutput, "racing hard-link collision", {
+      io: {
+        link: async (_temporary, output) => {
+          await fs.writeFile(output, racingBytes, { flag: "wx" });
+          const error = new Error("injected racing hard-link collision");
+          error.code = "EEXIST";
+          throw error;
+        },
+      },
+    });
+    assert.deepEqual(await fs.readFile(racingOutput), racingBytes, "racing output bytes must be preserved");
+    await assertNoTemporarySibling(fixtureDir, path.basename(racingOutput));
 
     const duplicatedSelection = path.join(fixtureDir, "duplicate-selection.json");
     const duplicatedBatch = path.join(fixtureDir, "duplicate-batch");

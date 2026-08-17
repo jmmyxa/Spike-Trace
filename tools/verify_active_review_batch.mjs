@@ -176,7 +176,7 @@ function assertManualRows(sheet, { allowManualValues }) {
     if (action === "background") {
       invariant(start === null && end === null, `Manual background row ${index + 4} must leave both time cells blank.`);
     } else {
-      invariant(Number.isInteger(start) && start >= 0 && Number.isInteger(end) && end >= 0, `Manual row ${index + 4} needs non-negative whole-second times.`);
+      invariant(Number.isFinite(start) && Number.isInteger(start) && start >= 0 && Number.isFinite(end) && Number.isInteger(end) && end >= 0, `Manual row ${index + 4} needs non-negative finite whole-second times.`);
     }
     invariant(note === null || typeof note === "string", `Manual row ${index + 4} note must be text.`);
   }

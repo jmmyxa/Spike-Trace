@@ -1,0 +1,154 @@
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
+
+import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
+
+import {
+  ACTION_SLOTS_PER_CLIP,
+  ACTIONS,
+  SIDES,
+  verifyWorkbookFile,
+} from "./verify_active_review_batch.mjs";
+
+function invariant(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function blank(value) {
+  return value === null || value === undefined || value === "";
+}
+
+function sha256(bytes) {
+  return crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+export function normalizeRepoPath(value, repoRoot = process.cwd()) {
+  return path.relative(path.resolve(repoRoot), path.resolve(value)).split(path.sep).join("/");
+}
+
+function normalizeClipActions(clip, rows) {
+  const clipId = clip.clip_id;
+  const duration = clip.duration_seconds;
+  invariant(Number.isFinite(duration) && duration > 0, `Clip ${clipId} has an invalid duration.`);
+  const populated = [];
+  for (const [slotIndex, row] of rows.entries()) {
+    const [action, start, end, side, note] = row;
+    if ([action, start, end, side, note].every(blank)) continue;
+    invariant(!blank(action), `Clip ${clipId} action slot ${slotIndex + 1} has manual values without an action.`);
+    invariant(ACTIONS.includes(action), `Clip ${clipId} action slot ${slotIndex + 1} has an invalid action.`);
+    invariant(SIDES.includes(side), `Clip ${clipId} action slot ${slotIndex + 1} must select far or near.`);
+    invariant(blank(note) || typeof note === "string", `Clip ${clipId} action slot ${slotIndex + 1} note must be text.`);
+    populated.push({ action, start, end, side, note: blank(note) ? "" : note });
+  }
+  invariant(populated.length > 0, `Clip ${clipId} has no completed action rows.`);
+  invariant(populated.length < ACTION_SLOTS_PER_CLIP, `Clip ${clipId} uses all ${ACTION_SLOTS_PER_CLIP} action slots; request a deliberately expanded workbook version.`);
+
+  const backgrounds = populated.filter((row) => row.action === "background");
+  invariant(backgrounds.length <= 1, `Clip ${clipId} may contain only one background row.`);
+  invariant(!(backgrounds.length && populated.length > 1), `Clip ${clipId} cannot mix background with team actions.`);
+  if (backgrounds.length) {
+    const background = backgrounds[0];
+    invariant(blank(background.start) && blank(background.end), `Clip ${clipId} background must leave both time cells blank.`);
+    return [{
+      action: "background",
+      relative_start_seconds: 0,
+      relative_end_seconds: duration,
+      team_side: background.side,
+      note: background.note,
+    }];
+  }
+
+  return populated.map((row, actionIndex) => {
+    invariant(Number.isFinite(row.start) && Number.isInteger(row.start), `Clip ${clipId} action ${actionIndex + 1} start must be a finite whole second.`);
+    invariant(Number.isFinite(row.end) && Number.isInteger(row.end), `Clip ${clipId} action ${actionIndex + 1} end must be a finite whole second.`);
+    invariant(row.start >= 0 && row.start < row.end && row.end <= duration, `Clip ${clipId} action ${actionIndex + 1} must stay within the clip with start before end.`);
+    return {
+      action: row.action,
+      relative_start_seconds: row.start,
+      relative_end_seconds: row.end,
+      team_side: row.side,
+      note: row.note,
+    };
+  });
+}
+
+async function publishJson(outputPath, payload, io = {}) {
+  const open = io.open ?? fs.open;
+  const link = io.link ?? fs.link;
+  const unlink = io.unlink ?? fs.unlink;
+  const unique = io.randomUUID ?? randomUUID;
+  const absoluteOutput = path.resolve(outputPath);
+  const temporary = path.join(path.dirname(absoluteOutput), `.${path.basename(absoluteOutput)}.tmp-${process.pid}-${unique()}`);
+  const bytes = Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  const exists = await fs.stat(absoluteOutput).then(() => true).catch((error) => {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  });
+  invariant(!exists, `Output draft already exists: ${absoluteOutput}`);
+  let handle;
+  try {
+    handle = await open(temporary, "wx");
+    await handle.writeFile(bytes);
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await link(temporary, absoluteOutput);
+  } finally {
+    if (handle) await handle.close().catch(() => undefined);
+    await unlink(temporary).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+  }
+}
+
+export async function extractActiveReviewResults(selectionPath, workbookPath, outputPath, { io } = {}) {
+  await verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues: true });
+  const selectionBytes = await fs.readFile(selectionPath);
+  const workbookBytes = await fs.readFile(workbookPath);
+  const selection = JSON.parse(selectionBytes.toString("utf8"));
+  invariant(Array.isArray(selection.clips) && selection.clips.length === 40, "Selection must contain exactly 40 clips.");
+
+  const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(path.resolve(workbookPath)));
+  const values = workbook.worksheets.getItem("人工动作").getRange("E4:I483").values;
+  const clips = selection.clips.map((clip, clipIndex) => {
+    const offset = clipIndex * ACTION_SLOTS_PER_CLIP;
+    const actions = normalizeClipActions(clip, values.slice(offset, offset + ACTION_SLOTS_PER_CLIP));
+    return {
+      clip_id: clip.clip_id,
+      ordinal: clip.ordinal,
+      source_start_seconds: clip.start_seconds,
+      source_end_seconds: clip.end_seconds,
+      actions,
+    };
+  });
+  const draft = {
+    format_version: 1,
+    batch_id: selection.batch_id,
+    round_id: selection.round_id,
+    selection: normalizeRepoPath(selectionPath),
+    selection_sha256: sha256(selectionBytes),
+    workbook: { path: normalizeRepoPath(workbookPath), sha256: sha256(workbookBytes) },
+    video: { path: selection.video.path, sha256: selection.video.sha256 },
+    time_precision_seconds: 1,
+    clips,
+  };
+  await publishJson(outputPath, draft, io);
+  return draft;
+}
+
+async function main() {
+  const [selectionPath, workbookPath, outputPath] = process.argv.slice(2);
+  invariant(selectionPath && workbookPath && outputPath && process.argv.length === 5, "Usage: node tools/extract_active_review_results.mjs SELECTION_JSON REVIEW_XLSX OUTPUT_DRAFT_JSON");
+  const draft = await extractActiveReviewResults(selectionPath, workbookPath, outputPath);
+  process.stdout.write(`${JSON.stringify({ batch_id: draft.batch_id, round_id: draft.round_id, clips: draft.clips.length, output: normalizeRepoPath(outputPath) })}\n`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`${error.stack ?? error.message}\n`);
+    process.exitCode = 1;
+  });
+}

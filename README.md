@@ -118,6 +118,7 @@ Spike-Trace/
 └─ tools/
    ├─ build_active_review_batch.mjs # 由选片 JSON 与代理 manifest 原子构建四页 40 段复核工作簿
    ├─ verify_active_review_batch.mjs # 验证短片、代理哈希、XLSX 投影、公式和人工输入边界
+   ├─ extract_active_review_results.mjs # 读取完成的 40 段工作簿并硬链接发布不可覆盖的复核草稿 JSON
    ├─ test_active_review_batch.mjs # 合成 40 段工作簿、预览、篡改拒绝与回滚可执行测试
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览
    ├─ verify_rangitoto_review.mjs # 独立验证工作簿结构、行数、空白输入与公式
