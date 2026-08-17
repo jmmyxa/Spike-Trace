@@ -161,6 +161,32 @@ class ProxyVideoTests(unittest.TestCase):
         self.assertFalse(self.destination.exists())
         self.assertEqual(list(self.destination.parent.glob(".proxy.*.mp4")), [])
 
+    def test_rejects_invalid_proxy_output_fps_before_writing(self):
+        for output_fps in (0, -1, float("nan"), float("inf")):
+            with self.subTest(output_fps=output_fps), self.assertRaises(VideoError):
+                write_proxy_video(
+                    self.source,
+                    self.destination,
+                    0.0,
+                    0.4,
+                    output_fps=output_fps,
+                )
+        self.assertFalse(self.destination.exists())
+
+    def test_rejects_invalid_proxy_max_width_before_writing(self):
+        for max_width in (1, 0, True, 3.5):
+            with self.subTest(max_width=max_width), self.assertRaisesRegex(
+                VideoError, "max_width must be an integer of at least 2"
+            ):
+                write_proxy_video(
+                    self.source,
+                    self.destination,
+                    0.0,
+                    0.4,
+                    max_width=max_width,
+                )
+        self.assertFalse(self.destination.exists())
+
     def test_cleans_up_temporary_file_when_writer_cannot_open(self):
         import spiketrace.video as video_module
 

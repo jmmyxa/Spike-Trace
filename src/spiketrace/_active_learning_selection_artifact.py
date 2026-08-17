@@ -366,34 +366,11 @@ def _validate_selection_payload(
     _validate_clips(
         selection["clips"], video_duration=selected_video["duration_seconds"]
     )
-    if _has_task_two_surface(selection):
-        _validate_task_two_selection(
-            selection, repo_root, merged=verified["merged"], verifier=verifier
-        )
+    _validate_task_two_selection(
+        selection, repo_root, merged=verified["merged"], verifier=verifier
+    )
     _validate_json_value(selection, "selection")
     return selection
-
-
-def _has_task_two_surface(selection: dict[str, Any]) -> bool:
-    settings = selection["settings"]
-    quota_summary = selection["quota_summary"]
-    coverage = selection["coverage"]
-    clips = selection["clips"]
-    complete_surfaces = (
-        _contains_fields(settings, _TASK_TWO_SETTINGS_FIELDS),
-        isinstance(quota_summary, list)
-        and len(quota_summary) == len(ROUND_ONE_QUOTAS)
-        and all(_contains_fields(item, _QUOTA_FIELDS) for item in quota_summary),
-        _contains_fields(coverage, _COVERAGE_FIELDS),
-        isinstance(clips, list)
-        and len(clips) == 40
-        and all(_contains_fields(clip, _TASK_TWO_CLIP_FIELDS) for clip in clips),
-    )
-    return sum(complete_surfaces) >= 3
-
-
-def _contains_fields(value: object, fields: tuple[str, ...]) -> bool:
-    return isinstance(value, dict) and all(field in value for field in fields)
 
 
 def _validate_task_two_selection(

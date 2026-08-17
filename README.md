@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份、产品前端和数据平台的第一阶段设计。下一阶段先把第二场完整比赛的全量候选改为每轮 40 个短回合的主动学习批次，建立跨比赛训练素材；独立评估继续使用未参与训练的另一场完整比赛。号码归属、前端和 SQLite 仍只围绕动作模型闭环逐步接入。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成 Rangitoto 首轮 40 段主动学习选片及本地复核批次。40 个静音代理、预览和 `outputs/active-learning/rangitoto/round-01/review.xlsx` 已经存在；当前唯一的用户操作是填写该工作簿的“人工动作”页。独立评估继续使用未参与训练的另一场完整比赛；号码归属、前端和 SQLite 暂不启动。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -52,7 +52,7 @@ README 必须随模块或目录变更同步更新。当前结构和职责如下�
 
 ```text
 Spike-Trace/
-├─ .gitattributes                # 固定标注 CSV 换行，保证跨设备字节哈希稳定
+├─ .gitattributes                # 固定标注 CSV 与确定性审计 CSV 换行，保证跨设备字节稳定
 ├─ agent-lanes.md                # 持久 Agent Lane 注册表与互斥写入范围
 ├─ .agent-lanes/                 # 各 Lane 的工作日志
 ├─ data/annotations/
@@ -89,6 +89,9 @@ Spike-Trace/
 │  ├─ merged_candidates.json     # format-2 自包含窗口证据；Task 5 重算后的最终 JSON
 │  ├─ merged_candidates.csv      # 与最终 JSON 一致的候选便携表格
 │  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的全量审计工作簿；不要求逐行填写
+├─ outputs/active-learning/rangitoto/
+│  ├─ round-01/                 # 本地忽略的 40 段代理、manifest 和待填 review.xlsx
+│  └─ round-01-previews/        # 本地忽略的四页工作簿预览
 ├─ src/spiketrace/
 │  ├─ active_learning_selection.py # 主动学习选片的稳定公共入口
 │  ├─ active_learning_review.py  # 应用主动学习人工结论、硬负样本与累计清单
@@ -159,7 +162,7 @@ results JSON，核对权威累计清单哈希和派生清单的逐行前缀，�
 
 下一阶段按以下顺序推进：
 
-1. 从 Rangitoto 全量候选中每轮自动选择 40 个短回合，人工一次穷举片段内全部我方动作并迭代动作模型。
+1. 填写已经生成的 Rangitoto 首轮 40 段工作簿，提取人工结果并生成累计训练清单。
 2. 使用未加入训练的另一场完整比赛建立固定 `val`，以后再保留第三场完整比赛作为 `test`。
 3. 动作模型基线稳定后，在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
 4. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
@@ -268,7 +271,7 @@ spiketrace evaluate-pretrained `
 
 `compatibility_metrics` 只衡量旧六类模型发现宽泛防守触球候选的能力，不能覆盖人工 `dig` 真值，也不能作为七类部署成绩。
 
-当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。下一步由主动学习选择器从整场候选池挑出短回合，再对短回合内所有我方动作做穷举标注；选择器完成前不开始新的大批量人工复核。
+当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。Rangitoto 主动学习选择器已经从整场候选池确定首轮 40 个短回合；现在只需在现成工作簿中穷举这些短回合内的我方动作。
 
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
@@ -459,20 +462,24 @@ python -m unittest discover -s tests -v
 
 ### Rangitoto 首轮主动学习复核交接
 
-`data/active-learning/rangitoto/round-01-selection.json` 是可版本化的 40 段选择证据；完整
-2,942 候选 JSON/CSV/XLSX 只作为审计证据保留。代理短片、预览图和 `review.xlsx` 都是本地
-生成物，不提交版本库。按以下流程操作：
+`data/active-learning/rangitoto/round-01-selection.json` 是已经提交的 40 段选择证据；完整
+2,942 候选 JSON/CSV/XLSX 只作为审计证据保留。40 个代理短片、四张预览图和
+`outputs/active-learning/rangitoto/round-01/review.xlsx` 已在本地生成，不提交版本库。
+
+当前用户只需打开 `outputs/active-learning/rangitoto/round-01/review.xlsx`，填写“人工动作”页。
+填写完成后再运行：
 
 ```powershell
-# 1. 生成选择和复核批次（程序执行）
-spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json data\active-learning\rangitoto\round-01-selection.json --repo-root .
-node tools\build_active_review_batch.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01 outputs\active-learning\rangitoto\round-01-previews
-
-# 2. 用户只填写 review.xlsx 的“人工动作”页
-
-# 3. 提取并应用（程序执行）
 node tools\extract_active_review_results.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01\review.xlsx data\active-learning\rangitoto\round-01-review-draft.json
 spiketrace apply-active-review data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv data\active-learning\rangitoto\round-01-selection.json data\active-learning\rangitoto\round-01-review-draft.json data\annotations\action_training_round_01.csv data\active-learning\rangitoto\round-01-results.json --repo-root . --legacy-base-match-id usa-germany-2024-olympics --review-match-id rangitoto-taka-national-final
+```
+
+以下仅用于从头重建或审计，不是当前操作；命令采用不同目标路径，并且这些不可覆盖的目标必须
+尚不存在：
+
+```powershell
+spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\active-learning\rangitoto\round-01-selection-rebuild.json --repo-root .
+node tools\build_active_review_batch.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01-rebuild outputs\active-learning\rangitoto\round-01-rebuild-previews
 ```
 
 代理短片无音频；用户只在“人工动作”页填写片段内相对的整数秒（开始与结束），并选择动作和
@@ -557,10 +564,10 @@ Rangitoto 就不能继续作为独立 `val` 或 `test`；可信的 Precision、R
 ## 当前限制
 
 当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
-Rangitoto 第二场完整比赛的 `center-nearest-frame-v1` 双裁剪 format-2 复核材料已经重建并可供
-主动学习选样：当前共有 2,942 个候选、4,282 个来源候选、823 个 duplicate groups 和 495 个
-conflict groups。下一步是实现每轮 40 个短片的确定性选择、精简复核和累计训练清单；全量工作簿
-只作审计，不要求人工完成。在独立比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率
+Rangitoto 第二场完整比赛的 `center-nearest-frame-v1` 双裁剪 format-2 复核材料、首轮 40 段
+确定性选择以及本地工作簿/代理已经完成：候选池共有 2,942 个候选、4,282 个来源候选、823 个
+duplicate groups 和 495 个 conflict groups。下一步仅是填写 `review.xlsx` 的“人工动作”页并生成
+累计训练清单；全量工作簿只作审计，不要求人工完成。在独立比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率
 或泛化结果。代码已经跑通
 自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并，但训练数据仍以
 39 个 `background` 为主，

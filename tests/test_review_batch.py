@@ -9,10 +9,7 @@ from pathlib import Path
 from unittest import mock
 
 import spiketrace.review_batch as review_batch_module
-from spiketrace.active_learning_selection import (
-    validate_merged_review_source,
-    write_review_selection,
-)
+from spiketrace import active_learning_selection
 from spiketrace.cli import build_parser, run_command
 from spiketrace.domain import VideoMetadata
 from spiketrace.errors import ActiveLearningError, VideoError
@@ -42,10 +39,10 @@ def make_merged_payload(video_path: Path, checkpoint_path: Path) -> dict[str, ob
         "video": {
             "path": "data/video.mp4",
             "fps": 25.0,
-            "frame_count": 3000,
+            "frame_count": 8000,
             "width": 1920,
             "height": 1080,
-            "duration_seconds": 120.0,
+            "duration_seconds": 320.0,
         },
         "model_version": "rangitoto-test-v1",
         "settings": {
@@ -59,9 +56,40 @@ def make_merged_payload(video_path: Path, checkpoint_path: Path) -> dict[str, ob
                 },
             }
         },
+        "events": [
+            {
+                "event_id": f"event-{index:03d}",
+                "start_ms": int(start * 1000),
+                "end_ms": int((start + 1) * 1000),
+                "action": action,
+                "confidence": confidence,
+                "observed_sides": [side] if duplicate is None else ["far", "near"],
+                "source_event_ids": [f"{side}:event-{index:03d}"],
+                "duplicate_group_id": duplicate,
+                "conflict_group_id": None,
+            }
+            for index, (start, action, confidence, side, duplicate) in enumerate(
+                [
+                    *((10 + index * 6, ("receive", "block", "dig")[index % 3], 0.72, "far", None) for index in range(20)),
+                    *((140 + index * 6, ("set", "attack", "serve")[index % 3], 0.9, "far", None) for index in range(8)),
+                    *((200 + index * 6, "set", 0.3, "far", f"duplicate-{index:02d}") for index in range(4)),
+                    *((230 + index * 6, "tip", 0.2, "near", None) for index in range(4)),
+                ]
+            )
+        ],
         "input_runs": {
-            "far": {"settings": {**settings, "crop": [0, 0, 1920, 645]}},
-            "near": {"settings": {**settings, "crop": [0, 255, 1920, 1080]}},
+            "far": {"settings": {**settings, "crop": [0, 0, 1920, 645]}, "windows": [
+                {"window_index": index, "start_seconds": start, "end_seconds": start + (15 if action == "background" else 1), "action": action, "confidence": confidence}
+                for index, (start, action, confidence) in enumerate(
+                    [*((10 + index * 6, ("receive", "block", "dig")[index % 3], 0.72) for index in range(20)), *((140 + index * 6, ("set", "attack", "serve")[index % 3], 0.9) for index in range(8)), *((200 + index * 6, "set", 0.3) for index in range(4)), *((260 + index * 10, "background", 0.99) for index in range(4))]
+                )
+            ]},
+            "near": {"settings": {**settings, "crop": [0, 255, 1920, 1080]}, "windows": [
+                {"window_index": index, "start_seconds": start, "end_seconds": start + (15 if action == "background" else 1), "action": action, "confidence": confidence}
+                for index, (start, action, confidence) in enumerate(
+                    [*((200 + index * 6, "set", 0.3) for index in range(4)), *((230 + index * 6, "tip", 0.2) for index in range(4)), *((260 + index * 10, "background", 0.99) for index in range(4))]
+                )
+            ]},
         },
     }
 
@@ -114,13 +142,14 @@ class ReviewProxyBatchTests(unittest.TestCase):
             "spiketrace.active_learning_selection.verify_dual_crop_review",
             return_value={"verified": True},
         ):
-            source = validate_merged_review_source(self.merged_json, repo_root=self.root)
-            self.selection_payload = make_selection_payload(source)
             self.selection = self.root / "selections" / "round-01.json"
-            write_review_selection(
-                self.selection_payload,
+            self.selection_payload = active_learning_selection.select_review_batch(
+                self.merged_json,
                 self.selection,
                 repo_root=self.root,
+                preferred_clip_seconds=5,
+                min_clip_seconds=5,
+                max_clip_seconds=5,
             )
         self.output_dir = self.root / "review-batch"
 

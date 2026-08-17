@@ -1,2 +1,3 @@
 data/annotations/*.csv text eol=crlf
+outputs/**/merged_candidates.csv text eol=lf
 *.json text eol=lf

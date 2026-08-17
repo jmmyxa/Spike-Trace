@@ -3,6 +3,7 @@ import csv
 import hashlib
 import io
 import json
+import subprocess
 import tempfile
 import time
 import unittest
@@ -852,6 +853,32 @@ class DualCropReviewVerifierTests(unittest.TestCase):
             self.assertTrue(result["verified"])
             self.assertFalse(result["csv_checked"])
             self.assertIsNone(result["hashes"]["merged_csv_sha256"])
+
+    def test_real_audit_csv_is_lf_pinned_and_verifies_with_autocrlf(self):
+        relative_csv = "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.csv"
+        csv_path = ROOT / relative_csv
+        json_path = csv_path.with_suffix(".json")
+        attribute = subprocess.run(
+            ["git", "check-attr", "eol", "--", relative_csv],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        autocrlf = subprocess.run(
+            ["git", "config", "--get", "core.autocrlf"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        self.assertEqual(attribute.stdout.strip(), f"{relative_csv}: eol: lf")
+        self.assertEqual(autocrlf.stdout.strip(), "true")
+        self.assertNotIn(b"\r\n", csv_path.read_bytes())
+        result = verify_dual_crop_review(json_path, csv_path=csv_path)
+        self.assertTrue(result["verified"])
+        self.assertTrue(result["csv_checked"])
 
     def test_rejects_independent_json_and_csv_tampering(self):
         mutations = {

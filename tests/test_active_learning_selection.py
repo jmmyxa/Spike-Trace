@@ -20,7 +20,7 @@ from spiketrace.active_learning_selection import (
     validate_merged_review_source,
     write_review_selection,
 )
-from spiketrace.dual_crop_review import build_dual_crop_review
+from spiketrace.dual_crop_review import build_dual_crop_review, verify_dual_crop_review
 from spiketrace.errors import ActiveLearningError
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -803,29 +803,9 @@ class FiveBucketSelectionTests(unittest.TestCase):
             )
 
     def test_loader_rejects_a_clip_overlapping_a_persisted_previous_selection(self):
-        current = self.select_fixture(filename="round-02.json", round_number=2)
         previous_path = self.root / "selections" / "task-1-round-01.json"
-        previous = make_valid_selection_payload(
-            {
-                "source": current["source"],
-                "video": current["video"],
-            }
-        )
-        previous["clips"] = [
-            {
-                "clip_id": f"clip-{ordinal:03d}",
-                "ordinal": ordinal,
-                "start_seconds": clip["start_seconds"],
-                "end_seconds": clip["end_seconds"],
-                "duration_seconds": clip["duration_seconds"],
-            }
-            for ordinal, clip in enumerate(current["clips"], start=1)
-        ]
-        with patch(
-            "spiketrace.active_learning_selection.verify_dual_crop_review",
-            return_value={"verified": True},
-        ):
-            write_review_selection(previous, previous_path, repo_root=self.root)
+        previous = self.select_fixture(filename=previous_path.name)
+        current = self.select_fixture(filename="round-02.json", round_number=2)
 
         current["previous_selections"] = [
             {
@@ -924,6 +904,35 @@ class FiveBucketSelectionTests(unittest.TestCase):
                     self.assertRaises(ActiveLearningError),
                 ):
                     load_review_selection(path, repo_root=self.root)
+
+    def test_loader_rejects_selection_v1_with_all_task_two_surfaces_stripped(self):
+        path = self.root / "selections" / "stripped-task-two-surfaces.json"
+        self.select_fixture(filename=path.name)
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["settings"] = {}
+        payload["quota_summary"] = []
+        payload["coverage"] = {}
+        base_clip_fields = {
+            "clip_id",
+            "ordinal",
+            "start_seconds",
+            "end_seconds",
+            "duration_seconds",
+        }
+        payload["clips"] = [
+            {key: value for key, value in clip.items() if key in base_clip_fields}
+            for clip in payload["clips"]
+        ]
+        path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+        with (
+            patch(
+                "spiketrace.active_learning_selection.verify_dual_crop_review",
+                return_value={"verified": True},
+            ),
+            self.assertRaisesRegex(ActiveLearningError, "selection settings"),
+        ):
+            load_review_selection(path, repo_root=self.root)
 
     def test_loader_enforces_persisted_clip_duration_bounds(self):
         mutations = (
@@ -1522,6 +1531,38 @@ class SelectionCliTests(unittest.TestCase):
                     )
                 self.assertNotIn("invalid choice: 'select-review-batch'", stderr.getvalue())
 
+    def test_argparse_rejects_non_finite_positive_floats(self):
+        from spiketrace.cli import build_parser
+
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value):
+                stderr = io.StringIO()
+                with redirect_stderr(stderr), self.assertRaises(SystemExit):
+                    build_parser().parse_args(
+                        [
+                            "select-review-batch",
+                            "merged.json",
+                            "selection.json",
+                            "--repo-root",
+                            ".",
+                            f"--preferred-clip-seconds={value}",
+                        ]
+                    )
+                self.assertIn("positive finite number", stderr.getvalue())
+
+        parsed = build_parser().parse_args(
+            [
+                "select-review-batch",
+                "merged.json",
+                "selection.json",
+                "--repo-root",
+                ".",
+                "--preferred-clip-seconds",
+                "12.5",
+            ]
+        )
+        self.assertEqual(parsed.preferred_clip_seconds, 12.5)
+
 
 class SelectionContractTests(unittest.TestCase):
     def setUp(self):
@@ -1538,9 +1579,7 @@ class SelectionContractTests(unittest.TestCase):
         self.merged_json.parent.mkdir(parents=True)
         self.merged_json.write_text(
             json.dumps(
-                make_compact_merged_payload(
-                    self.root, self.video_path, self.checkpoint_path
-                ),
+                make_selection_merged_payload(self.video_path, self.checkpoint_path),
                 indent=2,
             )
             + "\n",
@@ -1555,7 +1594,13 @@ class SelectionContractTests(unittest.TestCase):
                 self.merged_json,
                 repo_root=self.root,
             )
-        self.selection_payload = make_valid_selection_payload(self.source)
+            seed_output = self.root / "selections" / "seed.json"
+            self.selection_payload = active_learning_selection.select_review_batch(
+                self.merged_json,
+                seed_output,
+                repo_root=self.root,
+            )
+            seed_output.unlink()
 
     def _write_selection(self, payload=None):
         with patch(
@@ -1583,7 +1628,7 @@ class SelectionContractTests(unittest.TestCase):
 
     def test_writes_source_and_video_hashes_without_a_generated_timestamp(self):
         source = self.source
-        payload = make_valid_selection_payload(source, clip_count=40)
+        payload = copy.deepcopy(self.selection_payload)
         self._write_selection(payload)
         self.assertEqual(payload["format_version"], 1)
         self.assertEqual(
@@ -1604,7 +1649,7 @@ class SelectionContractTests(unittest.TestCase):
         self.assertEqual(self._load_selection(), payload)
 
     def test_rejects_an_existing_output_without_changing_its_bytes(self):
-        self.output_json.parent.mkdir(parents=True)
+        self.output_json.parent.mkdir(parents=True, exist_ok=True)
         self.output_json.write_bytes(b"keep")
         with self.assertRaisesRegex(ActiveLearningError, "already exists"):
             self._write_selection()
@@ -1660,8 +1705,8 @@ class SelectionContractTests(unittest.TestCase):
         self._write_selection()
         text = self.output_json.read_text(encoding="utf-8")
         non_finite = text.replace(
-            '    "clip_duration_ms": 1000',
-            '    "clip_duration_ms": NaN',
+            '    "preferred_clip_seconds": 15.0',
+            '    "preferred_clip_seconds": NaN',
             1,
         )
         self.output_json.write_text(non_finite, encoding="utf-8")
@@ -1677,8 +1722,8 @@ class SelectionContractTests(unittest.TestCase):
                 self.output_json.unlink(missing_ok=True)
                 self.merged_json.write_text(
                     json.dumps(
-                        make_compact_merged_payload(
-                            self.root, self.video_path, self.checkpoint_path
+                        make_selection_merged_payload(
+                            self.video_path, self.checkpoint_path
                         ),
                         indent=2,
                     )
@@ -1690,10 +1735,8 @@ class SelectionContractTests(unittest.TestCase):
                     "spiketrace.active_learning_selection.verify_dual_crop_review",
                     return_value={"verified": True},
                 ):
-                    source = validate_merged_review_source(
-                        self.merged_json, repo_root=self.root
-                    )
-                payload = make_valid_selection_payload(source)
+                    validate_merged_review_source(self.merged_json, repo_root=self.root)
+                payload = copy.deepcopy(self.selection_payload)
                 self._write_selection(payload)
                 if target == "merged":
                     self.merged_json.write_bytes(
@@ -1858,7 +1901,7 @@ class SelectionContractTests(unittest.TestCase):
                     self._load_selection()
                 self.output_json.unlink()
 
-    def test_requires_extensible_container_types_and_preserves_clip_extensions(self):
+    def test_requires_task_two_container_types_and_exact_clip_fields(self):
         container_mutations = {
             "settings": [],
             "previous_selections": {},
@@ -1872,37 +1915,177 @@ class SelectionContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ActiveLearningError, field):
                     self._write_selection(payload)
 
-        extensible = copy.deepcopy(self.selection_payload)
-        extensible["clips"][0]["future_evidence"] = {
+        extra_clip_field = copy.deepcopy(self.selection_payload)
+        extra_clip_field["clips"][0]["future_evidence"] = {
             "score": 0.75,
             "labels": ["serve"],
         }
-        self._write_selection(extensible)
-        self.assertEqual(self._load_selection(), extensible)
+        with self.assertRaisesRegex(ActiveLearningError, "fields must be exactly"):
+            self._write_selection(extra_clip_field)
 
-    def test_task_one_extensions_do_not_activate_task_two_validation(self):
-        mutations = {
-            "generic settings seed": lambda payload: payload["settings"].update(
-                seed=42
-            ),
-            "partial quota and coverage": lambda payload: (
-                payload["quota_summary"].append({"future_bucket": "review"}),
-                payload["coverage"].update(represented_time_strata=[0]),
-            ),
-            "single clip selection bucket": lambda payload: payload["clips"][
-                0
-            ].update(selection_bucket="future-review"),
-        }
-        for name, mutate in mutations.items():
-            with self.subTest(extension=name):
-                payload = copy.deepcopy(self.selection_payload)
-                mutate(payload)
-                self._write_selection(payload)
-                self.assertEqual(self._load_selection(), payload)
-                self.output_json.unlink()
+    def test_task_one_style_selection_v1_payload_is_not_a_compatibility_contract(self):
+        payload = copy.deepcopy(self.selection_payload)
+        payload["settings"] = {"clip_duration_ms": 1000}
+        payload["quota_summary"] = []
+        payload["coverage"] = {"start_seconds": 0.0, "end_seconds": 79.0}
+        payload["clips"] = [
+            {
+                key: clip[key]
+                for key in (
+                    "clip_id",
+                    "ordinal",
+                    "start_seconds",
+                    "end_seconds",
+                    "duration_seconds",
+                )
+            }
+            for clip in payload["clips"]
+        ]
+        with self.assertRaisesRegex(ActiveLearningError, "selection settings"):
+            self._write_selection(payload)
 
 
 class SelectionVerifierIntegrationTests(unittest.TestCase):
+    def test_real_merged_fixture_flows_through_verifier_and_selector(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            video_path = directory / "selector-video.mp4"
+            video_path.write_bytes(b"selector integration video")
+            video_sha256 = sha256_file(video_path)
+            video = {
+                "path": str(video_path),
+                "fps": 25.0,
+                "frame_count": 250000,
+                "width": 1920,
+                "height": 1080,
+                "duration_seconds": 10000.0,
+            }
+            runs = {
+                side: json.loads(
+                    (DUAL_CROP_FIXTURES / f"{side}.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                for side in ("far", "near")
+            }
+            for run in runs.values():
+                run["video"] = copy.deepcopy(video)
+                run["settings"]["video"] = copy.deepcopy(video)
+                run["settings"]["video_sha256"] = video_sha256
+                run["events"] = []
+                run["windows"] = []
+
+            def add_event(side, start_seconds, action, confidence):
+                run = runs[side]
+                confidence = round(confidence, 6)
+                window_index = len(run["windows"])
+                event_id = f"evt_{side}_{window_index:03d}"
+                run["windows"].append(
+                    {
+                        "window_index": window_index,
+                        "start_seconds": start_seconds,
+                        "end_seconds": start_seconds + 1.0,
+                        "action": action,
+                        "confidence": confidence,
+                    }
+                )
+                run["events"].append(
+                    {
+                        "video_id": video_path.stem,
+                        "event_id": event_id,
+                        "start_ms": int(start_seconds * 1000),
+                        "end_ms": int((start_seconds + 1.0) * 1000),
+                        "action": action,
+                        "confidence": confidence,
+                        "team_side": None,
+                        "player_number": None,
+                        "status": "predicted",
+                        "model_version": "rangitoto-test-v1",
+                        "source": "sliding_window",
+                        "source_window_indices": [window_index],
+                    }
+                )
+
+            positions = [100.0 + index * 250.0 for index in range(36)]
+            for index, start_seconds in enumerate(positions[:20]):
+                add_event(
+                    ("far", "near")[index % 2],
+                    start_seconds,
+                    ("receive", "block", "dig")[index % 3],
+                    0.72,
+                )
+            for index, start_seconds in enumerate(positions[20:28]):
+                add_event(
+                    "far",
+                    start_seconds,
+                    ("set", "attack", "serve")[index % 3],
+                    0.9 - index / 100,
+                )
+            for start_seconds in positions[28:32]:
+                add_event("far", start_seconds, "set", 0.3)
+                add_event("near", start_seconds, "set", 0.3)
+            for start_seconds in positions[32:36]:
+                add_event("near", start_seconds, "tip", 0.2)
+            for start_seconds in (9100.0, 9350.0, 9600.0, 9850.0):
+                for side in ("far", "near"):
+                    run = runs[side]
+                    run["windows"].append(
+                        {
+                            "window_index": len(run["windows"]),
+                            "start_seconds": start_seconds,
+                            "end_seconds": start_seconds + 15.0,
+                            "action": "background",
+                            "confidence": 0.99,
+                        }
+                    )
+
+            far_path = directory / "far.json"
+            near_path = directory / "near.json"
+            far_path.write_text(
+                json.dumps(runs["far"], indent=2) + "\n", encoding="utf-8"
+            )
+            near_path.write_text(
+                json.dumps(runs["near"], indent=2) + "\n", encoding="utf-8"
+            )
+            output_dir = directory / "review"
+            build_dual_crop_review(
+                far_path,
+                near_path,
+                output_dir,
+                repo_root=ROOT,
+            )
+            merged_path = output_dir / "merged_candidates.json"
+            verification = verify_dual_crop_review(
+                merged_path,
+                csv_path=output_dir / "merged_candidates.csv",
+            )
+            selection_path = directory / "selection.json"
+            selection = active_learning_selection.select_review_batch(
+                merged_path,
+                selection_path,
+                repo_root=ROOT,
+            )
+
+            self.assertTrue(verification["verified"])
+            self.assertEqual(len(selection["clips"]), 40)
+            self.assertEqual(
+                selection["source"]["merged_json_sha256"],
+                verification["hashes"]["merged_json_sha256"],
+            )
+            merged_ids = {
+                event["event_id"]
+                for event in json.loads(merged_path.read_text(encoding="utf-8"))[
+                    "events"
+                ]
+            }
+            selected_hint_ids = {
+                hint["canonical_event_id"]
+                for clip in selection["clips"]
+                for hint in clip["candidate_hints"]
+            }
+            self.assertTrue(selected_hint_ids)
+            self.assertLessEqual(selected_hint_ids, merged_ids)
+
     def test_real_dual_crop_verifier_accepts_source_and_rejects_tampering(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
             directory = Path(temporary)

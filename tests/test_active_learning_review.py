@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest import mock
 
+from spiketrace import active_learning_selection
 from spiketrace.active_learning_review import apply_active_review
 from spiketrace.cli import build_parser, run_command
 from spiketrace.errors import ActiveLearningError
@@ -107,10 +108,10 @@ class ApplyActiveReviewTests(unittest.TestCase):
             "video": {
                 "path": "data/rangitoto.mp4",
                 "fps": 25,
-                "frame_count": 12500,
+                "frame_count": 25000,
                 "width": 1920,
                 "height": 1080,
-                "duration_seconds": 500,
+                "duration_seconds": 1000,
             },
             "settings": {"input_runs": {"far": audit_far, "near": audit_near}},
             "input_runs": {
@@ -179,56 +180,63 @@ class ApplyActiveReviewTests(unittest.TestCase):
             "conflict_groups": [],
         }
         merged_path = self.root / "outputs" / "merged.json"
+        events = []
+
+        def add_event(index, start_seconds, action, confidence, side, duplicate=None):
+            event_id = f"event-{index:03d}"
+            events.append(
+                {
+                    "event_id": event_id,
+                    "start_ms": int(start_seconds * 1000),
+                    "end_ms": int((start_seconds + 1) * 1000),
+                    "action": action,
+                    "confidence": confidence,
+                    "observed_sides": [side] if duplicate is None else ["far", "near"],
+                    "source_event_ids": [f"{side}:{event_id}"],
+                    "duplicate_group_id": duplicate,
+                    "conflict_group_id": None,
+                }
+            )
+
+        for index in range(20):
+            add_event(index, 102 + index * 20, ("receive", "block", "dig")[index % 3], 0.72, "far")
+        for index in range(8):
+            add_event(20 + index, 520 + index * 20, ("set", "attack", "serve")[index % 3], 0.9, "far")
+        for index in range(4):
+            start_seconds = 700 + index * 20
+            add_event(28 + index, start_seconds, "set", 0.3, "far", f"duplicate-{index:02d}")
+        for index in range(4):
+            add_event(32 + index, 800 + index * 20, "tip", 0.2, "near")
+        merged["events"] = events
+        for side in ("far", "near"):
+            merged["input_runs"][side]["windows"].extend(
+                [
+                {
+                    "window_index": 4 + index,
+                    "start_seconds": start_seconds,
+                    "end_seconds": start_seconds + 15,
+                    "action": "background",
+                    "confidence": 0.99,
+                }
+                for index, start_seconds in enumerate((0, 120, 900, 925, 950))
+                ]
+            )
         merged_path.write_text(json.dumps(merged) + "\n", encoding="utf-8")
-        clips = [
-            {
-                "clip_id": f"round-01-clip-{ordinal:03d}",
-                "ordinal": ordinal,
-                "start_seconds": 100 + (ordinal - 1) * 5,
-                "end_seconds": 104 + (ordinal - 1) * 5,
-                "duration_seconds": 4,
-            }
-            for ordinal in range(1, 41)
-        ]
-        selection = {
-            "format_version": 1,
-            "selection_algorithm_version": "active-learning-selection-v1",
-            "batch_id": "rangitoto-round-01",
-            "round_id": "round-01",
-            "round_number": 1,
-            "source": {
-                "merged_json": "outputs/merged.json",
-                "merged_json_sha256": sha256_file(merged_path),
-                "checkpoint": "runs/best.pt",
-                "checkpoint_sha256": "a" * 64,
-                "inference_runs": {"far": audit_far, "near": audit_near},
-                "format_version": 2,
-                "merge_format_version": 2,
-                "model_version": "synthetic-v1",
-            },
-            "video": {
-                "video_id": "rangitoto",
-                "path": "data/rangitoto.mp4",
-                "sha256": video_hash,
-                "fps": 25,
-                "frame_count": 12500,
-                "width": 1920,
-                "height": 1080,
-                "duration_seconds": 500,
-                "crops": {
-                    "far": [0, 0, 1920, 645],
-                    "near": [0, 255, 1920, 1080],
-                },
-            },
-            "settings": {},
-            "previous_selections": [],
-            "quota_summary": [],
-            "coverage": {},
-            "clips": clips,
-        }
-        self.selection.write_text(json.dumps(selection) + "\n", encoding="utf-8")
+        with mock.patch(
+            "spiketrace.active_learning_selection.verify_dual_crop_review",
+            return_value={"verified": True},
+        ):
+            selection = active_learning_selection.select_review_batch(
+                merged_path,
+                self.selection,
+                repo_root=self.root,
+                preferred_clip_seconds=5,
+                min_clip_seconds=5,
+                max_clip_seconds=5,
+            )
         draft_clips = []
-        for clip in clips:
+        receive_count = 0
+        for clip in selection["clips"]:
             action = (
                 {
                     "action": "receive",
@@ -237,15 +245,17 @@ class ApplyActiveReviewTests(unittest.TestCase):
                     "team_side": "far",
                     "note": "clean receive",
                 }
-                if clip["ordinal"] == 1
+                if clip["anchor"]["action"] == "receive" and receive_count < 1
                 else {
                     "action": "background",
                     "relative_start_seconds": 0,
-                    "relative_end_seconds": 4,
+                    "relative_end_seconds": clip["duration_seconds"],
                     "team_side": "near",
                     "note": "",
                 }
             )
+            if action["action"] == "receive":
+                receive_count += 1
             draft_clips.append(
                 {
                     "clip_id": clip["clip_id"],
@@ -409,7 +419,7 @@ class HardNegativeTests(unittest.TestCase):
             )
         )
         self.assertEqual(result["settings"]["requested_max_background_windows"], 9)
-        self.assertEqual(result["settings"]["effective_max_background_windows"], 3)
+        self.assertEqual(result["settings"]["effective_max_background_windows"], 2)
         self.assertEqual(result["settings"]["background_seed"], 42)
 
     def test_zero_cap_is_valid(self):
@@ -1052,16 +1062,17 @@ class ActiveReviewValidationTests(unittest.TestCase):
         for name, field, value, message in cases:
             with self.subTest(name=name):
                 selection = copy.deepcopy(original_selection)
-                selection["clips"][0].update(
-                    {"start_seconds": 0, "end_seconds": 1, "duration_seconds": 1}
-                )
                 self.selection.write_text(
                     json.dumps(selection) + "\n", encoding="utf-8"
                 )
                 draft = copy.deepcopy(original_draft)
                 draft["selection_sha256"] = sha256_file(self.selection)
-                draft["clips"][0]["source_start_seconds"] = 0
-                draft["clips"][0]["source_end_seconds"] = 1
+                draft["clips"][0]["source_start_seconds"] = selection["clips"][0][
+                    "start_seconds"
+                ]
+                draft["clips"][0]["source_end_seconds"] = selection["clips"][0][
+                    "end_seconds"
+                ]
                 draft["clips"][0][field] = value
                 self.review_draft.write_text(
                     json.dumps(draft) + "\n", encoding="utf-8"

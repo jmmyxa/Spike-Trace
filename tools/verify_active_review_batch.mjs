@@ -10,6 +10,12 @@ export const SHEET_NAMES = ["短片清单", "人工动作", "候选提示", "标
 export const ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
 export const SIDES = ["far", "near"];
 export const ACTION_SLOTS_PER_CLIP = 12;
+const SHEET_BANNERS = [
+  ["短片清单", "主动学习短片清单", "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。 "],
+  ["人工动作", "人工动作", "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。 "],
+  ["候选提示", "候选提示", "只读模型提示；它们是参考，不是人工审核结果。 "],
+  ["标签说明", "标签说明", "请先阅读再填写“人工动作”页。 "],
+];
 export const CLIP_HEADERS = [
   "序号", "短片ID", "播放短片", "代理文件", "片段长度(秒)", "原视频开始",
   "原视频结束", "时间分层", "选择桶", "选择原因", "候选提示数",
@@ -231,6 +237,15 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const actions = workbook.worksheets.getItem("人工动作");
   const hints = workbook.worksheets.getItem("候选提示");
   const labels = workbook.worksheets.getItem("标签说明");
+  for (const [sheetName, title, instruction] of SHEET_BANNERS) {
+    const sheet = workbook.worksheets.getItem(sheetName);
+    assert.deepEqual(sheet.getRange("A1").values, [[title]], `${sheetName} title`);
+    assert.deepEqual(
+      sheet.getRange("A2").values,
+      [[instruction]],
+      `${sheetName} instruction`,
+    );
+  }
   exactUsedRange(clips, 43, CLIP_HEADERS.length, "Clip sheet");
   exactUsedRange(actions, 3 + 40 * ACTION_SLOTS_PER_CLIP, ACTION_HEADERS.length, "Action sheet");
   exactUsedRange(hints, 3 + projection.hintRows.length, HINT_HEADERS.length, "Hint sheet");

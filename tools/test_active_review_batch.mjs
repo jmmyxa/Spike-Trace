@@ -254,6 +254,8 @@ async function main() {
     ]);
 
     const corruptions = [
+      ["changed sheet title", async (book) => book.worksheets.getItem("短片清单").getRange("A1").values = [["篡改标题"]]],
+      ["changed sheet instruction", async (book) => book.worksheets.getItem("候选提示").getRange("A2").values = [["篡改说明"]]],
       ["changed clip ID", async (book) => book.worksheets.getItem("短片清单").getRange("B4").values = [["changed-clip"]]],
       ["absolute hyperlink", async (book) => book.worksheets.getItem("人工动作").getRange("C5").formulas = [['=HYPERLINK("C:/clips/a.mp4","播放")']]],
       ["altered later hyperlink", async (book) => book.worksheets.getItem("人工动作").getRange("C15").formulas = [['=HYPERLINK("clips/replaced.mp4","播放")']]],
@@ -266,7 +268,7 @@ async function main() {
       ["changed label instruction", async (book) => book.worksheets.getItem("标签说明").getRange("B4").values = [["erased"]]],
     ];
     for (const [name, mutate] of corruptions) {
-      const corrupted = path.join(fixtureDir, `corrupt-${name.replaceAll(" ", "-")}.xlsx`);
+      const corrupted = path.join(outputDir, `corrupt-${name.replaceAll(" ", "-")}.xlsx`);
       await exportWorkbook(workbookPath, corrupted, mutate);
       await rejects(selectionPath, corrupted, name);
     }
