@@ -116,6 +116,9 @@ Spike-Trace/
 │  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试
 │  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
 └─ tools/
+   ├─ build_active_review_batch.mjs # 由选片 JSON 与代理 manifest 原子构建四页 40 段复核工作簿
+   ├─ verify_active_review_batch.mjs # 验证短片、代理哈希、XLSX 投影、公式和人工输入边界
+   ├─ test_active_review_batch.mjs # 合成 40 段工作簿、预览、篡改拒绝与回滚可执行测试
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览
    ├─ verify_rangitoto_review.mjs # 独立验证工作簿结构、行数、空白输入与公式
    ├─ test_rangitoto_review.mjs  # 四窗口 fixture 的可执行 XLSX 集成测试
