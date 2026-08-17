@@ -43,10 +43,11 @@ function sha256(data) {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-async function sha256File(filePath) {
+export async function sha256File(filePath, { open = fs.open, chunkBytes = 1024 * 1024 } = {}) {
+  invariant(Number.isInteger(chunkBytes) && chunkBytes > 0, "SHA-256 chunk size must be a positive integer.");
   const hash = crypto.createHash("sha256");
-  const handle = await fs.open(filePath, "r");
-  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  const handle = await open(filePath, "r");
+  const buffer = Buffer.allocUnsafe(chunkBytes);
   let position = 0;
   try {
     while (true) {

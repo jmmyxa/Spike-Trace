@@ -105,10 +105,17 @@ async function main() {
   );
   const selectionIgnore = spawnSync(
     "git",
-    ["check-ignore", "data/active-learning/rangitoto/round-01-selection.json"],
+    ["check-ignore", "--no-index", "data/active-learning/rangitoto/round-01-selection.json"],
     { cwd: ROOT, encoding: "utf8" },
   );
   assert.equal(selectionIgnore.status, 1, "selection JSON must be recognized by Git instead of ignored");
+  const selectionEol = spawnSync(
+    "git",
+    ["check-attr", "eol", "--", "data/active-learning/rangitoto/round-01-selection.json"],
+    { cwd: ROOT, encoding: "utf8" },
+  );
+  assert.equal(selectionEol.status, 0, "Git must be able to inspect selection line-ending policy");
+  assert.match(selectionEol.stdout, /eol: lf/, "selection JSON must be checked out with LF bytes for SHA-256 portability");
   const proxyIgnore = spawnSync(
     "git",
     ["check-ignore", "outputs/active-learning/rangitoto/round-01/clips/example.mp4"],

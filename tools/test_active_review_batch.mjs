@@ -10,6 +10,7 @@ import {
   ACTION_SLOTS_PER_CLIP,
   SHEET_NAMES,
   SIDES,
+  sha256File,
   verifyProxyBatch,
   verifyWorkbookFile,
 } from "./verify_active_review_batch.mjs";
@@ -26,6 +27,33 @@ const ROOT = path.resolve(".");
 
 function digest(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
+}
+
+async function verifyStreamingHashRegression() {
+  const bytes = Buffer.from("streaming SHA-256 must not materialize the source video", "utf8");
+  const reads = [];
+  let closeCount = 0;
+  const digestResult = await sha256File("virtual-over-2-gib-source.mp4", {
+    chunkBytes: 4,
+    open: async (filePath, flags) => {
+      assert.equal(filePath, "virtual-over-2-gib-source.mp4");
+      assert.equal(flags, "r");
+      return {
+        async read(buffer, offset, length, position) {
+          reads.push({ offset, length, position });
+          const copied = bytes.copy(buffer, offset, position, Math.min(position + 3, bytes.length));
+          return { bytesRead: copied };
+        },
+        async close() {
+          closeCount += 1;
+        },
+      };
+    },
+  });
+  assert.equal(digestResult, digest(bytes), "streamed hashing must digest every partial read exactly once");
+  assert.deepEqual(reads.map(({ offset, length }) => ({ offset, length })), reads.map(() => ({ offset: 0, length: 4 })));
+  assert.deepEqual(reads.map(({ position }) => position), [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48, 51, 54, 55]);
+  assert.equal(closeCount, 1, "streamed hashing must close its file handle");
 }
 
 function runPython(args, context) {
@@ -184,6 +212,7 @@ async function assertNoSnapshotSibling(directory, inputName) {
 }
 
 async function main() {
+  await verifyStreamingHashRegression();
   const fixtureDir = path.join(ROOT, "tests", ".active-review-fixture");
   const outputDir = path.join(fixtureDir, "batch");
   const previewDir = path.join(fixtureDir, "previews");
