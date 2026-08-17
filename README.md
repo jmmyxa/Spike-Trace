@@ -103,6 +103,7 @@ Spike-Trace/
 │  ├─ ml.py                      # PyTorch 模型、设备和 checkpoint
 │  ├─ outputs.py                 # 事件 JSON/CSV 输出
 │  ├─ pretrained.py              # 外部 YOLO 适配、标签归一化与评估
+│  ├─ review_batch.py            # 主动学习 40 段静音代理视频批次与 manifest 写出
 │  ├─ review.py                  # 二次复核队列生成、结果校验与新清单写出
 │  ├─ timecode.py                # 视频秒数与可读时间互转
 │  ├─ training.py                # R3D-18/Tiny3D 训练与验证
@@ -112,6 +113,7 @@ Spike-Trace/
 │  ├─ test_active_learning_selection.py # 主动学习选片制品契约与信任链测试
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
+│  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试
 │  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
 └─ tools/
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览

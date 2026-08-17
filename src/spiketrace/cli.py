@@ -157,6 +157,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--previous-selection", type=Path, action="append", default=[]
     )
 
+    review_clips_parser = subparsers.add_parser(
+        "build-review-clips",
+        help="Build silent proxy clips and a manifest for an active-learning batch.",
+    )
+    review_clips_parser.add_argument("selection_json", type=Path)
+    review_clips_parser.add_argument("output_dir", type=Path)
+    review_clips_parser.add_argument("--repo-root", type=Path, required=True)
+    review_clips_parser.add_argument("--proxy-fps", type=_positive_float, default=15.0)
+    review_clips_parser.add_argument("--max-width", type=_positive_int, default=960)
+
     pretrained_parser = subparsers.add_parser(
         "evaluate-pretrained",
         help="Evaluate pretrained YOLO action weights against an annotation CSV.",
@@ -275,6 +285,17 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             min_anchor_gap_seconds=args.min_anchor_gap_seconds,
             time_strata=args.time_strata,
             previous_selection_paths=args.previous_selection,
+        )
+
+    if args.command == "build-review-clips":
+        from .review_batch import build_review_proxies
+
+        return build_review_proxies(
+            args.selection_json,
+            args.output_dir,
+            repo_root=args.repo_root,
+            output_fps=args.proxy_fps,
+            max_width=args.max_width,
         )
 
     if args.command == "evaluate-pretrained":
