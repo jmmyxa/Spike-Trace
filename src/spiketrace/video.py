@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from math import floor, isfinite
@@ -90,6 +91,138 @@ def inspect_video(video_path: str | Path) -> VideoMetadata:
         )
     finally:
         capture.release()
+
+
+def write_proxy_video(
+    video_path: str | Path,
+    output_path: str | Path,
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    output_fps: float = 15.0,
+    max_width: int = 960,
+    codec: str = "mp4v",
+) -> VideoMetadata:
+    """Write a sampled, resized, silent MP4 clip and return its metadata."""
+    try:
+        start_seconds = float(start_seconds)
+        end_seconds = float(end_seconds)
+        output_fps = float(output_fps)
+    except (TypeError, ValueError) as exc:
+        raise VideoError("Proxy video parameters must be numeric.") from exc
+    if (
+        not isfinite(start_seconds)
+        or not isfinite(end_seconds)
+        or start_seconds < 0
+        or end_seconds <= start_seconds
+    ):
+        raise VideoError("Clip must satisfy 0 <= start_seconds < end_seconds.")
+    if not isfinite(output_fps) or output_fps <= 0:
+        raise VideoError("output_fps must be finite and positive.")
+    if isinstance(max_width, bool) or not isinstance(max_width, int) or max_width < 2:
+        raise VideoError("max_width must be an integer of at least 2.")
+    if not isinstance(codec, str) or len(codec) != 4 or not codec.isascii():
+        raise VideoError("codec must contain exactly four ASCII characters.")
+
+    source = inspect_video(video_path)
+    if end_seconds > source.duration_seconds + 1e-9:
+        raise VideoError("Clip end exceeds the source video duration.")
+
+    destination = Path(output_path).expanduser().resolve()
+    if destination.exists():
+        raise VideoError(f"Proxy video destination already exists: {destination}")
+
+    target_width = min(source.width, max_width)
+    target_height = max(2, round(source.height * target_width / source.width))
+    target_width -= target_width % 2
+    target_height -= target_height % 2
+    frame_total = max(1, floor((end_seconds - start_seconds) * output_fps + 0.5))
+    frame_indices = clip_sample_frame_indices(
+        start_seconds,
+        end_seconds,
+        num_frames=frame_total,
+        fps=source.fps,
+        frame_count=source.frame_count,
+    )
+
+    cv2 = _cv2()
+    temporary_path: Path | None = None
+    capture = None
+    writer = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            suffix=".mp4",
+            prefix=f".{destination.stem}.",
+            dir=destination.parent,
+            delete=False,
+        ) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+
+        capture = cv2.VideoCapture(str(source.path))
+        if not capture.isOpened():
+            raise VideoError(f"OpenCV could not open video: {source.path}")
+        capture.set(cv2.CAP_PROP_POS_FRAMES, frame_indices[0])
+
+        writer = cv2.VideoWriter(
+            str(temporary_path),
+            cv2.VideoWriter_fourcc(*codec),
+            output_fps,
+            (target_width, target_height),
+        )
+        if not writer.isOpened():
+            raise VideoError(f"OpenCV could not create proxy video: {destination}")
+
+        decoded_frame_index = frame_indices[0] - 1
+        source_frame: np.ndarray | None = None
+        for frame_index in frame_indices:
+            while decoded_frame_index < frame_index:
+                ok, source_frame = capture.read()
+                decoded_frame_index += 1
+                if not ok or source_frame is None:
+                    raise VideoError(
+                        f"Could not decode frame {frame_index} from {source.path}"
+                    )
+            resized_frame = cv2.resize(
+                source_frame,
+                (target_width, target_height),
+                interpolation=cv2.INTER_AREA,
+            )
+            writer.write(resized_frame)
+
+        writer.release()
+        writer = None
+        proxy = inspect_video(temporary_path)
+        expected_duration = frame_total / output_fps
+        if (
+            proxy.frame_count != frame_total
+            or abs(proxy.fps - output_fps) > 0.01
+            or (proxy.width, proxy.height) != (target_width, target_height)
+            or abs(proxy.duration_seconds - expected_duration) > 0.11
+        ):
+            raise VideoError("Written proxy video did not match the requested metadata.")
+
+        temporary_path.replace(destination)
+        temporary_path = None
+        return VideoMetadata(
+            path=destination,
+            fps=proxy.fps,
+            frame_count=proxy.frame_count,
+            width=proxy.width,
+            height=proxy.height,
+            duration_seconds=proxy.duration_seconds,
+        )
+    except VideoError:
+        raise
+    except Exception as exc:
+        raise VideoError(f"Could not write proxy video: {destination}") from exc
+    finally:
+        if capture is not None:
+            capture.release()
+        if writer is not None:
+            writer.release()
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def sample_video_frames(

@@ -11,6 +11,7 @@ from spiketrace.video import (
     clip_sample_frame_indices,
     iter_window_times,
     sample_video_clip,
+    write_proxy_video,
 )
 
 
@@ -29,6 +30,20 @@ def _write_test_video(path: Path, *, frame_count: int = 12, fps: float = 10.0) -
             writer.write(frame)
     finally:
         writer.release()
+
+
+def _read_frame_mean(path: Path, frame_index: int) -> np.ndarray:
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        raise RuntimeError(f"Could not reopen temporary test video: {path}")
+    try:
+        capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+        ok, frame = capture.read()
+        if not ok or frame is None:
+            raise RuntimeError(f"Could not read frame {frame_index} from {path}")
+        return frame.mean(axis=(0, 1))
+    finally:
+        capture.release()
 
 
 class WindowTimeTests(unittest.TestCase):
@@ -99,6 +114,78 @@ class ClipSampleFrameIndexTests(unittest.TestCase):
                     fps=fps,
                     frame_count=count,
                 )
+
+
+class ProxyVideoTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.source = Path(self.temporary_directory.name) / "source.avi"
+        self.destination = Path(self.temporary_directory.name) / "proxy.mp4"
+        _write_test_video(self.source)
+
+    def tearDown(self):
+        self.temporary_directory.cleanup()
+
+    def test_writes_reopenable_silent_mp4_with_stable_geometry(self):
+        metadata = write_proxy_video(
+            self.source,
+            self.destination,
+            0.2,
+            1.2,
+            output_fps=10.0,
+            max_width=6,
+        )
+        self.assertEqual(metadata.frame_count, 10)
+        self.assertAlmostEqual(metadata.fps, 10.0, places=2)
+        self.assertEqual((metadata.width, metadata.height), (6, 4))
+        self.assertAlmostEqual(metadata.duration_seconds, 1.0, delta=0.11)
+        self.assertTrue(self.destination.is_file())
+
+        first_mean = _read_frame_mean(self.destination, 0)
+        last_mean = _read_frame_mean(self.destination, metadata.frame_count - 1)
+        np.testing.assert_allclose(first_mean, [70.0, 75.0, 45.0], atol=25.0)
+        np.testing.assert_allclose(last_mean, [70.0, 75.0, 165.0], atol=25.0)
+        self.assertGreater(last_mean[2], first_mean[2] + 80.0)
+
+    def test_refuses_bounds_errors_and_an_existing_destination(self):
+        self.destination.write_bytes(b"keep")
+        for start, end in ((-1, 1), (1, 1), (0, 99), (float("nan"), 1)):
+            with self.subTest((start, end)), self.assertRaises(VideoError):
+                write_proxy_video(self.source, self.destination, start, end)
+        self.assertEqual(self.destination.read_bytes(), b"keep")
+
+    def test_rejects_invalid_codec_before_writing(self):
+        for codec in ("mp4", "abcde", "mp4\u00e9"):
+            with self.subTest(codec=codec), self.assertRaises(VideoError):
+                write_proxy_video(self.source, self.destination, 0.0, 0.4, codec=codec)
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(list(self.destination.parent.glob(".proxy.*.mp4")), [])
+
+    def test_cleans_up_temporary_file_when_writer_cannot_open(self):
+        import spiketrace.video as video_module
+
+        class ClosedWriter:
+            def isOpened(self):
+                return False
+
+            def release(self):
+                pass
+
+        with patch.object(
+            video_module._cv2(), "VideoWriter", return_value=ClosedWriter()
+        ), self.assertRaises(VideoError):
+            write_proxy_video(self.source, self.destination, 0.0, 0.4)
+
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(list(self.destination.parent.glob(".proxy.*.mp4")), [])
+
+    def test_missing_source_does_not_leave_output_or_temporary_file(self):
+        missing_source = Path(self.temporary_directory.name) / "missing.avi"
+        with self.assertRaises(VideoError):
+            write_proxy_video(missing_source, self.destination, 0.0, 0.4)
+
+        self.assertFalse(self.destination.exists())
+        self.assertEqual(list(self.destination.parent.glob(".proxy.*.mp4")), [])
 
 
 class SequentialClipBatchTests(unittest.TestCase):
