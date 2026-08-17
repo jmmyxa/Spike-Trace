@@ -330,6 +330,13 @@ class ApplyActiveReviewTests(unittest.TestCase):
             )
         )
 
+    def test_persists_validated_time_precision_in_returned_and_saved_results(self):
+        result = self.apply(max_background_windows=0)
+        persisted = json.loads(self.output_results.read_text(encoding="utf-8"))
+
+        self.assertEqual(result["time_precision_seconds"], 1)
+        self.assertEqual(persisted["time_precision_seconds"], 1)
+
 
 class HardNegativeTests(unittest.TestCase):
     _write_selection_and_draft = ApplyActiveReviewTests._write_selection_and_draft
@@ -602,9 +609,25 @@ class AtomicPublicationTests(unittest.TestCase):
         self.assertEqual(self.temporary_siblings(), [])
 
     def test_results_hashes_exact_published_manifest_bytes(self):
+        expected_input_hashes = {
+            "selection_sha256": sha256_file(self.selection),
+            "review_input_sha256": sha256_file(self.review_draft),
+            "base_manifest_sha256": sha256_file(self.base_manifest),
+        }
         result = self.apply(background_seed=42)
         persisted = json.loads(self.output_results.read_text(encoding="utf-8"))
         self.assertEqual(result, persisted)
+        self.assertEqual(
+            {
+                field: persisted[field]
+                for field in (
+                    "selection_sha256",
+                    "review_input_sha256",
+                    "base_manifest_sha256",
+                )
+            },
+            expected_input_hashes,
+        )
         self.assertEqual(
             persisted["output_manifest_sha256"], sha256_file(self.output_manifest)
         )
@@ -685,6 +708,72 @@ class AtomicPublicationTests(unittest.TestCase):
         self.assertEqual(self.output_manifest.read_bytes(), competitor)
         self.assertFalse(self.output_results.exists())
         self.assertEqual(self.temporary_siblings(), [])
+
+    def test_rollback_surfaces_identity_and_unlink_failures(self):
+        real_link = __import__("os").link
+        real_unlink = Path.unlink
+
+        def fail_second(source, destination):
+            if Path(destination) == self.output_results:
+                raise OSError("injected second-link failure")
+            return real_link(source, destination)
+
+        def fail_identity_check(*_args, **_kwargs):
+            raise PermissionError("injected rollback identity failure")
+
+        def fail_manifest_unlink(path, *args, **kwargs):
+            if path == self.output_manifest:
+                raise PermissionError("injected rollback unlink failure")
+            return real_unlink(path, *args, **kwargs)
+
+        cases = (
+            (
+                "identity check",
+                mock.patch(
+                    "spiketrace.active_learning_review.os.path.samefile",
+                    side_effect=fail_identity_check,
+                ),
+                "verify manifest ownership during rollback",
+            ),
+            (
+                "unlink",
+                mock.patch.object(Path, "unlink", new=fail_manifest_unlink),
+                "remove manifest during rollback",
+            ),
+        )
+        for name, rollback_failure, message in cases:
+            with self.subTest(name=name):
+                try:
+                    with (
+                        mock.patch(
+                            "spiketrace.active_learning_selection.verify_dual_crop_review",
+                            return_value={"verified": True},
+                        ),
+                        mock.patch(
+                            "spiketrace.active_learning_review.os.link",
+                            side_effect=fail_second,
+                        ),
+                        rollback_failure,
+                        self.assertRaisesRegex(ActiveLearningError, message) as caught,
+                    ):
+                        apply_active_review(
+                            self.base_manifest,
+                            self.selection,
+                            self.review_draft,
+                            self.output_manifest,
+                            self.output_results,
+                            repo_root=self.root,
+                            legacy_base_match_id="legacy",
+                            review_match_id="review",
+                            require_files=False,
+                        )
+                    self.assertIsInstance(caught.exception.__cause__, PermissionError)
+                    self.assertTrue(self.output_manifest.exists())
+                    self.assertFalse(self.output_results.exists())
+                    self.assertEqual(self.temporary_siblings(), [])
+                finally:
+                    real_unlink(self.output_manifest, missing_ok=True)
+                    real_unlink(self.output_results, missing_ok=True)
 
     def test_concurrent_writers_publish_one_complete_pair_without_temp_leaks(self):
         real_link = __import__("os").link
@@ -935,6 +1024,93 @@ class ActiveReviewValidationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ActiveLearningError, "Background"):
             self.apply()
+
+    def test_rejects_invalid_source_bounds_before_comparing_them(self):
+        original_selection = json.loads(self.selection.read_text(encoding="utf-8"))
+        original_draft = json.loads(self.review_draft.read_text(encoding="utf-8"))
+        cases = (
+            ("boolean start", "source_start_seconds", False, "preserve exact"),
+            ("boolean end", "source_end_seconds", True, "preserve exact"),
+            ("text start", "source_start_seconds", "0", "preserve exact"),
+            ("null end", "source_end_seconds", None, "preserve exact"),
+            (
+                "oversized integer start",
+                "source_start_seconds",
+                10**400,
+                "preserve exact",
+            ),
+            ("NaN start", "source_start_seconds", float("nan"), "non-finite"),
+            ("infinite end", "source_end_seconds", float("inf"), "non-finite"),
+            (
+                "negative infinite start",
+                "source_start_seconds",
+                float("-inf"),
+                "non-finite",
+            ),
+        )
+
+        for name, field, value, message in cases:
+            with self.subTest(name=name):
+                selection = copy.deepcopy(original_selection)
+                selection["clips"][0].update(
+                    {"start_seconds": 0, "end_seconds": 1, "duration_seconds": 1}
+                )
+                self.selection.write_text(
+                    json.dumps(selection) + "\n", encoding="utf-8"
+                )
+                draft = copy.deepcopy(original_draft)
+                draft["selection_sha256"] = sha256_file(self.selection)
+                draft["clips"][0]["source_start_seconds"] = 0
+                draft["clips"][0]["source_end_seconds"] = 1
+                draft["clips"][0][field] = value
+                self.review_draft.write_text(
+                    json.dumps(draft) + "\n", encoding="utf-8"
+                )
+
+                with self.assertRaisesRegex(ActiveLearningError, message):
+                    self.apply()
+                self.assertFalse(self.output_manifest.exists())
+                self.assertFalse(self.output_results.exists())
+
+    def test_rejects_concurrent_replacement_of_each_audited_input(self):
+        from spiketrace import active_learning_review
+
+        inputs = {
+            "selection": self.selection,
+            "review input": self.review_draft,
+            "base manifest": self.base_manifest,
+        }
+        originals = {name: path.read_bytes() for name, path in inputs.items()}
+        real_read_source_table = active_learning_review._read_source_table
+
+        for name, target in inputs.items():
+            with self.subTest(name=name):
+                for original_name, path in inputs.items():
+                    path.write_bytes(originals[original_name])
+                self.output_manifest.unlink(missing_ok=True)
+                self.output_results.unlink(missing_ok=True)
+
+                def read_then_replace(path, *, replacement=target, input_name=name):
+                    table = real_read_source_table(path)
+                    replacement.write_bytes(originals[input_name] + b" ")
+                    return table
+
+                try:
+                    with (
+                        mock.patch(
+                            "spiketrace.active_learning_review._read_source_table",
+                            side_effect=read_then_replace,
+                        ),
+                        self.assertRaisesRegex(
+                            ActiveLearningError, f"{name.title()} changed"
+                        ),
+                    ):
+                        self.apply(max_background_windows=0)
+                    self.assertFalse(self.output_manifest.exists())
+                    self.assertFalse(self.output_results.exists())
+                finally:
+                    self.output_manifest.unlink(missing_ok=True)
+                    self.output_results.unlink(missing_ok=True)
 
     def test_adds_only_missing_canonical_columns_after_source_header(self):
         source_fields = [

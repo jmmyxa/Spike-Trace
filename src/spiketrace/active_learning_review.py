@@ -47,6 +47,17 @@ _CANONICAL_COLUMNS = (
 _SHA256_LENGTH = 64
 
 
+def _read_bytes(path: Path, description: str) -> bytes:
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise ActiveLearningError(f"Cannot read {description}: {path}") from exc
+
+
+def _sha256_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     try:
@@ -58,8 +69,8 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _read_json(
-    path: Path, description: str, *, expected_sha256: str | None = None
+def _parse_json_bytes(
+    raw: bytes, description: str, *, expected_sha256: str | None = None
 ) -> dict[str, Any]:
     def reject_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -75,11 +86,7 @@ def _read_json(
         raise ActiveLearningError(f"{description} contains non-finite number {value}.")
 
     try:
-        raw = path.read_bytes()
-        if (
-            expected_sha256 is not None
-            and hashlib.sha256(raw).hexdigest() != expected_sha256
-        ):
+        if expected_sha256 is not None and _sha256_bytes(raw) != expected_sha256:
             raise ActiveLearningError("Merged JSON SHA-256 does not match.")
         value = json.loads(
             raw,
@@ -88,11 +95,56 @@ def _read_json(
         )
     except ActiveLearningError:
         raise
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ActiveLearningError(f"Cannot read {description}: {path}") from exc
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ActiveLearningError(f"Cannot parse {description}.") from exc
     if not isinstance(value, dict):
         raise ActiveLearningError(f"{description} must be a JSON object.")
     return value
+
+
+def _read_json(
+    path: Path, description: str, *, expected_sha256: str | None = None
+) -> dict[str, Any]:
+    return _parse_json_bytes(
+        _read_bytes(path, description),
+        description,
+        expected_sha256=expected_sha256,
+    )
+
+
+def _write_input_snapshot(path: Path, raw: bytes, description: str) -> Path:
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{path.name}.snapshot-",
+            dir=path.parent,
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(raw)
+        return temporary
+    except OSError as exc:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        raise ActiveLearningError(
+            f"Could not stage immutable {description} snapshot."
+        ) from exc
+
+
+def _verify_input_snapshot(
+    path: Path, expected_sha256: str, description: str
+) -> None:
+    try:
+        current_sha256 = _sha256_bytes(path.read_bytes())
+    except OSError as exc:
+        raise ActiveLearningError(
+            f"{description} changed or became unavailable during review application."
+        ) from exc
+    if current_sha256 != expected_sha256:
+        raise ActiveLearningError(
+            f"{description} changed during review application."
+        )
 
 
 def _sha256(value: object, description: str) -> str:
@@ -163,6 +215,7 @@ def _validate_draft(
     *,
     selection: dict[str, Any],
     selection_path: Path,
+    selection_sha256: str,
     repo_root: Path,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     _exact_fields(draft, _DRAFT_FIELDS, "Review draft")
@@ -175,7 +228,7 @@ def _validate_draft(
         raise ActiveLearningError(
             "Review draft batch and round must match the selection."
         )
-    if draft["selection_sha256"] != _sha256_file(selection_path):
+    if draft["selection_sha256"] != selection_sha256:
         raise ActiveLearningError("Review draft selection SHA-256 does not match.")
     draft_selection_path = _resolve_repo_path(
         draft["selection"], repo_root, "Review draft selection path"
@@ -223,12 +276,25 @@ def _validate_draft(
             },
             f"Review draft clip {clip_index}",
         )
+        source_start = draft_clip["source_start_seconds"]
+        source_end = draft_clip["source_end_seconds"]
+        if (
+            isinstance(source_start, bool)
+            or isinstance(source_end, bool)
+            or not isinstance(source_start, (int, float))
+            or not isinstance(source_end, (int, float))
+            or (isinstance(source_start, float) and not math.isfinite(source_start))
+            or (isinstance(source_end, float) and not math.isfinite(source_end))
+        ):
+            raise ActiveLearningError(
+                "Review draft clips must preserve exact selection order and bounds."
+            )
         if (
             draft_clip["clip_id"] != selection_clip["clip_id"]
             or type(draft_clip["ordinal"]) is not int
             or draft_clip["ordinal"] != selection_clip["ordinal"]
-            or draft_clip["source_start_seconds"] != selection_clip["start_seconds"]
-            or draft_clip["source_end_seconds"] != selection_clip["end_seconds"]
+            or source_start != selection_clip["start_seconds"]
+            or source_end != selection_clip["end_seconds"]
         ):
             raise ActiveLearningError(
                 "Review draft clips must preserve exact selection order and bounds."
@@ -382,6 +448,37 @@ def _write_unique_sibling(output_path: Path, payload: bytes) -> Path:
         ) from exc
 
 
+def _rollback_manifest_link(temporary_manifest: Path, output_manifest: Path) -> None:
+    try:
+        created_by_this_call = os.path.samefile(temporary_manifest, output_manifest)
+    except FileNotFoundError as exc:
+        try:
+            output_manifest.stat()
+        except FileNotFoundError:
+            return
+        except OSError as stat_exc:
+            raise ActiveLearningError(
+                "Could not verify manifest ownership during rollback."
+            ) from stat_exc
+        raise ActiveLearningError(
+            "Could not verify manifest ownership during rollback."
+        ) from exc
+    except OSError as exc:
+        raise ActiveLearningError(
+            "Could not verify manifest ownership during rollback."
+        ) from exc
+    if not created_by_this_call:
+        return
+    try:
+        output_manifest.unlink()
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise ActiveLearningError(
+            "Could not remove manifest during rollback."
+        ) from exc
+
+
 def _publish_dual_outputs(
     *,
     manifest_bytes: bytes,
@@ -413,11 +510,7 @@ def _publish_dual_outputs(
             os.link(temporary_results, output_results)
         except OSError as exc:
             if manifest_created:
-                try:
-                    if os.path.samefile(temporary_manifest, output_manifest):
-                        output_manifest.unlink()
-                except (FileNotFoundError, OSError):
-                    pass
+                _rollback_manifest_link(temporary_manifest, output_manifest)
             if isinstance(exc, FileExistsError):
                 raise ActiveLearningError(
                     "Review application output already exists."
@@ -615,14 +708,41 @@ def apply_active_review(
         if video_root is not None
         else base_manifest.parent.resolve()
     )
-    base_records = load_manifest(
-        base_manifest,
-        video_root=effective_video_root,
-        require_files=require_files,
-    )
-    selection = load_review_selection(
-        selection_file, repo_root=root, require_video=require_files
-    )
+    base_manifest_bytes = _read_bytes(base_manifest, "base manifest")
+    selection_bytes = _read_bytes(selection_file, "selection")
+    review_input_bytes = _read_bytes(review_input, "review input")
+    base_manifest_sha256 = _sha256_bytes(base_manifest_bytes)
+    selection_sha256 = _sha256_bytes(selection_bytes)
+    review_input_sha256 = _sha256_bytes(review_input_bytes)
+
+    base_snapshot: Path | None = None
+    selection_snapshot: Path | None = None
+    try:
+        base_snapshot = _write_input_snapshot(
+            base_manifest, base_manifest_bytes, "base manifest"
+        )
+        selection_snapshot = _write_input_snapshot(
+            selection_file, selection_bytes, "selection"
+        )
+        base_records = load_manifest(
+            base_snapshot,
+            video_root=effective_video_root,
+            require_files=require_files,
+        )
+        fieldnames, rows = _read_source_table(base_snapshot)
+        selection = load_review_selection(
+            selection_snapshot, repo_root=root, require_video=require_files
+        )
+        if _sha256_file(base_snapshot) != base_manifest_sha256:
+            raise ActiveLearningError("Immutable base manifest snapshot changed.")
+        if _sha256_file(selection_snapshot) != selection_sha256:
+            raise ActiveLearningError("Immutable selection snapshot changed.")
+    finally:
+        if base_snapshot is not None:
+            base_snapshot.unlink(missing_ok=True)
+        if selection_snapshot is not None:
+            selection_snapshot.unlink(missing_ok=True)
+
     selection_video = _resolve_repo_path(
         selection["video"]["path"], root, "Selection video path"
     )
@@ -633,11 +753,12 @@ def apply_active_review(
         raise ActiveLearningError(
             "The reviewed source video already appears in a val or test split."
         )
-    draft = _read_json(review_input, "review draft")
+    draft = _parse_json_bytes(review_input_bytes, "review draft")
     audited_clips, absolute_actions = _validate_draft(
         draft,
         selection=selection,
         selection_path=selection_file,
+        selection_sha256=selection_sha256,
         repo_root=root,
     )
     guard, requested_cap, effective_cap, actual_seed = _background_settings(
@@ -664,7 +785,6 @@ def apply_active_review(
         cap=effective_cap,
         seed=actual_seed,
     )
-    fieldnames, rows = _read_source_table(base_manifest)
     for column in _CANONICAL_COLUMNS:
         if column not in fieldnames:
             fieldnames.append(column)
@@ -782,9 +902,10 @@ def apply_active_review(
             "format_version": 1,
             "batch_id": selection["batch_id"],
             "round_id": selection["round_id"],
-            "selection_sha256": _sha256_file(selection_file),
-            "review_input_sha256": _sha256_file(review_input),
-            "base_manifest_sha256": _sha256_file(base_manifest),
+            "time_precision_seconds": draft["time_precision_seconds"],
+            "selection_sha256": selection_sha256,
+            "review_input_sha256": review_input_sha256,
+            "base_manifest_sha256": base_manifest_sha256,
             "output_manifest": normalized_output_path,
             "output_manifest_sha256": manifest_hash,
             "settings": settings,
@@ -798,6 +919,9 @@ def apply_active_review(
             },
         }
 
+    _verify_input_snapshot(selection_file, selection_sha256, "Selection")
+    _verify_input_snapshot(review_input, review_input_sha256, "Review Input")
+    _verify_input_snapshot(base_manifest, base_manifest_sha256, "Base Manifest")
     _, results = _publish_dual_outputs(
         manifest_bytes=manifest_bytes,
         results_builder=build_results,
