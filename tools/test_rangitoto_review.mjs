@@ -85,7 +85,36 @@ async function main() {
   for (const stalePhrase of ["旧双裁剪扫描已经失效", "必须先由 Task 5", "因此下一步先完成 Rangitoto 候选复核"]) {
     assert.equal(readme.includes(stalePhrase), false, `README must not retain stale status phrase: ${stalePhrase}`);
   }
-  assert.match(readme, /nearest-v1[\s\S]*2,942[\s\S]*人工复核/);
+  assert.ok(readme.includes("2,942"));
+  assert.ok(readme.includes("人工复核"));
+  assert.match(readme, /nearest-v1/);
+  for (const command of [
+    "select-review-batch",
+    "build_active_review_batch.mjs",
+    "extract_active_review_results.mjs",
+  ]) {
+    assert.ok(readme.includes(command), `README must document active-learning command: ${command}`);
+  }
+  for (const requiredPhrase of ["40", "片段内", "无音频", "background", "receive", "dig"]) {
+    assert.ok(readme.includes(requiredPhrase), `README must document active-learning guidance: ${requiredPhrase}`);
+  }
+  assert.match(
+    readme,
+    /Rangitoto[\s\S]*(?:不能继续作为独立 `val`|不能继续作为独立.*val)/,
+    "README must state that Rangitoto cannot remain an independent validation match after training use",
+  );
+  const selectionIgnore = spawnSync(
+    "git",
+    ["check-ignore", "data/active-learning/rangitoto/round-01-selection.json"],
+    { cwd: ROOT, encoding: "utf8" },
+  );
+  assert.equal(selectionIgnore.status, 1, "selection JSON must be recognized by Git instead of ignored");
+  const proxyIgnore = spawnSync(
+    "git",
+    ["check-ignore", "outputs/active-learning/rangitoto/round-01/clips/example.mp4"],
+    { cwd: ROOT, encoding: "utf8" },
+  );
+  assert.equal(proxyIgnore.status, 0, "generated proxy MP4 files must remain ignored");
   const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), "spiketrace-rangitoto-review-"));
   try {
     const mergedDir = path.join(temporaryRoot, "merged");

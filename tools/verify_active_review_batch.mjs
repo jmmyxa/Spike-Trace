@@ -44,7 +44,21 @@ function sha256(data) {
 }
 
 async function sha256File(filePath) {
-  return sha256(await fs.readFile(filePath));
+  const hash = crypto.createHash("sha256");
+  const handle = await fs.open(filePath, "r");
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  let position = 0;
+  try {
+    while (true) {
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
+      if (bytesRead === 0) break;
+      hash.update(buffer.subarray(0, bytesRead));
+      position += bytesRead;
+    }
+  } finally {
+    await handle.close();
+  }
+  return hash.digest("hex");
 }
 
 function pathInside(root, value, label) {

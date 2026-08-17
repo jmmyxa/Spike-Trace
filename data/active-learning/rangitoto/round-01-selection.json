@@ -1,0 +1,2416 @@
+{
+  "format_version": 1,
+  "selection_algorithm_version": "active-learning-selection-v1",
+  "batch_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01",
+  "round_id": "round-01",
+  "round_number": 1,
+  "source": {
+    "merged_json": "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json",
+    "merged_json_sha256": "e79aba6e5eb3a1075819a290144198b7e393fceed94313cdf9fc171378a76e7e",
+    "checkpoint": "runs/rangitoto-r3d18-bootstrap/best.pt",
+    "checkpoint_sha256": "bf88fb015ab61d68e49e499abff91693e94005bba777269bf573cf96d25f8200",
+    "inference_runs": {
+      "far": {
+        "source_file": "outputs/rangitoto-r3d18-bootstrap-center-nearest-v1/far/events.json",
+        "source_file_sha256": "c43ba9b2eb4d065239e0158265d8362f18c7a93435a3c6846b7d70b5dfee3bcd",
+        "normalized_payload_sha256": "393eba690b1e42e2ad3d4f9b0884b3141ac310e6967079ce9095ae5ea57988fa"
+      },
+      "near": {
+        "source_file": "outputs/rangitoto-r3d18-bootstrap-center-nearest-v1/near/events.json",
+        "source_file_sha256": "0cecbe15f9ec2aa04d3eacb133bd1f5231855556977cfc9118fd90e96b07f92d",
+        "normalized_payload_sha256": "33423161a6c7ab902c13e156023239c1f195dc002fc8e19e369b980dcb49b623"
+      }
+    },
+    "format_version": 2,
+    "merge_format_version": 2,
+    "model_version": "rangitoto-r3d18-bootstrap-v0.1"
+  },
+  "video": {
+    "video_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p",
+    "path": "data/YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4",
+    "sha256": "0102bf5de66a86677581155d1d2e723621a2a45d5c74b0757a8a256387204fbf",
+    "fps": 30.0,
+    "frame_count": 197384,
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6579.466666666666,
+    "crops": {
+      "far": [
+        0,
+        0,
+        1920,
+        645
+      ],
+      "near": [
+        0,
+        255,
+        1920,
+        1080
+      ]
+    }
+  },
+  "settings": {
+    "seed": 42,
+    "preferred_clip_seconds": 15.0,
+    "min_clip_seconds": 5.0,
+    "max_clip_seconds": 30.0,
+    "min_anchor_gap_seconds": 5.0,
+    "time_strata": 10,
+    "planned_quotas": {
+      "conflict_or_minority": 20,
+      "high_confidence_tail": 8,
+      "dual_view_agreement": 4,
+      "random_candidate_control": 4,
+      "dual_background_control": 4
+    }
+  },
+  "previous_selections": [],
+  "quota_summary": [
+    {
+      "bucket": "conflict_or_minority",
+      "planned": 20,
+      "selected": 20,
+      "transferred_out": 0,
+      "transferred_to": null,
+      "reason": null
+    },
+    {
+      "bucket": "high_confidence_tail",
+      "planned": 8,
+      "selected": 8,
+      "transferred_out": 0,
+      "transferred_to": null,
+      "reason": null
+    },
+    {
+      "bucket": "dual_view_agreement",
+      "planned": 4,
+      "selected": 4,
+      "transferred_out": 0,
+      "transferred_to": null,
+      "reason": null
+    },
+    {
+      "bucket": "random_candidate_control",
+      "planned": 4,
+      "selected": 4,
+      "transferred_out": 0,
+      "transferred_to": null,
+      "reason": null
+    },
+    {
+      "bucket": "dual_background_control",
+      "planned": 4,
+      "selected": 4,
+      "transferred_out": 0,
+      "transferred_to": null,
+      "reason": null
+    }
+  ],
+  "coverage": {
+    "represented_time_strata": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "represented_time_strata_count": 10,
+    "available_crop_scenes": [
+      "far",
+      "near"
+    ],
+    "represented_crop_scenes": [
+      "far",
+      "near"
+    ],
+    "available_minority_candidate_ids": [
+      "evt_merged_000717",
+      "evt_merged_001743",
+      "evt_merged_001860",
+      "evt_merged_001875",
+      "evt_merged_001884",
+      "evt_merged_001895",
+      "evt_merged_001932",
+      "evt_merged_002317",
+      "evt_merged_000522",
+      "evt_merged_000602",
+      "evt_merged_000993",
+      "evt_merged_002602",
+      "evt_merged_001184",
+      "evt_merged_001861",
+      "evt_merged_001873"
+    ],
+    "covered_minority_candidate_ids": [
+      "evt_merged_000717",
+      "evt_merged_001743",
+      "evt_merged_001860",
+      "evt_merged_001875",
+      "evt_merged_001884",
+      "evt_merged_001895",
+      "evt_merged_001932",
+      "evt_merged_002317",
+      "evt_merged_000522",
+      "evt_merged_000602",
+      "evt_merged_000993",
+      "evt_merged_002602",
+      "evt_merged_001184",
+      "evt_merged_001861",
+      "evt_merged_001873"
+    ]
+  },
+  "clips": [
+    {
+      "clip_id": "round-01-clip-001",
+      "ordinal": 1,
+      "start_seconds": 0.0,
+      "end_seconds": 28.2,
+      "start_time": "00:00:00.000",
+      "end_time": "00:00:28.200",
+      "duration_seconds": 28.2,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group",
+        "merged_overlap_from:conflict_or_minority",
+        "merged_overlap_from:dual_background_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-001.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000001",
+        "start_seconds": 0.0,
+        "end_seconds": 21.4,
+        "action": "serve",
+        "confidence": 0.271206,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000001",
+          "absolute_start_seconds": 0.0,
+          "absolute_end_seconds": 1.4,
+          "relative_start_seconds": 0.0,
+          "relative_end_seconds": 1.4,
+          "action": "serve",
+          "confidence": 0.271206,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000001",
+          "source_candidate_ids": [
+            "near:evt_000001"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000006",
+          "absolute_start_seconds": 12.8,
+          "absolute_end_seconds": 18.6,
+          "relative_start_seconds": 12.8,
+          "relative_end_seconds": 18.6,
+          "action": "serve",
+          "confidence": 0.326469,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000002",
+          "source_candidate_ids": [
+            "near:evt_000005"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000012",
+          "absolute_start_seconds": 20.0,
+          "absolute_end_seconds": 21.4,
+          "relative_start_seconds": 20.0,
+          "relative_end_seconds": 21.4,
+          "action": "serve",
+          "confidence": 0.263796,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000003",
+          "source_candidate_ids": [
+            "near:evt_000006"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000001",
+        "near:evt_000005",
+        "near:evt_000006"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000001",
+        "cg_000002",
+        "cg_000003"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-002",
+      "ordinal": 2,
+      "start_seconds": 46.6,
+      "end_seconds": 61.6,
+      "start_time": "00:00:46.600",
+      "end_time": "00:01:01.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group"
+      ],
+      "proxy_filename": "clips/round-01-clip-002.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000020",
+        "start_seconds": 48.4,
+        "end_seconds": 59.8,
+        "action": "set",
+        "confidence": 0.320349,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000020",
+          "absolute_start_seconds": 48.4,
+          "absolute_end_seconds": 59.8,
+          "relative_start_seconds": 1.8,
+          "relative_end_seconds": 13.2,
+          "action": "set",
+          "confidence": 0.320349,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000003",
+          "conflict_group_id": "cg_000005",
+          "source_candidate_ids": [
+            "far:evt_000014",
+            "near:evt_000011"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000014",
+        "near:evt_000011"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000003"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000005"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-003",
+      "ordinal": 3,
+      "start_seconds": 64.6,
+      "end_seconds": 90.6,
+      "start_time": "00:01:04.600",
+      "end_time": "00:01:30.600",
+      "duration_seconds": 26.0,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group",
+        "merged_overlap_from:conflict_or_minority"
+      ],
+      "proxy_filename": "clips/round-01-clip-003.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000030",
+        "start_seconds": 70.8,
+        "end_seconds": 83.8,
+        "action": "attack",
+        "confidence": 0.274135,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000030",
+          "absolute_start_seconds": 70.8,
+          "absolute_end_seconds": 73.4,
+          "relative_start_seconds": 6.2,
+          "relative_end_seconds": 8.8,
+          "action": "attack",
+          "confidence": 0.274135,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000009",
+          "conflict_group_id": "cg_000006",
+          "source_candidate_ids": [
+            "far:evt_000021",
+            "near:evt_000020"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000044",
+          "absolute_start_seconds": 82.4,
+          "absolute_end_seconds": 83.8,
+          "relative_start_seconds": 17.8,
+          "relative_end_seconds": 19.2,
+          "action": "attack",
+          "confidence": 0.240549,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000007",
+          "source_candidate_ids": [
+            "near:evt_000030"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000021",
+        "near:evt_000020",
+        "near:evt_000030"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000009"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000006",
+        "cg_000007"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-004",
+      "ordinal": 4,
+      "start_seconds": 97.8,
+      "end_seconds": 119.4,
+      "start_time": "00:01:37.800",
+      "end_time": "00:01:59.400",
+      "duration_seconds": 21.6,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group",
+        "merged_overlap_from:conflict_or_minority"
+      ],
+      "proxy_filename": "clips/round-01-clip-004.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000064",
+        "start_seconds": 103.6,
+        "end_seconds": 112.6,
+        "action": "set",
+        "confidence": 0.274956,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000064",
+          "absolute_start_seconds": 103.6,
+          "absolute_end_seconds": 107.0,
+          "relative_start_seconds": 5.8,
+          "relative_end_seconds": 9.2,
+          "action": "set",
+          "confidence": 0.274956,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000017",
+          "conflict_group_id": "cg_000008",
+          "source_candidate_ids": [
+            "near:evt_000047",
+            "far:evt_000043"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000067",
+          "absolute_start_seconds": 111.2,
+          "absolute_end_seconds": 112.6,
+          "relative_start_seconds": 13.4,
+          "relative_end_seconds": 14.8,
+          "action": "attack",
+          "confidence": 0.357523,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000009",
+          "source_candidate_ids": [
+            "near:evt_000050"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000043",
+        "near:evt_000047",
+        "near:evt_000050"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000017"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000008",
+        "cg_000009"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-005",
+      "ordinal": 5,
+      "start_seconds": 123.8,
+      "end_seconds": 143.8,
+      "start_time": "00:02:03.800",
+      "end_time": "00:02:23.800",
+      "duration_seconds": 20.0,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group",
+        "merged_overlap_from:conflict_or_minority"
+      ],
+      "proxy_filename": "clips/round-01-clip-005.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000073",
+        "start_seconds": 128.8,
+        "end_seconds": 138.6,
+        "action": "set",
+        "confidence": 0.308698,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000073",
+          "absolute_start_seconds": 128.8,
+          "absolute_end_seconds": 133.8,
+          "relative_start_seconds": 5.0,
+          "relative_end_seconds": 10.0,
+          "action": "set",
+          "confidence": 0.308698,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000023",
+          "conflict_group_id": "cg_000010",
+          "source_candidate_ids": [
+            "near:evt_000055",
+            "far:evt_000051"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000076",
+          "absolute_start_seconds": 134.0,
+          "absolute_end_seconds": 138.6,
+          "relative_start_seconds": 10.2,
+          "relative_end_seconds": 14.8,
+          "action": "attack",
+          "confidence": 0.373571,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000025",
+          "conflict_group_id": "cg_000011",
+          "source_candidate_ids": [
+            "near:evt_000058",
+            "far:evt_000054"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000051",
+        "far:evt_000054",
+        "near:evt_000055",
+        "near:evt_000058"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000023",
+        "dg_000025"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000010",
+        "cg_000011"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-006",
+      "ordinal": 6,
+      "start_seconds": 161.2,
+      "end_seconds": 176.2,
+      "start_time": "00:02:41.200",
+      "end_time": "00:02:56.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group"
+      ],
+      "proxy_filename": "clips/round-01-clip-006.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000088",
+        "start_seconds": 166.8,
+        "end_seconds": 170.6,
+        "action": "set",
+        "confidence": 0.377517,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000088",
+          "absolute_start_seconds": 166.8,
+          "absolute_end_seconds": 170.6,
+          "relative_start_seconds": 5.6,
+          "relative_end_seconds": 9.4,
+          "action": "set",
+          "confidence": 0.377517,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000031",
+          "conflict_group_id": "cg_000012",
+          "source_candidate_ids": [
+            "near:evt_000067",
+            "far:evt_000064",
+            "near:evt_000069",
+            "near:evt_000071"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000067",
+        "far:evt_000064",
+        "near:evt_000069",
+        "near:evt_000071"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000031"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000012"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-007",
+      "ordinal": 7,
+      "start_seconds": 191.8,
+      "end_seconds": 206.8,
+      "start_time": "00:03:11.800",
+      "end_time": "00:03:26.800",
+      "duration_seconds": 15.0,
+      "time_stratum": 0,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "distinct_conflict_group"
+      ],
+      "proxy_filename": "clips/round-01-clip-007.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000097",
+        "start_seconds": 198.4,
+        "end_seconds": 200.2,
+        "action": "set",
+        "confidence": 0.334326,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000097",
+          "absolute_start_seconds": 198.4,
+          "absolute_end_seconds": 200.2,
+          "relative_start_seconds": 6.6,
+          "relative_end_seconds": 8.4,
+          "action": "set",
+          "confidence": 0.334326,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000035",
+          "conflict_group_id": "cg_000013",
+          "source_candidate_ids": [
+            "near:evt_000077",
+            "far:evt_000072"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000077",
+        "far:evt_000072"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000035"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000013"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-008",
+      "ordinal": 8,
+      "start_seconds": 411.6,
+      "end_seconds": 426.6,
+      "start_time": "00:06:51.600",
+      "end_time": "00:07:06.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 0,
+      "selection_bucket": "dual_view_agreement",
+      "selection_reasons": [
+        "cross_crop_duplicate_agreement"
+      ],
+      "proxy_filename": "clips/round-01-clip-008.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000209",
+        "start_seconds": 418.0,
+        "end_seconds": 420.2,
+        "action": "set",
+        "confidence": 0.309254,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000209",
+          "absolute_start_seconds": 418.0,
+          "absolute_end_seconds": 420.2,
+          "relative_start_seconds": 6.4,
+          "relative_end_seconds": 8.6,
+          "action": "set",
+          "confidence": 0.309254,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000074",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000171",
+            "far:evt_000149"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000171",
+        "far:evt_000149"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000074"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-009",
+      "ordinal": 9,
+      "start_seconds": 447.2,
+      "end_seconds": 462.2,
+      "start_time": "00:07:27.200",
+      "end_time": "00:07:42.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 0,
+      "selection_bucket": "dual_view_agreement",
+      "selection_reasons": [
+        "cross_crop_duplicate_agreement"
+      ],
+      "proxy_filename": "clips/round-01-clip-009.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000231",
+        "start_seconds": 450.4,
+        "end_seconds": 459.0,
+        "action": "attack",
+        "confidence": 0.403951,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000231",
+          "absolute_start_seconds": 450.4,
+          "absolute_end_seconds": 459.0,
+          "relative_start_seconds": 3.2,
+          "relative_end_seconds": 11.8,
+          "action": "attack",
+          "confidence": 0.403951,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000084",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000193",
+            "far:evt_000162"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000193",
+        "far:evt_000162"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000084"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-010",
+      "ordinal": 10,
+      "start_seconds": 491.0,
+      "end_seconds": 518.8,
+      "start_time": "00:08:11.000",
+      "end_time": "00:08:38.800",
+      "duration_seconds": 27.8,
+      "time_stratum": 0,
+      "selection_bucket": "dual_view_agreement",
+      "selection_reasons": [
+        "cross_crop_duplicate_agreement",
+        "merged_overlap_from:random_candidate_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-010.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000251",
+        "start_seconds": 495.2,
+        "end_seconds": 513.4,
+        "action": "attack",
+        "confidence": 0.324301,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000251",
+          "absolute_start_seconds": 495.2,
+          "absolute_end_seconds": 501.8,
+          "relative_start_seconds": 4.2,
+          "relative_end_seconds": 10.8,
+          "action": "attack",
+          "confidence": 0.324301,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000090",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000211",
+            "far:evt_000175"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000259",
+          "absolute_start_seconds": 509.2,
+          "absolute_end_seconds": 513.4,
+          "relative_start_seconds": 18.2,
+          "relative_end_seconds": 22.4,
+          "action": "attack",
+          "confidence": 0.334965,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000091",
+          "conflict_group_id": "cg_000042",
+          "source_candidate_ids": [
+            "far:evt_000176",
+            "near:evt_000219"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000175",
+        "far:evt_000176",
+        "near:evt_000211",
+        "near:evt_000219"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000090",
+        "dg_000091"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000042"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-011",
+      "ordinal": 11,
+      "start_seconds": 590.8,
+      "end_seconds": 614.0,
+      "start_time": "00:09:50.800",
+      "end_time": "00:10:14.000",
+      "duration_seconds": 23.2,
+      "time_stratum": 0,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority",
+        "merged_overlap_from:dual_view_agreement"
+      ],
+      "proxy_filename": "clips/round-01-clip-011.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000296",
+        "start_seconds": 594.8,
+        "end_seconds": 611.0,
+        "action": "attack",
+        "confidence": 0.28841,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000296",
+          "absolute_start_seconds": 594.8,
+          "absolute_end_seconds": 601.8,
+          "relative_start_seconds": 4.0,
+          "relative_end_seconds": 11.0,
+          "action": "attack",
+          "confidence": 0.28841,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000105",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000257",
+            "far:evt_000194"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000298",
+          "absolute_start_seconds": 602.0,
+          "absolute_end_seconds": 611.0,
+          "relative_start_seconds": 11.2,
+          "relative_end_seconds": 20.2,
+          "action": "attack",
+          "confidence": 0.413845,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000106",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000259",
+            "far:evt_000195"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000194",
+        "far:evt_000195",
+        "near:evt_000257",
+        "near:evt_000259"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000105",
+        "dg_000106"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-012",
+      "ordinal": 12,
+      "start_seconds": 720.4,
+      "end_seconds": 735.4,
+      "start_time": "00:12:00.400",
+      "end_time": "00:12:15.400",
+      "duration_seconds": 15.0,
+      "time_stratum": 1,
+      "selection_bucket": "dual_view_agreement",
+      "selection_reasons": [
+        "cross_crop_duplicate_agreement"
+      ],
+      "proxy_filename": "clips/round-01-clip-012.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000333",
+        "start_seconds": 726.4,
+        "end_seconds": 729.4,
+        "action": "attack",
+        "confidence": 0.293213,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000333",
+          "absolute_start_seconds": 726.4,
+          "absolute_end_seconds": 729.4,
+          "relative_start_seconds": 6.0,
+          "relative_end_seconds": 9.0,
+          "action": "attack",
+          "confidence": 0.293213,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000122",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000297",
+            "far:evt_000217"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000297",
+        "far:evt_000217"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000122"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-013",
+      "ordinal": 13,
+      "start_seconds": 1083.6,
+      "end_seconds": 1098.6,
+      "start_time": "00:18:03.600",
+      "end_time": "00:18:18.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 1,
+      "selection_bucket": "dual_background_control",
+      "selection_reasons": [
+        "paired_dual_background_interval"
+      ],
+      "proxy_filename": "clips/round-01-clip-013.mp4",
+      "anchor": {
+        "canonical_event_id": null,
+        "start_seconds": 1088.0,
+        "end_seconds": 1094.2,
+        "action": "background",
+        "confidence": null,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [],
+      "reserved_source_event_ids": [],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-014",
+      "ordinal": 14,
+      "start_seconds": 1128.2,
+      "end_seconds": 1143.2,
+      "start_time": "00:18:48.200",
+      "end_time": "00:19:03.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 1,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-014.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000507",
+        "start_seconds": 1132.8,
+        "end_seconds": 1138.6,
+        "action": "attack",
+        "confidence": 0.417686,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000507",
+          "absolute_start_seconds": 1132.8,
+          "absolute_end_seconds": 1138.6,
+          "relative_start_seconds": 4.6,
+          "relative_end_seconds": 10.4,
+          "action": "attack",
+          "confidence": 0.417686,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000169",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000457",
+            "far:evt_000296"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000457",
+        "far:evt_000296"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000169"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-015",
+      "ordinal": 15,
+      "start_seconds": 1161.8,
+      "end_seconds": 1176.8,
+      "start_time": "00:19:21.800",
+      "end_time": "00:19:36.800",
+      "duration_seconds": 15.0,
+      "time_stratum": 1,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-015.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000522",
+        "start_seconds": 1168.8,
+        "end_seconds": 1169.8,
+        "action": "block",
+        "confidence": 0.273106,
+        "observed_sides": [
+          "far"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000522",
+          "absolute_start_seconds": 1168.8,
+          "absolute_end_seconds": 1169.8,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "block",
+          "confidence": 0.273106,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000085",
+          "source_candidate_ids": [
+            "far:evt_000305"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000305"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000085"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-016",
+      "ordinal": 16,
+      "start_seconds": 1380.6,
+      "end_seconds": 1395.6,
+      "start_time": "00:23:00.600",
+      "end_time": "00:23:15.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 2,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-016.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000602",
+        "start_seconds": 1387.6,
+        "end_seconds": 1388.6,
+        "action": "block",
+        "confidence": 0.206469,
+        "observed_sides": [
+          "far"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000602",
+          "absolute_start_seconds": 1387.6,
+          "absolute_end_seconds": 1388.6,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "block",
+          "confidence": 0.206469,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000100",
+          "source_candidate_ids": [
+            "far:evt_000365"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000365"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000100"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-017",
+      "ordinal": 17,
+      "start_seconds": 1708.2,
+      "end_seconds": 1723.2,
+      "start_time": "00:28:28.200",
+      "end_time": "00:28:43.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 2,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-017.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000717",
+        "start_seconds": 1715.2,
+        "end_seconds": 1716.2,
+        "action": "receive",
+        "confidence": 0.202511,
+        "observed_sides": [
+          "far"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000717",
+          "absolute_start_seconds": 1715.2,
+          "absolute_end_seconds": 1716.2,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.202511,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000119",
+          "source_candidate_ids": [
+            "far:evt_000429"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000429"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000119"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-018",
+      "ordinal": 18,
+      "start_seconds": 1788.6,
+      "end_seconds": 1803.6,
+      "start_time": "00:29:48.600",
+      "end_time": "00:30:03.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 2,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-018.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000752",
+        "start_seconds": 1792.8,
+        "end_seconds": 1799.4,
+        "action": "attack",
+        "confidence": 0.462117,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000752",
+          "absolute_start_seconds": 1792.8,
+          "absolute_end_seconds": 1799.4,
+          "relative_start_seconds": 4.2,
+          "relative_end_seconds": 10.8,
+          "action": "attack",
+          "confidence": 0.462117,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000241",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000663",
+            "far:evt_000446"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000663",
+        "far:evt_000446"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000241"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-019",
+      "ordinal": 19,
+      "start_seconds": 1809.4,
+      "end_seconds": 1824.4,
+      "start_time": "00:30:09.400",
+      "end_time": "00:30:24.400",
+      "duration_seconds": 15.0,
+      "time_stratum": 2,
+      "selection_bucket": "random_candidate_control",
+      "selection_reasons": [
+        "time_stratified_random_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-019.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000763",
+        "start_seconds": 1816.4,
+        "end_seconds": 1817.4,
+        "action": "set",
+        "confidence": 0.267943,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000763",
+          "absolute_start_seconds": 1816.4,
+          "absolute_end_seconds": 1817.4,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "set",
+          "confidence": 0.267943,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000674"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000674"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-020",
+      "ordinal": 20,
+      "start_seconds": 2067.4,
+      "end_seconds": 2082.4,
+      "start_time": "00:34:27.400",
+      "end_time": "00:34:42.400",
+      "duration_seconds": 15.0,
+      "time_stratum": 3,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-020.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000883",
+        "start_seconds": 2074.4,
+        "end_seconds": 2075.4,
+        "action": "attack",
+        "confidence": 0.41819,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000883",
+          "absolute_start_seconds": 2074.4,
+          "absolute_end_seconds": 2075.4,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "attack",
+          "confidence": 0.41819,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000779"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000779"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-021",
+      "ordinal": 21,
+      "start_seconds": 2179.2,
+      "end_seconds": 2209.0,
+      "start_time": "00:36:19.200",
+      "end_time": "00:36:49.000",
+      "duration_seconds": 29.8,
+      "time_stratum": 3,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-021.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000924",
+        "start_seconds": 2179.2,
+        "end_seconds": 2209.0,
+        "action": "attack",
+        "confidence": 0.453405,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000924",
+          "absolute_start_seconds": 2179.2,
+          "absolute_end_seconds": 2209.0,
+          "relative_start_seconds": 0.0,
+          "relative_end_seconds": 29.8,
+          "action": "attack",
+          "confidence": 0.453405,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000280",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000817",
+            "far:evt_000515",
+            "far:evt_000516"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000817",
+        "far:evt_000515",
+        "far:evt_000516"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000280"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-022",
+      "ordinal": 22,
+      "start_seconds": 2263.0,
+      "end_seconds": 2278.0,
+      "start_time": "00:37:43.000",
+      "end_time": "00:37:58.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 3,
+      "selection_bucket": "dual_background_control",
+      "selection_reasons": [
+        "paired_dual_background_interval"
+      ],
+      "proxy_filename": "clips/round-01-clip-022.mp4",
+      "anchor": {
+        "canonical_event_id": null,
+        "start_seconds": 2268.0,
+        "end_seconds": 2273.0,
+        "action": "background",
+        "confidence": null,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [],
+      "reserved_source_event_ids": [],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-023",
+      "ordinal": 23,
+      "start_seconds": 2343.2,
+      "end_seconds": 2358.2,
+      "start_time": "00:39:03.200",
+      "end_time": "00:39:18.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 3,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-023.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000982",
+        "start_seconds": 2346.4,
+        "end_seconds": 2355.0,
+        "action": "attack",
+        "confidence": 0.431066,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000982",
+          "absolute_start_seconds": 2346.4,
+          "absolute_end_seconds": 2355.0,
+          "relative_start_seconds": 3.2,
+          "relative_end_seconds": 11.8,
+          "action": "attack",
+          "confidence": 0.431066,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000291",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000871",
+            "far:evt_000538",
+            "far:evt_000539"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_000871",
+        "far:evt_000538",
+        "far:evt_000539"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000291"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-024",
+      "ordinal": 24,
+      "start_seconds": 2367.6,
+      "end_seconds": 2392.0,
+      "start_time": "00:39:27.600",
+      "end_time": "00:39:52.000",
+      "duration_seconds": 24.4,
+      "time_stratum": 3,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage",
+        "merged_overlap_from:high_confidence_tail"
+      ],
+      "proxy_filename": "clips/round-01-clip-024.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_000993",
+        "start_seconds": 2370.0,
+        "end_seconds": 2385.0,
+        "action": "block",
+        "confidence": 0.260351,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_000993",
+          "absolute_start_seconds": 2384.0,
+          "absolute_end_seconds": 2385.0,
+          "relative_start_seconds": 16.4,
+          "relative_end_seconds": 17.4,
+          "action": "block",
+          "confidence": 0.260351,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000161",
+          "source_candidate_ids": [
+            "far:evt_000544"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_000988",
+          "absolute_start_seconds": 2370.0,
+          "absolute_end_seconds": 2380.2,
+          "relative_start_seconds": 2.4,
+          "relative_end_seconds": 12.6,
+          "action": "attack",
+          "confidence": 0.419095,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000293",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_000877",
+            "far:evt_000541",
+            "far:evt_000542"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000541",
+        "far:evt_000542",
+        "far:evt_000544",
+        "near:evt_000877"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000293"
+      ],
+      "reserved_conflict_group_ids": [
+        "cg_000161"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-025",
+      "ordinal": 25,
+      "start_seconds": 2941.0,
+      "end_seconds": 2956.0,
+      "start_time": "00:49:01.000",
+      "end_time": "00:49:16.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 4,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-025.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001184",
+        "start_seconds": 2948.0,
+        "end_seconds": 2949.0,
+        "action": "dig",
+        "confidence": 0.265211,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001184",
+          "absolute_start_seconds": 2948.0,
+          "absolute_end_seconds": 2949.0,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "dig",
+          "confidence": 0.265211,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000196",
+          "source_candidate_ids": [
+            "near:evt_001054"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001054"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000196"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-026",
+      "ordinal": 26,
+      "start_seconds": 3590.4,
+      "end_seconds": 3605.4,
+      "start_time": "00:59:50.400",
+      "end_time": "01:00:05.400",
+      "duration_seconds": 15.0,
+      "time_stratum": 5,
+      "selection_bucket": "random_candidate_control",
+      "selection_reasons": [
+        "time_stratified_random_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-026.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001483",
+        "start_seconds": 3597.2,
+        "end_seconds": 3598.6,
+        "action": "set",
+        "confidence": 0.259078,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001483",
+          "absolute_start_seconds": 3597.2,
+          "absolute_end_seconds": 3598.6,
+          "relative_start_seconds": 6.8,
+          "relative_end_seconds": 8.2,
+          "action": "set",
+          "confidence": 0.259078,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_001340"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001340"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-027",
+      "ordinal": 27,
+      "start_seconds": 3920.2,
+      "end_seconds": 3935.2,
+      "start_time": "01:05:20.200",
+      "end_time": "01:05:35.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 5,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-027.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001613",
+        "start_seconds": 3927.2,
+        "end_seconds": 3928.2,
+        "action": "set",
+        "confidence": 0.437155,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001613",
+          "absolute_start_seconds": 3927.2,
+          "absolute_end_seconds": 3928.2,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "set",
+          "confidence": 0.437155,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_001469"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001469"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-028",
+      "ordinal": 28,
+      "start_seconds": 3961.6,
+      "end_seconds": 3976.6,
+      "start_time": "01:06:01.600",
+      "end_time": "01:06:16.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "high_confidence_tail",
+      "selection_reasons": [
+        "high_confidence_tail_priority"
+      ],
+      "proxy_filename": "clips/round-01-clip-028.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001636",
+        "start_seconds": 3967.6,
+        "end_seconds": 3970.6,
+        "action": "attack",
+        "confidence": 0.415558,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001636",
+          "absolute_start_seconds": 3967.6,
+          "absolute_end_seconds": 3970.6,
+          "relative_start_seconds": 6.0,
+          "relative_end_seconds": 9.0,
+          "action": "attack",
+          "confidence": 0.415558,
+          "observed_sides": [
+            "far",
+            "near"
+          ],
+          "duplicate_group_id": "dg_000479",
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_001494",
+            "far:evt_000877"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001494",
+        "far:evt_000877"
+      ],
+      "reserved_duplicate_group_ids": [
+        "dg_000479"
+      ],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-029",
+      "ordinal": 29,
+      "start_seconds": 4167.6,
+      "end_seconds": 4182.6,
+      "start_time": "01:09:27.600",
+      "end_time": "01:09:42.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-029.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001743",
+        "start_seconds": 4174.0,
+        "end_seconds": 4176.2,
+        "action": "receive",
+        "confidence": 0.25303,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001743",
+          "absolute_start_seconds": 4174.0,
+          "absolute_end_seconds": 4176.2,
+          "relative_start_seconds": 6.4,
+          "relative_end_seconds": 8.6,
+          "action": "receive",
+          "confidence": 0.25303,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000295",
+          "source_candidate_ids": [
+            "near:evt_001610"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001610"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000295"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-030",
+      "ordinal": 30,
+      "start_seconds": 4200.0,
+      "end_seconds": 4215.0,
+      "start_time": "01:10:00.000",
+      "end_time": "01:10:15.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "dual_background_control",
+      "selection_reasons": [
+        "paired_dual_background_interval"
+      ],
+      "proxy_filename": "clips/round-01-clip-030.mp4",
+      "anchor": {
+        "canonical_event_id": null,
+        "start_seconds": 4203.6,
+        "end_seconds": 4211.4,
+        "action": "background",
+        "confidence": null,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [],
+      "reserved_source_event_ids": [],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-031",
+      "ordinal": 31,
+      "start_seconds": 4362.2,
+      "end_seconds": 4377.2,
+      "start_time": "01:12:42.200",
+      "end_time": "01:12:57.200",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-031.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001860",
+        "start_seconds": 4368.8,
+        "end_seconds": 4370.6,
+        "action": "receive",
+        "confidence": 0.217426,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001860",
+          "absolute_start_seconds": 4368.8,
+          "absolute_end_seconds": 4370.2,
+          "relative_start_seconds": 6.6,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.217426,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000314",
+          "source_candidate_ids": [
+            "near:evt_001724"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_001861",
+          "absolute_start_seconds": 4369.6,
+          "absolute_end_seconds": 4370.6,
+          "relative_start_seconds": 7.4,
+          "relative_end_seconds": 8.4,
+          "action": "dig",
+          "confidence": 0.212018,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000314",
+          "source_candidate_ids": [
+            "far:evt_000966"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_000966",
+        "near:evt_001724"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000314"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-032",
+      "ordinal": 32,
+      "start_seconds": 4387.4,
+      "end_seconds": 4402.4,
+      "start_time": "01:13:07.400",
+      "end_time": "01:13:22.400",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-032.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001875",
+        "start_seconds": 4393.6,
+        "end_seconds": 4396.2,
+        "action": "receive",
+        "confidence": 0.229155,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001875",
+          "absolute_start_seconds": 4394.8,
+          "absolute_end_seconds": 4396.2,
+          "relative_start_seconds": 7.4,
+          "relative_end_seconds": 8.8,
+          "action": "receive",
+          "confidence": 0.229155,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000315",
+          "source_candidate_ids": [
+            "near:evt_001736"
+          ]
+        },
+        {
+          "canonical_event_id": "evt_merged_001873",
+          "absolute_start_seconds": 4393.6,
+          "absolute_end_seconds": 4394.6,
+          "relative_start_seconds": 6.2,
+          "relative_end_seconds": 7.2,
+          "action": "dig",
+          "confidence": 0.264943,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000315",
+          "source_candidate_ids": [
+            "near:evt_001734"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001734",
+        "near:evt_001736"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000315"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-033",
+      "ordinal": 33,
+      "start_seconds": 4424.6,
+      "end_seconds": 4439.6,
+      "start_time": "01:13:44.600",
+      "end_time": "01:13:59.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-033.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001884",
+        "start_seconds": 4431.6,
+        "end_seconds": 4432.6,
+        "action": "receive",
+        "confidence": 0.258274,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001884",
+          "absolute_start_seconds": 4431.6,
+          "absolute_end_seconds": 4432.6,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.258274,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000317",
+          "source_candidate_ids": [
+            "near:evt_001744"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001744"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000317"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-034",
+      "ordinal": 34,
+      "start_seconds": 4441.0,
+      "end_seconds": 4456.0,
+      "start_time": "01:14:01.000",
+      "end_time": "01:14:16.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-034.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001895",
+        "start_seconds": 4448.0,
+        "end_seconds": 4449.0,
+        "action": "receive",
+        "confidence": 0.250305,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001895",
+          "absolute_start_seconds": 4448.0,
+          "absolute_end_seconds": 4449.0,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.250305,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000319",
+          "source_candidate_ids": [
+            "near:evt_001757"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001757"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000319"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-035",
+      "ordinal": 35,
+      "start_seconds": 4491.0,
+      "end_seconds": 4506.0,
+      "start_time": "01:14:51.000",
+      "end_time": "01:15:06.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 6,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-035.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_001932",
+        "start_seconds": 4498.0,
+        "end_seconds": 4499.0,
+        "action": "receive",
+        "confidence": 0.221357,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_001932",
+          "absolute_start_seconds": 4498.0,
+          "absolute_end_seconds": 4499.0,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.221357,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000321",
+          "source_candidate_ids": [
+            "near:evt_001785"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_001785"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000321"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-036",
+      "ordinal": 36,
+      "start_seconds": 5207.0,
+      "end_seconds": 5222.0,
+      "start_time": "01:26:47.000",
+      "end_time": "01:27:02.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 7,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-036.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_002317",
+        "start_seconds": 5214.0,
+        "end_seconds": 5215.0,
+        "action": "receive",
+        "confidence": 0.330101,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_002317",
+          "absolute_start_seconds": 5214.0,
+          "absolute_end_seconds": 5215.0,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "receive",
+          "confidence": 0.330101,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000381",
+          "source_candidate_ids": [
+            "near:evt_002158"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_002158"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000381"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-037",
+      "ordinal": 37,
+      "start_seconds": 5355.0,
+      "end_seconds": 5370.0,
+      "start_time": "01:29:15.000",
+      "end_time": "01:29:30.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 8,
+      "selection_bucket": "random_candidate_control",
+      "selection_reasons": [
+        "time_stratified_random_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-037.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_002392",
+        "start_seconds": 5361.6,
+        "end_seconds": 5363.4,
+        "action": "set",
+        "confidence": 0.244676,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_002392",
+          "absolute_start_seconds": 5361.6,
+          "absolute_end_seconds": 5363.4,
+          "relative_start_seconds": 6.6,
+          "relative_end_seconds": 8.4,
+          "action": "set",
+          "confidence": 0.244676,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000399",
+          "source_candidate_ids": [
+            "near:evt_002233"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_002233"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000399"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-038",
+      "ordinal": 38,
+      "start_seconds": 5862.6,
+      "end_seconds": 5877.6,
+      "start_time": "01:37:42.600",
+      "end_time": "01:37:57.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 8,
+      "selection_bucket": "conflict_or_minority",
+      "selection_reasons": [
+        "required_minority_coverage"
+      ],
+      "proxy_filename": "clips/round-01-clip-038.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_002602",
+        "start_seconds": 5869.6,
+        "end_seconds": 5870.6,
+        "action": "block",
+        "confidence": 0.245083,
+        "observed_sides": [
+          "far"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_002602",
+          "absolute_start_seconds": 5869.6,
+          "absolute_end_seconds": 5870.6,
+          "relative_start_seconds": 7.0,
+          "relative_end_seconds": 8.0,
+          "action": "block",
+          "confidence": 0.245083,
+          "observed_sides": [
+            "far"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": "cg_000435",
+          "source_candidate_ids": [
+            "far:evt_001334"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "far:evt_001334"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": [
+        "cg_000435"
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-039",
+      "ordinal": 39,
+      "start_seconds": 5998.6,
+      "end_seconds": 6013.6,
+      "start_time": "01:39:58.600",
+      "end_time": "01:40:13.600",
+      "duration_seconds": 15.0,
+      "time_stratum": 9,
+      "selection_bucket": "dual_background_control",
+      "selection_reasons": [
+        "paired_dual_background_interval"
+      ],
+      "proxy_filename": "clips/round-01-clip-039.mp4",
+      "anchor": {
+        "canonical_event_id": null,
+        "start_seconds": 6003.2,
+        "end_seconds": 6009.0,
+        "action": "background",
+        "confidence": null,
+        "observed_sides": [
+          "far",
+          "near"
+        ]
+      },
+      "candidate_hints": [],
+      "reserved_source_event_ids": [],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    },
+    {
+      "clip_id": "round-01-clip-040",
+      "ordinal": 40,
+      "start_seconds": 6486.0,
+      "end_seconds": 6501.0,
+      "start_time": "01:48:06.000",
+      "end_time": "01:48:21.000",
+      "duration_seconds": 15.0,
+      "time_stratum": 9,
+      "selection_bucket": "random_candidate_control",
+      "selection_reasons": [
+        "time_stratified_random_control"
+      ],
+      "proxy_filename": "clips/round-01-clip-040.mp4",
+      "anchor": {
+        "canonical_event_id": "evt_merged_002899",
+        "start_seconds": 6491.6,
+        "end_seconds": 6495.4,
+        "action": "attack",
+        "confidence": 0.316865,
+        "observed_sides": [
+          "near"
+        ]
+      },
+      "candidate_hints": [
+        {
+          "canonical_event_id": "evt_merged_002899",
+          "absolute_start_seconds": 6491.6,
+          "absolute_end_seconds": 6495.4,
+          "relative_start_seconds": 5.6,
+          "relative_end_seconds": 9.4,
+          "action": "attack",
+          "confidence": 0.316865,
+          "observed_sides": [
+            "near"
+          ],
+          "duplicate_group_id": null,
+          "conflict_group_id": null,
+          "source_candidate_ids": [
+            "near:evt_002748"
+          ]
+        }
+      ],
+      "reserved_source_event_ids": [
+        "near:evt_002748"
+      ],
+      "reserved_duplicate_group_ids": [],
+      "reserved_conflict_group_ids": []
+    }
+  ]
+}

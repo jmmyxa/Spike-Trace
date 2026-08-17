@@ -65,6 +65,9 @@ Spike-Trace/
 │  ├─ *_annotations_expanded_batch_*.csv # 应用补标后的训练清单
 │  ├─ usa_germany_2024_annotations_expanded_batch_02.csv # 当前 90 条训练清单
 │  └─ *_match.json               # 比赛信息、当前清单、复核状态与半场区间
+├─ data/active-learning/
+│  └─ rangitoto/
+│     └─ round-01-selection.json # 可复现的首轮 40 段选片规格；视频和工作簿不入库
 ├─ docs/
 │  ├─ data-platform/              # 数据平台与用户工作区设计
 │  │  ├─ data-platform-design.md  # SQLite、文件资产、版本与 API 边界
@@ -453,6 +456,32 @@ python -m unittest discover -s tests -v
 少数候选、高置信度硬负、随机候选和双方均无候选的时间块。人工一次播放并穷举片段内全部
 我方动作，输入片段内相对秒数；系统再换算为原视频时间并生成累计训练清单。首轮不要求用户
 处理未被短片覆盖的其他候选，也不以清空历史候选为训练目标。
+
+### Rangitoto 首轮主动学习复核交接
+
+`data/active-learning/rangitoto/round-01-selection.json` 是可版本化的 40 段选择证据；完整
+2,942 候选 JSON/CSV/XLSX 只作为审计证据保留。代理短片、预览图和 `review.xlsx` 都是本地
+生成物，不提交版本库。按以下流程操作：
+
+```powershell
+# 1. 生成选择和复核批次（程序执行）
+spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json data\active-learning\rangitoto\round-01-selection.json --repo-root .
+node tools\build_active_review_batch.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01 outputs\active-learning\rangitoto\round-01-previews
+
+# 2. 用户只填写 review.xlsx 的“人工动作”页
+
+# 3. 提取并应用（程序执行）
+node tools\extract_active_review_results.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01\review.xlsx data\active-learning\rangitoto\round-01-review-draft.json
+spiketrace apply-active-review data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv data\active-learning\rangitoto\round-01-selection.json data\active-learning\rangitoto\round-01-review-draft.json data\annotations\action_training_round_01.csv data\active-learning\rangitoto\round-01-results.json --repo-root . --legacy-base-match-id usa-germany-2024-olympics --review-match-id rangitoto-taka-national-final
+```
+
+代理短片无音频；用户只在“人工动作”页填写片段内相对的整数秒（开始与结束），并选择动作和
+画面侧别。明确填写 `background` 表示该片段已经复核且没有要加入的动作；不要添加状态列、
+checkbox 或完成列。`receive` 仅指接对方发球，`dig` 仅指对方进攻后的防守起球。
+
+这 40 段是为训练补样而偏置选择的主动学习样本，不是准确率测试。只要 Rangitoto 标注加入
+训练，Rangitoto 就不能继续作为独立 `val` 或 `test`；Precision、Recall、Macro F1 和混淆
+矩阵必须在一场从未用于训练或选样的完整比赛上测量。
 
 重算、合并与工作簿验证命令如下：
 

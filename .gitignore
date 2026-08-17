@@ -11,6 +11,9 @@ data/*
 !data/annotations/
 !data/annotations/*.csv
 !data/annotations/*.json
+!data/active-learning/
+!data/active-learning/**/
+!data/active-learning/**/*.json
 runs/
 outputs/*
 outputs/.rangitoto-review-build/
