@@ -88,6 +88,7 @@ Spike-Trace/
 │  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的全量审计工作簿；不要求逐行填写
 ├─ src/spiketrace/
 │  ├─ active_learning_selection.py # 主动学习选片的稳定公共入口
+│  ├─ active_learning_review.py  # 应用主动学习人工结论、硬负样本与累计清单
 │  ├─ _active_learning_selection_contract.py # 选片 schema、时间与设置纯函数
 │  ├─ _active_learning_selection_artifact.py # 来源信任链、制品校验与安全写入
 │  ├─ _active_learning_selector.py # 五桶候选生成与确定性编排
@@ -111,6 +112,7 @@ Spike-Trace/
 ├─ tests/
 │  ├─ fixtures/dual_crop_review/ # 四窗口 far/near inference JSON v2 字面 fixture
 │  ├─ test_active_learning_selection.py # 主动学习选片制品契约与信任链测试
+│  ├─ test_active_learning_review.py # 人工结论应用、硬负样本与双输出回滚测试
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
 │  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试
@@ -461,6 +463,7 @@ python -m unittest discover -s tests -v
 .venv\Scripts\spiketrace.exe verify-dual-crop-review outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json --csv outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.csv
 node tools\build_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx outputs\.rangitoto-review-build\previews
 node tools\verify_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx
+.venv\Scripts\spiketrace.exe apply-active-review BASE_MANIFEST SELECTION REVIEW_INPUT OUTPUT_MANIFEST OUTPUT_RESULTS --repo-root . --legacy-base-match-id LEGACY_ID --review-match-id REVIEW_ID
 ```
 
 人工只编辑工作簿的五个黄色列：`人工确认动作`、`人工开始时间`、`人工结束时间`、`人工侧别`

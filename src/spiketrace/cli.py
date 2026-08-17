@@ -201,6 +201,26 @@ def build_parser() -> argparse.ArgumentParser:
     apply_review_parser.add_argument("output_csv", type=Path)
     apply_review_parser.add_argument("--video-root", type=Path)
     apply_review_parser.add_argument("--allow-missing-videos", action="store_true")
+
+    active_review_parser = subparsers.add_parser(
+        "apply-active-review",
+        help="Apply an extracted active-learning review draft to a cumulative manifest.",
+    )
+    active_review_parser.add_argument("base_manifest", type=Path)
+    active_review_parser.add_argument("selection", type=Path)
+    active_review_parser.add_argument("review_input", type=Path)
+    active_review_parser.add_argument("output_manifest", type=Path)
+    active_review_parser.add_argument("output_results", type=Path)
+    active_review_parser.add_argument("--repo-root", type=Path, required=True)
+    active_review_parser.add_argument("--legacy-base-match-id", required=True)
+    active_review_parser.add_argument("--review-match-id", required=True)
+    active_review_parser.add_argument("--video-root", type=Path)
+    active_review_parser.add_argument(
+        "--background-guard-seconds", type=float, default=0.5
+    )
+    active_review_parser.add_argument("--max-background-windows", type=int)
+    active_review_parser.add_argument("--background-seed", type=int)
+    active_review_parser.add_argument("--allow-missing-videos", action="store_true")
     return parser
 
 
@@ -331,6 +351,25 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             args.results,
             args.output_csv,
             video_root=args.video_root,
+            require_files=not args.allow_missing_videos,
+        )
+
+    if args.command == "apply-active-review":
+        from .active_learning_review import apply_active_review
+
+        return apply_active_review(
+            args.base_manifest,
+            args.selection,
+            args.review_input,
+            args.output_manifest,
+            args.output_results,
+            repo_root=args.repo_root,
+            legacy_base_match_id=args.legacy_base_match_id,
+            review_match_id=args.review_match_id,
+            video_root=args.video_root,
+            background_guard_seconds=args.background_guard_seconds,
+            max_background_windows=args.max_background_windows,
+            background_seed=args.background_seed,
             require_files=not args.allow_missing_videos,
         )
 
