@@ -140,7 +140,7 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
     const [reviewLabel, start, end, teamSide, note] = values;
     if (!ACTIONS.includes(reviewLabel)) fail(`Manual row ${index + 4} needs an allowed action.`);
     if (teamSide !== null && !SIDES.includes(teamSide)) fail(`Manual row ${index + 4} needs far or near.`);
-    if ((start === null) !== (end === null) || (start !== null && (!Number.isInteger(start) || start < 0 || !Number.isInteger(end) || end <= start))) fail(`Manual row ${index + 4} needs paired non-negative whole-second times.`);
+    if ((start === null) !== (end === null) || (start !== null && (!Number.isInteger(start) || start < 0 || !Number.isInteger(end) || end <= start || end > clip.duration_seconds))) fail(`Manual row ${index + 4} needs paired non-negative whole-second times within the clip.`);
     if (reviewLabel === "background" && start === null && end === null) { /* clip sentinel checked below */ }
     canonicalActionRows.push({ action_ref: `${clip.clip_id}/action-${String(slot).padStart(3, "0")}`, clip_id: clip.clip_id, source_action_slot: slot, source_row: index + 4, raw_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, normalized_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, background_scope: reviewLabel === "background" ? (start === null ? "clip_sentinel" : "timed_interval") : null, side_inherited: false, source_repairs: repair ? [repair] : [] });
   }
