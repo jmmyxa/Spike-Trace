@@ -16,7 +16,7 @@ import {
 } from "./verify_active_review_batch.mjs";
 import { buildActiveReviewBatch } from "./build_active_review_batch.mjs";
 import { extractActiveReviewResults } from "./extract_active_review_results.mjs";
-import { sha256File as sharedSha256File } from "./active_review_io.mjs";
+import { parseJsonObjectStrict, sha256File as sharedSha256File } from "./active_review_io.mjs";
 
 assert.deepEqual(SHEET_NAMES, ["短片清单", "人工动作", "候选提示", "标签说明"]);
 assert.deepEqual(ACTIONS, ["background", "serve", "receive", "set", "attack", "block", "dig"]);
@@ -284,6 +284,7 @@ async function main() {
     const draftPath = path.join(fixtureDir, "review-draft.json");
     await writeCompletedWorkbook(workbookPath, completedWorkbook);
     const selectionBytes = await fs.readFile(selectionPath);
+    const selection = parseJsonObjectStrict(selectionBytes, "selection fixture");
     const completedBytes = await fs.readFile(completedWorkbook);
     const draft = await extractActiveReviewResults(selectionPath, completedWorkbook, draftPath);
     const expectedDraft = {
