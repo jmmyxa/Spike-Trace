@@ -51,3 +51,26 @@ git diff --check
 Results: the evidence/semantic test suite, Node syntax check, and whitespace check exited `0`. The batch regression test could not load `@oai/artifact-tool` because this worktree lacks the required dependency junction; no junction was created. Its new v1 assertions cover cleaned builder banners plus action-header and hyperlink-display tampering when the artifact runtime is available.
 
 Fixes cover exact headers and label content, four-A2-only banner compatibility, clip/action hyperlink displays and strict shared-formula blocks, raw-vs-normalized A16 repair lineage, zero-source rejection for completed workbooks, side inheritance/conflicts, timed backgrounds, validation changes, and unexpected sheets. Strict blank template verification remains compatible by applying the nonempty-source rule only when manual values are allowed.
+
+## Review Fix Round 2/5
+
+RED command:
+
+```powershell
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tools\test_active_review_evidence.mjs
+```
+
+Result: failed as expected before the schema restoration because a valid Task 2 `A1` trimmed-banner record was rejected by the envelope loader.
+
+GREEN commands:
+
+```powershell
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tools\test_active_review_evidence.mjs
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' --check tools\active_review_workbook_semantics.mjs
+git diff --check
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tools\test_active_review_batch.mjs
+```
+
+Results: the evidence suite, syntax check, and whitespace check exited `0`. The batch suite still cannot load `@oai/artifact-tool` because the worktree has no dependency junction; the command exited with `ERR_MODULE_NOT_FOUND` and no junction was created.
+
+The Task 2 envelope again accepts any uppercase A1 trimmed-banner cell. Workbook semantic verification independently rejects every compatibility banner target except the four exact `A2` cells. Shared formula tests cover the known imported shape plus no-master, formula-less master, duplicate master, mismatched shared index/text/range, and permission block-alignment failures.

@@ -74,6 +74,7 @@ function allowedBanner(snapshot, sheet, cell, value, compatibility) {
 
 function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides }) {
   const compatibility = compatibilityPayload(boundEvidenceOverrides);
+  for (const entry of compatibility?.trimmed_banner_cells ?? []) if (entry.cell !== "A2" || !BANNER_CELLS.some(([sheet, cell]) => sheet === entry.sheet && cell === entry.cell)) fail("Workbook banner compatibility target is invalid.");
   assert.deepEqual(snapshot.names, ["短片清单", "人工动作", "候选提示", "标签说明"], "Workbook sheet order/count must be exact.");
   const byName = new Map(snapshot.sheets.map((sheet) => [sheet.name, sheet]));
   for (const [sheet, cell] of BANNER_CELLS) allowedBanner(snapshot, sheet, cell, byName.get(sheet)?.banners[cell], compatibility);
@@ -119,8 +120,10 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
     if (!expanded) {
       const permission = compatibility?.shared_formula_ranges?.find((entry) => entry.sheet === "人工动作" && entry.range === range && entry.block_size === 12 && entry.expected_display_value === "播放");
       const references = cells.map(sharedFormula);
-      const master = references.find((entry) => entry?.ref === range);
-      if (!permission || !master || !Number.isInteger(master.index) || references.some((entry) => !entry || entry.index !== master.index || (entry.ref !== null && entry.ref !== range) || entry.text !== "") || cells.some((cell) => formulaText(cell) !== null && formulaText(cell) !== expected)) fail(`Action shared hyperlink block ${range} is invalid.`);
+      const masterIndexes = references.flatMap((entry, index) => entry?.ref === range ? [index] : []);
+      const masterIndex = masterIndexes[0];
+      const master = references[masterIndex];
+      if (!permission || masterIndexes.length !== 1 || !Number.isInteger(master?.index) || formulaText(cells[masterIndex]) !== expected || references.some((entry) => !entry || entry.index !== master.index || (entry.ref !== null && entry.ref !== range) || entry.text !== "") || cells.some((cell) => formulaText(cell) !== null && formulaText(cell) !== expected)) fail(`Action shared hyperlink block ${range} is invalid.`);
     }
     for (let slot = 0; slot < 12; slot += 1) if (actionSheet.values[start - 1 + slot][2] !== "播放") fail(`Action hyperlink display row ${start + slot} is invalid.`);
   }
