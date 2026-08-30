@@ -148,11 +148,12 @@ Spike-Trace/
 - [数据平台与工作区设计](docs/data-platform/README.md)
 - [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)
 - [动作证据、遮挡与球员参与者设计](docs/superpowers/specs/2026-08-30-action-evidence-occlusion-design.md)
+- [Rangitoto 证据分层迁移实现计划](docs/superpowers/plans/2026-08-30-rangitoto-evidence-aware-review.md)
 - [Rangitoto 首轮 40 段主动学习实现计划](docs/superpowers/plans/2026-08-16-rangitoto-active-learning-round-01.md)
 - [R3D-18 高效分阶段微调实现计划](docs/superpowers/plans/2026-08-16-action-model-efficient-finetuning.md)
 - [第二轮完整概率与不确定性选样实现计划](docs/superpowers/plans/2026-08-16-active-learning-round-two-scoring.md)
 
-上述三份实现计划已经确认，执行顺序固定为：先完成首轮 40 段复核闭环；人工结果和独立
+上述四份实现计划已经确认，执行顺序固定为：先把已完成的首轮 40 段工作簿迁移为证据分层结果；该结果和独立
 `val` 比赛就绪后实现并运行两阶段微调；只有新 checkpoint 生成后，才升级完整概率输出并
 制作第二轮 margin/entropy 复核批次。
 
@@ -179,7 +180,7 @@ results JSON，核对权威累计清单哈希和派生清单的逐行前缀，�
 └─ 预训练路径：六类 YOLO -> 标签归一化 -> 严格七类/兼容六类指标 -> 复核 CSV
 ```
 
-`receive` 仅表示美国队直接接对方发球的第一次触球；`dig` 表示针对对方扣球、吊球等进攻的防守起球，不含拦网。对方直接出界且美国队未触球时标为 `background`。非进攻 free ball 的我方首次触球本轮暂标为 `background`，并在备注写 `free-ball`。
+`receive` 仅表示我方直接接对方发球的第一次触球；`dig` 表示针对对方扣球、吊球等进攻的防守起球，不含拦网。对方直接出界且我方未触球时标为 `background`。复核层把被动送过网的非进攻触球保存为 `free_ball`；当前七类训练投影仅把直接可见的 `free_ball` 映射为 `background`，并在权威结果中保留原标签。它不计为 `attack`，是否失误由独立结果记录决定。
 
 ## 准备标注
 
@@ -467,13 +468,12 @@ python -m unittest discover -s tests -v
 2,942 候选 JSON/CSV/XLSX 只作为审计证据保留。40 个代理短片、四张预览图和
 `outputs/active-learning/rangitoto/round-01/review.xlsx` 已在本地生成，不提交版本库。
 
-当前用户只需打开 `outputs/active-learning/rangitoto/round-01/review.xlsx`，填写“人工动作”页。
-填写完成后再运行：
-
-```powershell
-node tools\extract_active_review_results.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01\review.xlsx data\active-learning\rangitoto\round-01-review-draft.json
-spiketrace apply-active-review data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv data\active-learning\rangitoto\round-01-selection.json data\active-learning\rangitoto\round-01-review-draft.json data\annotations\action_training_round_01.csv data\active-learning\rangitoto\round-01-results.json --repo-root . --legacy-base-match-id usa-germany-2024-olympics --review-match-id rangitoto-taka-national-final
-```
+该工作簿已经填写完成，共读取到 83 条人工记录；用户不需要再操作工作簿。原工作簿保持
+SHA-256 `3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b`，
+不能原位修复或覆盖。由于 v1 草稿无法无损表达遮挡、镜头外、裁判推断、`free_ball` 和多人参与，
+当前不得把它直接交给旧 `apply-active-review`。下一步按
+[证据分层迁移实现计划](docs/superpowers/plans/2026-08-30-rangitoto-evidence-aware-review.md)
+生成 v2 权威结果、七类训练投影和同步 CSV；在实现完成前不需要用户补充确认。
 
 以下仅用于从头重建或审计，不是当前操作；命令采用不同目标路径，并且这些不可覆盖的目标必须
 尚不存在：
@@ -483,9 +483,9 @@ spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_c
 node tools\build_active_review_batch.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01-rebuild outputs\active-learning\rangitoto\round-01-rebuild-previews
 ```
 
-代理短片无音频；用户只在“人工动作”页填写片段内相对的整数秒（开始与结束），并选择动作和
-画面侧别。明确填写 `background` 表示该片段已经复核且没有要加入的动作；不要添加状态列、
-checkbox 或完成列。`receive` 仅指接对方发球，`dig` 仅指对方进攻后的防守起球。
+代理短片无音频；本轮人工记录使用片段内整数秒、动作和画面侧别，没有状态列、checkbox 或完成列。
+无时间的单条 `background` 表示整段已看完且没有目标动作；带时间的 `background` 是显式负样本，
+可以与动作共存。`receive` 仅指接对方发球，`dig` 仅指对方进攻后的防守起球。
 
 这 40 段是为训练补样而偏置选择的主动学习样本，不是准确率测试。只要 Rangitoto 标注加入
 训练，Rangitoto 就不能继续作为独立 `val` 或 `test`；Precision、Recall、Macro F1 和混淆
@@ -500,12 +500,11 @@ checkbox 或完成列。`receive` 仅指接对方发球，`dig` 仅指对方进�
 .venv\Scripts\spiketrace.exe verify-dual-crop-review outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json --csv outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.csv
 node tools\build_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx outputs\.rangitoto-review-build\previews
 node tools\verify_rangitoto_review.mjs outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\rangitoto-r3d18-bootstrap-review\rangitoto_action_review.xlsx
-.venv\Scripts\spiketrace.exe apply-active-review BASE_MANIFEST SELECTION REVIEW_INPUT OUTPUT_MANIFEST OUTPUT_RESULTS --repo-root . --legacy-base-match-id LEGACY_ID --review-match-id REVIEW_ID
 ```
 
-人工只编辑工作簿的五个黄色列：`人工确认动作`、`人工开始时间`、`人工结束时间`、`人工侧别`
-和 `备注`。`人工确认动作` 非空即代表已复核，`background` 用于拒绝误检；没有额外状态列、
-勾选框或完成列。人工开始/结束时间填写数值秒，可读时间码只是只读显示文本。`receive` 仅指
+本轮人工只编辑了工作簿的五个黄色列：`人工确认动作`、`人工开始时间`、`人工结束时间`、`人工侧别`
+和 `备注`。`人工确认动作` 非空即代表已复核；没有额外状态列、勾选框或完成列。人工开始/结束
+时间是整数秒，可读时间码只是只读显示文本。`receive` 仅指
 接对方发球，`dig` 仅指对方进攻后的防守起球；`far` / `near` 是视觉裁剪位置，不代表球队。
 
 该 bootstrap checkpoint 只用美国队对德国队同一场比赛的 90 个训练窗口训练。Rangitoto
@@ -566,10 +565,10 @@ Rangitoto 就不能继续作为独立 `val` 或 `test`；可信的 Precision、R
 
 当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
 Rangitoto 第二场完整比赛的 `center-nearest-frame-v1` 双裁剪 format-2 复核材料、首轮 40 段
-确定性选择以及本地工作簿/代理已经完成：候选池共有 2,942 个候选、4,282 个来源候选、823 个
-duplicate groups 和 495 个 conflict groups。下一步仅是填写 `review.xlsx` 的“人工动作”页并生成
-累计训练清单；全量工作簿只作审计，不要求人工完成。在独立比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率
-或泛化结果。代码已经跑通
+确定性选择、本地代理和 83 条人工记录已经完成：候选池共有 2,942 个候选、4,282 个来源候选、
+823 个 duplicate groups 和 495 个 conflict groups。当前工程任务是实现证据分层迁移，安全处理
+遮挡、镜头外、推断结果、`free_ball` 与未来的多人参与关系；用户不需要继续填写工作簿。在独立
+比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率或泛化结果。代码已经跑通
 自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并，但训练数据仍以
 39 个 `background` 为主，
 `set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
