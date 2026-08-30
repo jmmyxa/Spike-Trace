@@ -106,7 +106,13 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
   const expectedGaps = new Map((compatibility?.validation_import_gaps ?? []).map((gap) => [gap.range, gap]));
   const validationRules = [["E4:E483", actionSheet.validations.action?.E], ["F4:G483", actionSheet.validations.action?.FG], ["H4:H483", actionSheet.validations.action?.H]];
   for (const [range, validation] of validationRules) {
-    if (validation?.rule) continue;
+    if (validation?.rule) {
+      const rule = validation.rule;
+      if (range === "E4:E483" && (rule.type !== "list" || JSON.stringify(rule.values) !== JSON.stringify(ACTIONS))) fail(`Action ${range} validation changed.`);
+      if (range === "F4:G483" && (rule.type !== "whole" || rule.operator !== "greaterThanOrEqual" || Number(rule.formula1) !== 0)) fail(`Action ${range} validation changed.`);
+      if (range === "H4:H483" && (rule.type !== "list" || JSON.stringify(rule.values) !== JSON.stringify(SIDES))) fail(`Action ${range} validation changed.`);
+      continue;
+    }
     const gap = expectedGaps.get(range);
     if (!gap) fail(`Action ${range} validation is missing.`);
   }
