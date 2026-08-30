@@ -32,6 +32,7 @@ try {
     () => parseJsonObjectStrict(duplicate, "override"),
     /override contains duplicate key "selection"/,
   );
+  assert.throws(() => parseJsonObjectStrict(Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xc3, 0x28, 0x7d]), "encoding"), /encoding contains invalid UTF-8/);
   assert.throws(() => parseJsonObjectStrict(Buffer.from("[]"), "array"), /array contains invalid JSON/);
   assert.deepEqual(parseJsonObjectStrict(Buffer.from('{"items":[{"x":1},{"x":1}]}'), "valid"), { items: [{ x: 1 }, { x: 1 }] });
 
@@ -54,6 +55,14 @@ try {
     assert.equal(await fs.stat(target).then(() => true).catch(() => false), false, `${name} target must not publish`);
     assert.equal((await fs.readdir(root)).some((entry) => entry.startsWith(`.${name}.json.tmp-`)), false, `${name} temp must be removed`);
   }
+
+  const collisionPath = path.join(root, "collision.json");
+  const collisionTemporary = path.join(root, `.collision.json.tmp-${process.pid}-fixed`);
+  const collisionBytes = Buffer.from("pre-existing sibling", "utf8");
+  await fs.writeFile(collisionTemporary, collisionBytes);
+  await assert.rejects(() => publishJsonNoReplace(collisionPath, expectedDraft, { io: { randomUUID: () => "fixed" } }));
+  assert.deepEqual(await fs.readFile(collisionTemporary), collisionBytes);
+  await fs.unlink(collisionTemporary);
 
   const competingPath = path.join(root, "competing.json");
   const competingBytes = Buffer.from("competing writer", "utf8");

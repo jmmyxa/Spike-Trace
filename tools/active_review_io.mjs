@@ -51,7 +51,12 @@ function isWhitespace(character) {
 
 export function parseJsonObjectStrict(bytes, label) {
   invariant(bytes instanceof Uint8Array, `${label} must be UTF-8 bytes.`);
-  const text = Buffer.from(bytes).toString("utf8");
+  let text;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error(`${label} contains invalid UTF-8.`);
+  }
   let index = 0;
   const fail = () => { throw new Error(`${label} contains invalid JSON.`); };
   const skipWhitespace = () => { while (isWhitespace(text[index])) index += 1; };
@@ -132,8 +137,10 @@ export async function publishJsonNoReplace(outputPath, payload, { io = {}, befor
   const temporary = path.join(path.dirname(absoluteOutput), `.${path.basename(absoluteOutput)}.tmp-${process.pid}-${unique()}`);
   const bytes = Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, "utf8");
   let handle;
+  let ownedTemporary = false;
   try {
     handle = await open(temporary, "wx");
+    ownedTemporary = true;
     await handle.writeFile(bytes);
     await handle.sync();
     await handle.close();
@@ -145,8 +152,10 @@ export async function publishJsonNoReplace(outputPath, payload, { io = {}, befor
     return bytes;
   } finally {
     if (handle) await handle.close().catch(() => undefined);
-    await unlink(temporary).catch((error) => {
-      if (error?.code !== "ENOENT") throw error;
-    });
+    if (ownedTemporary) {
+      await unlink(temporary).catch((error) => {
+        if (error?.code !== "ENOENT") throw error;
+      });
+    }
   }
 }

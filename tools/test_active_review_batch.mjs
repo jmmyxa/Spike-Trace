@@ -286,6 +286,30 @@ async function main() {
     const selectionBytes = await fs.readFile(selectionPath);
     const completedBytes = await fs.readFile(completedWorkbook);
     const draft = await extractActiveReviewResults(selectionPath, completedWorkbook, draftPath);
+    const expectedDraft = {
+      format_version: 1,
+      batch_id: selection.batch_id,
+      round_id: selection.round_id,
+      selection: path.relative(ROOT, selectionPath).split(path.sep).join("/"),
+      selection_sha256: digest(selectionBytes),
+      workbook: { path: path.relative(ROOT, completedWorkbook).split(path.sep).join("/"), sha256: digest(completedBytes) },
+      video: { path: selection.video.path, sha256: selection.video.sha256 },
+      time_precision_seconds: 1,
+      clips: selection.clips.map((clip, index) => ({
+        clip_id: clip.clip_id,
+        ordinal: clip.ordinal,
+        source_start_seconds: clip.start_seconds,
+        source_end_seconds: clip.end_seconds,
+        actions: index === 0
+          ? [
+            { action: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "接发球" },
+            { action: "set", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "far", note: "" },
+          ]
+          : [{ action: "background", relative_start_seconds: 0, relative_end_seconds: clip.duration_seconds, team_side: "near", note: "" }],
+      })),
+    };
+    const expectedBytes = Buffer.from(`${JSON.stringify(expectedDraft, null, 2)}\n`, "utf8");
+    assert.deepEqual(await fs.readFile(draftPath), expectedBytes, "v1 extractor bytes must remain exact");
     assert.deepEqual(draft.clips[0].actions, [
       { action: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "接发球" },
       { action: "set", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "far", note: "" },
