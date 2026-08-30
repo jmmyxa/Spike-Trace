@@ -211,7 +211,7 @@ export async function composeActiveReviewEvidence(selectionPath, workbookPath, o
     workbookBytes: workbookSnapshot.bytes,
     repoRoot: root,
   });
-  const verifyWorkbookFile = io.verifyWorkbookFile ?? (await import("./verify_active_review_batch.mjs")).verifyWorkbookFile;
+  const { verifyWorkbookFile } = await import("./verify_active_review_batch.mjs");
   const verifiedWorkbook = await verifyWorkbookFile(selectionSnapshot.path, workbookSnapshot.path, {
     allowManualValues: true,
     selectionBytes: selectionSnapshot.bytes,

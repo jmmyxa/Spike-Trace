@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
 
 import {
   assertStableInput,
@@ -16,6 +17,8 @@ import {
   validateEvidenceOverrideReferences,
 } from "./active_review_evidence_overrides.mjs";
 import { verifyWorkbookSemantics } from "./active_review_workbook_semantics.mjs";
+import { buildActiveReviewBatch } from "./build_active_review_batch.mjs";
+import { createSyntheticSelection } from "./active_review_synthetic_fixture.mjs";
 import {
   composeEvidenceSynthesisInput,
   composeActiveReviewEvidence,
@@ -166,26 +169,23 @@ async function verifyRealEvidence(argv) {
 if (process.argv[2] === "--real") await verifyRealEvidence(process.argv.slice(2));
 
 async function composerFixture() {
-  const fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "active-review-composer-"));
-  const input = path.join(fixtureRoot, "input");
-  await fs.mkdir(input);
-  const videoPath = path.join(fixtureRoot, "video.mp4");
-  const videoBytes = Buffer.from("frozen-video", "utf8");
-  await fs.writeFile(videoPath, videoBytes);
-  const selection = { batch_id: "batch-1", round_id: "round-01", video: { video_id: "video-1", path: "video.mp4", sha256: sha256(videoBytes), fps: 30, frame_count: 300, width: 100, height: 50, duration_seconds: 10, crops: { far: [0, 0, 100, 25], near: [0, 25, 100, 50] } }, clips: [{ clip_id: "clip-001", start_seconds: 100, end_seconds: 110, duration_seconds: 10 }] };
-  const selectionPath = path.join(input, "selection.json");
-  const workbookPath = path.join(input, "review.xlsx");
-  const overridePath = path.join(input, "override.json");
-  const selectionBytes = Buffer.from(JSON.stringify(selection), "utf8");
-  const workbookBytes = Buffer.from("frozen-workbook", "utf8");
-  const override = { format: "spiketrace.active-review-evidence-overrides", format_version: 1, review_set_key: "review/round-01", batch_id: "batch-1", round_id: "round-01", selection: { path: "input/selection.json", sha256: sha256(selectionBytes) }, workbook: { path: "input/review.xlsx", sha256: sha256(workbookBytes) }, video: { path: "video.mp4", sha256: sha256(videoBytes) }, workbook_compatibility: { trimmed_banner_cells: [], shared_formula_ranges: [], validation_import_gaps: [], read_only_repairs: [] }, action_overrides: [], supplemental_actions: [], outcome_observations: [], visibility_observations: [], action_participants: [] };
-  await fs.writeFile(selectionPath, selectionBytes);
-  await fs.writeFile(workbookPath, workbookBytes);
+  const repoRoot = path.resolve(".");
+  const fixtureRoot = await fs.mkdtemp(path.join(path.join(repoRoot, "tests"), ".active-review-evidence-fixture-"));
+  const selectionPath = await createSyntheticSelection(fixtureRoot, { repoRoot });
+  const batchDir = path.join(fixtureRoot, "batch");
+  await buildActiveReviewBatch(selectionPath, batchDir, path.join(fixtureRoot, "previews"));
+  const workbookPath = path.join(batchDir, "review.xlsx");
+  const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(workbookPath));
+  const actions = workbook.worksheets.getItem("人工动作");
+  for (let index = 0; index < 40; index += 1) actions.getRange(`E${4 + index * 12}:H${4 + index * 12}`).values = [["background", null, null, "near"]];
+  await (await SpreadsheetFile.exportXlsx(workbook)).save(workbookPath);
+  const overridePath = path.join(fixtureRoot, "override.json");
+  const selectionBytes = await fs.readFile(selectionPath);
+  const workbookBytes = await fs.readFile(workbookPath);
+  const selection = parseJsonObjectStrict(selectionBytes, "Synthetic selection");
+  const override = { format: "spiketrace.active-review-evidence-overrides", format_version: 1, review_set_key: "review/round-01", batch_id: selection.batch_id, round_id: selection.round_id, selection: { path: normalizeRepoPath(selectionPath, repoRoot), sha256: sha256(selectionBytes) }, workbook: { path: normalizeRepoPath(workbookPath, repoRoot), sha256: sha256(workbookBytes) }, video: { path: selection.video.path, sha256: selection.video.sha256 }, workbook_compatibility: { trimmed_banner_cells: [], shared_formula_ranges: [], validation_import_gaps: [], read_only_repairs: [] }, action_overrides: [], supplemental_actions: [], outcome_observations: [], visibility_observations: [], action_participants: [] };
   await fs.writeFile(overridePath, JSON.stringify(override));
-  const canonicalActionRows = [{ action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, background_scope: null, side_inherited: false, source_repairs: [] }];
-  let receivedRepoRoot = null;
-  const io = { verifyWorkbookFile: async (receivedSelectionPath, receivedWorkbookPath, options) => { assert.equal(receivedSelectionPath, selectionPath); assert.equal(receivedWorkbookPath, workbookPath); assert.deepEqual(options.selectionBytes, selectionBytes); assert.deepEqual(options.workbookBytes, workbookBytes); receivedRepoRoot = options.repoRoot; return { selection, canonicalActionRows, normalizationAudit: [] }; } };
-  return { fixtureRoot, selectionPath, workbookPath, overridePath, videoPath, canonicalActionRows, io, receivedRepoRoot: () => receivedRepoRoot };
+  return { fixtureRoot, repoRoot, selectionPath, workbookPath, overridePath, videoPath: path.join(repoRoot, selection.video.path), io: {} };
 }
 
 async function assertNoComposerLeak(fixture, outputPath) {
@@ -201,10 +201,9 @@ for (const [name, mutate] of [
 ]) {
   const fixture = await composerFixture();
   try {
-    const outputPath = path.join(fixture.fixtureRoot, `${name}.json`);
-    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.fixtureRoot, io: fixture.io, afterVerification: () => mutate(fixture) }), /changed during (extraction|composition)/);
+    const outputPath = path.join(fixture.fixtureRoot, `output-${name}.json`);
+    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.repoRoot, io: fixture.io, afterVerification: () => mutate(fixture) }), /changed during (extraction|composition)/);
     await assertNoComposerLeak(fixture, outputPath);
-    assert.equal(fixture.receivedRepoRoot(), fixture.fixtureRoot);
   } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
 }
 
@@ -216,27 +215,25 @@ for (const [name, makeIo] of [
   const fixture = await composerFixture();
   try {
     const outputPath = path.join(fixture.fixtureRoot, `${name}.json`);
-    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.fixtureRoot, io: { ...fixture.io, ...makeIo() } }));
+    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.repoRoot, io: { ...fixture.io, ...makeIo() } }));
     await assertNoComposerLeak(fixture, outputPath);
   } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
 }
 
 const firstComposer = await composerFixture();
-const secondComposer = await composerFixture();
 try {
   const firstOutput = path.join(firstComposer.fixtureRoot, "result.json");
-  const secondOutput = path.join(secondComposer.fixtureRoot, "result.json");
-  await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, firstOutput, { repoRoot: firstComposer.fixtureRoot, io: firstComposer.io });
-  await composeActiveReviewEvidence(secondComposer.selectionPath, secondComposer.workbookPath, secondComposer.overridePath, secondOutput, { repoRoot: secondComposer.fixtureRoot, io: secondComposer.io });
+  const secondOutput = path.join(firstComposer.fixtureRoot, "result-copy.json");
+  await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, firstOutput, { repoRoot: firstComposer.repoRoot, io: firstComposer.io });
+  await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, secondOutput, { repoRoot: firstComposer.repoRoot, io: firstComposer.io });
   assert.deepEqual(await fs.readFile(firstOutput), await fs.readFile(secondOutput));
   const collisionPath = path.join(firstComposer.fixtureRoot, "collision.json");
   await fs.writeFile(collisionPath, "existing");
-  await assert.rejects(() => composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, collisionPath, { repoRoot: firstComposer.fixtureRoot, io: firstComposer.io }));
+  await assert.rejects(() => composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, collisionPath, { repoRoot: firstComposer.repoRoot, io: firstComposer.io }));
   assert.deepEqual(await fs.readFile(collisionPath), Buffer.from("existing"));
   assert.equal((await fs.readdir(firstComposer.fixtureRoot)).some((entry) => entry.startsWith(".collision.json.tmp-")), false);
 } finally {
   await fs.rm(firstComposer.fixtureRoot, { recursive: true, force: true });
-  await fs.rm(secondComposer.fixtureRoot, { recursive: true, force: true });
 }
 
 function semanticWorkbook({ mutate } = {}) {

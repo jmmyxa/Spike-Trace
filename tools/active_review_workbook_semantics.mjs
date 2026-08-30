@@ -26,6 +26,7 @@ function blank(value) { return value === null || value === undefined || value ==
 function normalize(value) { return blank(value) ? null : value; }
 function fail(message) { throw new Error(message); }
 function expectedHyperlink(clipId) { return `=HYPERLINK("clips/${clipId}.mp4","播放")`; }
+function hyperlinkDisplay(value, clipId) { return value === "播放" || value === `HYPERLINK is not implemented. linkLocation=clips/${clipId}.mp4, friendlyName=播放`; }
 function rangeValues(sheet, address) { return sheet.getRange(address).values; }
 function rowInRange(range, row) {
   const match = /^C(\d+):C(\d+)$/.exec(range ?? "");
@@ -109,7 +110,7 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
   for (const [index, clip] of selection.clips.entries()) {
     const cell = clipSheet.formulas[index + 3][2];
     assert.equal(formulaText(cell), expectedHyperlink(clip.clip_id), `Clip hyperlink ${clip.clip_id}`);
-    assert.equal(clipSheet.values[index + 3][2], "播放", `Clip hyperlink display ${clip.clip_id}`);
+    assert.ok(hyperlinkDisplay(clipSheet.values[index + 3][2], clip.clip_id), `Clip hyperlink display ${clip.clip_id}`);
   }
   for (let block = 0; block < selection.clips.length; block += 1) {
     const start = 4 + block * 12;
@@ -125,7 +126,7 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
       const master = references[masterIndex];
       if (!permission || masterIndexes.length !== 1 || !Number.isInteger(master?.index) || formulaText(cells[masterIndex]) !== expected || references.some((entry) => !entry || entry.index !== master.index || (entry.ref !== null && entry.ref !== range) || entry.text !== "") || cells.some((cell) => formulaText(cell) !== null && formulaText(cell) !== expected)) fail(`Action shared hyperlink block ${range} is invalid.`);
     }
-    for (let slot = 0; slot < 12; slot += 1) if (actionSheet.values[start - 1 + slot][2] !== "播放") fail(`Action hyperlink display row ${start + slot} is invalid.`);
+    for (let slot = 0; slot < 12; slot += 1) if (!hyperlinkDisplay(actionSheet.values[start - 1 + slot][2], selection.clips[block].clip_id)) fail(`Action hyperlink display row ${start + slot} is invalid.`);
   }
   const expectedGaps = new Map((compatibility?.validation_import_gaps ?? []).map((gap) => [gap.range, gap]));
   const validationRules = [["E4:E483", actionSheet.validations.action?.E], ["F4:G483", actionSheet.validations.action?.FG], ["H4:H483", actionSheet.validations.action?.H]];

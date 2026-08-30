@@ -40,3 +40,11 @@ RED observed exit `1`: the new golden assertion expected `batch-1/result-549fd19
 After replacing the identifier with the specified NUL-delimited canonical SHA-256 formula, rejecting empty related-action arrays during envelope parsing, adding injectable composer publication-boundary tests, and threading explicit `repoRoot` into workbook binding verification, the same command observed exit `0`.
 
 The fresh test coverage mutates each frozen selection/workbook/override/video source after verification and asserts no output or temporary sibling leaks; it also covers collision, write/sync/publish failure cleanup, deterministic cross-directory bytes, and the explicit non-default repository root received by the verifier hook.
+
+## Fix round 2 RED/GREEN
+
+The composer verifier seam was removed. Trust-boundary tests now build a real synthetic proxy batch and XLSX, populate valid review rows, bind a real override to frozen source bytes, and invoke the production workbook verifier for mutation, collision, publication-failure, and deterministic-publication cases. The synthetic fixture uses a unique `tests/.active-review-evidence-fixture-*` directory and never mutates repository evidence artifacts.
+
+The artifact runtime is supplied without a worktree junction through a percent-encoded data-URL loader. Set `SPIKETRACE_PYTHON` to `.venv\\Scripts\\python.exe`, `PYTHONPATH` to `src`, and put the same loader in `NODE_OPTIONS` so spawned extraction CLI processes inherit it. With that setup, `tools/test_active_review_evidence.mjs` exits `0`, and `tools/test_active_review_batch.mjs` exits `0` after the completed/rejected review, corruption, race, and rollback cases.
+
+The workbook semantic verifier also accepts only the exact artifact-tool `HYPERLINK is not implemented. linkLocation=clips/<expected-id>.mp4, friendlyName=播放` diagnostic when its separately validated formula names the same expected clip; arbitrary display text remains rejected.
