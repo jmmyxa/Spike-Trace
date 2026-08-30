@@ -129,6 +129,7 @@ Spike-Trace/
    ├─ extract_active_review_results.mjs # 读取完成的 40 段工作簿并硬链接发布不可覆盖的复核草稿 JSON
    ├─ active_review_evidence_overrides.mjs # 严格校验哈希绑定的证据覆盖信封与引用
    ├─ active_review_workbook_semantics.mjs # 对复核工作簿执行哈希绑定的语义等价、修复审计与动作行规范化
+   ├─ compose_active_review_evidence.mjs # 将冻结的选择、工作簿和证据覆盖合成为不可覆盖的 v2 证据输入
    ├─ test_active_review_batch.mjs # 合成 40 段工作簿、预览、篡改拒绝与回滚可执行测试
    ├─ test_active_review_evidence.mjs # 证据覆盖信封、哈希绑定与引用校验测试
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览

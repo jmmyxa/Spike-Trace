@@ -16,9 +16,15 @@ import {
   validateEvidenceOverrideReferences,
 } from "./active_review_evidence_overrides.mjs";
 import { verifyWorkbookSemantics } from "./active_review_workbook_semantics.mjs";
+import {
+  composeEvidenceSynthesisInput,
+  deriveResultSetId,
+} from "./compose_active_review_evidence.mjs";
 
 assert.equal(typeof loadEvidenceOverrideEnvelope, "function");
 assert.equal(typeof validateEvidenceOverrideReferences, "function");
+assert.equal(typeof composeEvidenceSynthesisInput, "function");
+assert.equal(typeof deriveResultSetId, "function");
 
 const SEMANTIC_ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
 const semanticSelection = {
@@ -37,6 +43,87 @@ const semanticBanners = [
   ["标签说明", "请先阅读再填写“人工动作”页。"],
 ];
 const semanticLabels = [["规则", "说明"], ["receive / dig", "receive 仅指接对方发球的一传；dig 仅指对方进攻后的防守起球。"], ["相对秒", "片段内开始秒和结束秒必须填写非负整数，单位是相对当前短片的秒。"], ["background", "background 必须单独使用，且开始秒与结束秒两个单元格都必须保持空白。"], ["人工侧别", "background 仍须选择当前 far 或 near 的球队裁剪；far/near 只表示画面远端/近端裁剪，不表示球队身份。"], ["完成方式", "没有状态列、审核列或 checkbox；填写人工确认动作即是人工记录。"], ["容量", "每个短片固定 12 个动作槽。若 12 槽都不足，请不要覆盖现有行，应请求扩容版本。"], ["代理文件", "代理短片无音频且已降分辨率，只用于便携复核。"]];
+
+const compositionSelection = {
+  batch_id: "batch-1", round_id: "round-01",
+  video: { video_id: "video-1", path: "video.mp4", sha256: "a".repeat(64), fps: 30, frame_count: 300, width: 100, height: 50, duration_seconds: 10, crops: { far: [0, 0, 100, 25], near: [0, 25, 100, 50] } },
+  clips: [{ clip_id: "clip-001", start_seconds: 100, end_seconds: 110, duration_seconds: 10 }],
+};
+const compositionRows = [
+  { action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, background_scope: null, side_inherited: false, source_repairs: [] },
+  { action_ref: "clip-001/action-002", clip_id: "clip-001", source_action_slot: 2, source_row: 5, raw_values: { clip_id: "clip-001", review_label: "attack", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: null }, normalized_values: { clip_id: "clip-001", review_label: "attack", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+];
+const compositionBound = { overrideSha256: "c".repeat(64), overrideRepoPath: "evidence.json", selectionBinding: { path: "selection.json", sha256: "a".repeat(64) }, workbookBinding: { path: "review.xlsx", sha256: "b".repeat(64) }, payload: { review_set_key: "review/round-01" } };
+const compositionOverrides = {
+  bound: compositionBound, sourceRepairs: [],
+  actionOverrides: [{ action_ref: "clip-001/action-002", replacement_review_label: "free_ball", visibility: "off_camera", evidence_basis: "sequence_context", replacement_note: "changed", reason: "off camera relabel" }],
+  supplementalActions: [{ supplemental_index: 1, clip_id: "clip-001", review_label: "free_ball", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", visibility: "direct_clear", evidence_basis: "direct_video", interval_scope: "timed", note: "added", reason: "missed action" }],
+  outcomes: [{ related_action_refs: ["clip-001/supplemental-001"], outcome: "point_lost", result_type: "free_ball_error", evidence_basis: "direct_video", status: "observed_or_inferred", note: "result" }],
+  visibilityObservations: [{ event_kind: "off_camera", clip_id: "clip-001", team_side: "near", relative_start_seconds: 3, relative_end_seconds: 4, interval_scope: "timed", related_action_refs: ["clip-001/action-002"], note: "camera moved", reason: "visible gap" }], participants: [],
+};
+const compositionAudit = [{ kind: "side_inheritance", clip_id: "clip-001", action_ref: "clip-001/action-002", source_row: 5, raw_value: null, normalized_value: "near", reason: "inherit side" }];
+const compositionPayload = composeEvidenceSynthesisInput({ selection: compositionSelection, canonicalActionRows: compositionRows, validatedOverrides: compositionOverrides, normalizationAudit: compositionAudit });
+assert.deepEqual(Object.keys(compositionPayload), ["format", "format_version", "result_set_id", "review_set_key", "batch_id", "round_id", "selection", "workbook", "evidence_overrides", "video", "time_precision_seconds", "source_review_rows", "source_repairs", "action_observations", "outcome_observations", "visibility_observations", "action_participants", "normalization_audit"]);
+assert.equal(compositionPayload.format, "spiketrace.active-review-evidence-input");
+assert.equal(compositionPayload.format_version, 2);
+assert.equal(compositionPayload.time_precision_seconds, 1);
+assert.equal(compositionPayload.action_observations[0].visibility, "direct_clear");
+assert.equal(compositionPayload.action_observations[0].evidence_basis, "direct_video");
+assert.deepEqual(compositionPayload.action_observations[0].raw_values, compositionRows[0].raw_values);
+assert.equal(compositionPayload.action_observations[1].review_label, "free_ball");
+assert.equal(compositionPayload.action_observations[1].source_reason, "off camera relabel");
+assert.equal(compositionPayload.action_observations[1].start_seconds, 103);
+assert.equal(compositionPayload.action_observations[2].action_ref, "clip-001/supplemental-001");
+assert.equal(compositionPayload.action_observations[2].source_action_slot, null);
+assert.equal(compositionPayload.visibility_observations[0].source_reason, "visible gap");
+assert.match(compositionPayload.visibility_observations[0].visibility_ref, /off_camera-source-001$/);
+assert.match(compositionPayload.outcome_observations[0].outcome_ref, /outcome-001$/);
+assert.deepEqual(compositionPayload.normalization_audit, compositionAudit);
+assert.equal("training_decision" in compositionPayload, false);
+assert.equal(compositionPayload.result_set_id, deriveResultSetId({ batchId: "batch-1", roundId: "round-01", selectionSha256: "a".repeat(64), workbookSha256: "b".repeat(64), evidenceOverridesSha256: "c".repeat(64) }));
+assert.throws(() => composeEvidenceSynthesisInput({ selection: compositionSelection, canonicalActionRows: compositionRows, validatedOverrides: { ...compositionOverrides, visibilityObservations: [] }, normalizationAudit: compositionAudit }), /lacks matching off_camera visibility coverage/);
+
+async function verifyRealEvidence(argv) {
+  assert.equal(argv.length, 5, "Usage: node tools/test_active_review_evidence.mjs --real SELECTION_JSON REVIEW_XLSX EVIDENCE_OVERRIDES_JSON REVIEW_INPUT_JSON");
+  const [, selectionPath, workbookPath, overridePath, reviewInputPath] = argv;
+  const [selectionSnapshot, workbookSnapshot, overrideSnapshot, reviewInputBytes] = await Promise.all([
+    readInputSnapshot(selectionPath, "Selection"),
+    readInputSnapshot(workbookPath, "Workbook"),
+    readInputSnapshot(overridePath, "Evidence override"),
+    fs.readFile(reviewInputPath),
+  ]);
+  const selection = parseJsonObjectStrict(selectionSnapshot.bytes, "Selection");
+  const boundEvidenceOverrides = await loadEvidenceOverrideEnvelope(overrideSnapshot.path, {
+    overrideBytes: overrideSnapshot.bytes, selection,
+    selectionPath: selectionSnapshot.path, selectionBytes: selectionSnapshot.bytes,
+    workbookPath: workbookSnapshot.path, workbookBytes: workbookSnapshot.bytes,
+    repoRoot: process.cwd(),
+  });
+  const { verifyWorkbookFile } = await import("./verify_active_review_batch.mjs");
+  const verifiedWorkbook = await verifyWorkbookFile(selectionSnapshot.path, workbookSnapshot.path, {
+    allowManualValues: true, selectionBytes: selectionSnapshot.bytes, workbookBytes: workbookSnapshot.bytes, boundEvidenceOverrides,
+  });
+  const validatedOverrides = validateEvidenceOverrideReferences(boundEvidenceOverrides, { selection: verifiedWorkbook.selection, canonicalActionRows: verifiedWorkbook.canonicalActionRows });
+  const payload = composeEvidenceSynthesisInput({ selection: verifiedWorkbook.selection, canonicalActionRows: verifiedWorkbook.canonicalActionRows, validatedOverrides, normalizationAudit: verifiedWorkbook.normalizationAudit });
+  const rendered = Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  assert.deepEqual(rendered, reviewInputBytes);
+  assert.equal(payload.selection.sha256, selectionSnapshot.sha256);
+  assert.equal(payload.workbook.sha256, workbookSnapshot.sha256);
+  assert.equal(payload.evidence_overrides.sha256, overrideSnapshot.sha256);
+  assert.equal(payload.selection.path, normalizeRepoPath(selectionSnapshot.path));
+  assert.equal(payload.workbook.path, normalizeRepoPath(workbookSnapshot.path));
+  assert.equal(payload.video.path, selection.video.path);
+  assert.equal(payload.source_review_rows.length, 83);
+  assert.equal(payload.source_repairs.length, 1);
+  assert.equal(payload.action_observations.filter((row) => row.source_action_slot !== null).length, 83);
+  assert.equal(new Set(payload.source_review_rows.map((row) => row.action_ref)).size, 83);
+  assert.ok(payload.action_observations.every((row) => row.visibility && row.evidence_basis));
+  await assertStableInput(selectionSnapshot.path, selectionSnapshot.bytes, "Selection");
+  await assertStableInput(workbookSnapshot.path, workbookSnapshot.bytes, "Workbook");
+  await assertStableInput(overrideSnapshot.path, overrideSnapshot.bytes, "Evidence override");
+}
+
+if (process.argv[2] === "--real") await verifyRealEvidence(process.argv.slice(2));
 
 function semanticWorkbook({ mutate } = {}) {
   const clips = Array.from({ length: 43 }, () => Array(11).fill(null));
