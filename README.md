@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成 Rangitoto 首轮 40 段主动学习选片及本地复核批次。40 个静音代理、预览和 `outputs/active-learning/rangitoto/round-01/review.xlsx` 已经存在；当前唯一的用户操作是填写该工作簿的“人工动作”页。独立评估继续使用未参与训练的另一场完整比赛；号码归属、前端和 SQLite 暂不启动。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环。Rangitoto 首轮 40 段工作簿已经填写完成，共有 83 条人工记录；原工作簿保持不变。审计发现 v1 不能安全表达遮挡、镜头外、裁判推断、`free_ball` 和多人拦网归属，因此当前结果不会直接写入训练清单，而是先按已确认的证据分层设计迁移为 v2 权威结果。独立评估继续使用未参与训练的另一场完整比赛；号码识别运行时代码、前端和 SQLite 暂不启动。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -79,7 +79,7 @@ Spike-Trace/
 │  ├─ product/
 │  │  └─ mvp-workflow-design.md   # 导入、复核、评估、统计和导出流程
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
-│  └─ superpowers/               # 已确认的阶段设计与逐步实现计划
+│  └─ superpowers/               # 已确认的阶段设计与逐步实现计划；含动作证据、遮挡和参与者契约
 ├─ examples/                     # 标注格式示例
 ├─ outputs/expansion-batch-01/
 │  └─ *_expansion_batch_01.xlsx  # 可跨设备填写并提交的完整回合补标工作簿
@@ -147,6 +147,7 @@ Spike-Trace/
 - [MVP 产品工作流](docs/product/mvp-workflow-design.md)
 - [数据平台与工作区设计](docs/data-platform/README.md)
 - [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)
+- [动作证据、遮挡与球员参与者设计](docs/superpowers/specs/2026-08-30-action-evidence-occlusion-design.md)
 - [Rangitoto 首轮 40 段主动学习实现计划](docs/superpowers/plans/2026-08-16-rangitoto-active-learning-round-01.md)
 - [R3D-18 高效分阶段微调实现计划](docs/superpowers/plans/2026-08-16-action-model-efficient-finetuning.md)
 - [第二轮完整概率与不确定性选样实现计划](docs/superpowers/plans/2026-08-16-active-learning-round-two-scoring.md)
@@ -162,7 +163,7 @@ results JSON，核对权威累计清单哈希和派生清单的逐行前缀，�
 
 下一阶段按以下顺序推进：
 
-1. 填写已经生成的 Rangitoto 首轮 40 段工作簿，提取人工结果并生成累计训练清单。
+1. 保留已填写的 Rangitoto 首轮工作簿，按证据分层设计迁移 83 条人工记录并生成安全的累计训练清单。
 2. 使用未加入训练的另一场完整比赛建立固定 `val`，以后再保留第三场完整比赛作为 `test`。
 3. 动作模型基线稳定后，在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
 4. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
