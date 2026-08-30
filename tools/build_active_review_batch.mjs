@@ -53,7 +53,7 @@ export function createReviewWorkbook(selection) {
   const labels = workbook.worksheets.add("标签说明");
   for (const sheet of [clips, actions, hints, labels]) sheet.showGridLines = false;
 
-  title(clips, "K", "主动学习短片清单", "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。 ");
+  title(clips, "K", "主动学习短片清单", "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。");
   clips.getRange("A3:K3").values = [CLIP_HEADERS];
   clips.getRange("A4:K43").values = projection.clipRows;
   clips.getRange("C4:C43").formulas = selection.clips.map((clip) => [`=HYPERLINK("clips/${clip.clip_id}.mp4","播放")`]);
@@ -65,7 +65,7 @@ export function createReviewWorkbook(selection) {
   clips.freezePanes.freezeRows(3);
   setWidths(clips, { A: 56, B: 190, C: 74, D: 190, E: 110, F: 110, G: 110, H: 92, I: 180, J: 420, K: 95 });
 
-  title(actions, "I", "人工动作", "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。 ");
+  title(actions, "I", "人工动作", "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。");
   actions.getRange("A3:I3").values = [ACTION_HEADERS];
   actions.getRange("A4:I483").values = projection.actionRows;
   actions.getRange("C4:C483").formulas = projection.actionRows.map((row) => [`=HYPERLINK("clips/${row[0]}.mp4","播放")`]);
@@ -84,7 +84,7 @@ export function createReviewWorkbook(selection) {
   setWidths(actions, { A: 190, B: 76, C: 74, D: 116, E: 130, F: 130, G: 130, H: 104, I: 310 });
 
   const hintLastRow = 3 + projection.hintRows.length;
-  title(hints, "J", "候选提示", "只读模型提示；它们是参考，不是人工审核结果。 ");
+  title(hints, "J", "候选提示", "只读模型提示；它们是参考，不是人工审核结果。");
   hints.getRange("A3:J3").values = [HINT_HEADERS];
   if (projection.hintRows.length) hints.getRange(`A4:J${hintLastRow}`).values = projection.hintRows;
   styleHeader(hints.getRange("A3:J3"));
@@ -97,7 +97,7 @@ export function createReviewWorkbook(selection) {
   hints.freezePanes.freezeRows(3);
   setWidths(hints, { A: 190, B: 250, C: 110, D: 110, E: 112, F: 92, G: 110, H: 130, I: 130, J: 320 });
 
-  title(labels, "B", "标签说明", "请先阅读再填写“人工动作”页。 ");
+  title(labels, "B", "标签说明", "请先阅读再填写“人工动作”页。");
   labels.getRange("A3:B10").values = [
     ["规则", "说明"],
     ["receive / dig", "receive 仅指接对方发球的一传；dig 仅指对方进攻后的防守起球。"],

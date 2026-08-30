@@ -6,16 +6,18 @@ import { fileURLToPath } from "node:url";
 
 import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
 import { parseJsonObjectStrict, sha256, sha256File as sharedSha256File } from "./active_review_io.mjs";
+import { verifyWorkbookSemantics } from "./active_review_workbook_semantics.mjs";
+import { validateEvidenceOverrideReferences } from "./active_review_evidence_overrides.mjs";
 
 export const SHEET_NAMES = ["短片清单", "人工动作", "候选提示", "标签说明"];
 export const ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
 export const SIDES = ["far", "near"];
 export const ACTION_SLOTS_PER_CLIP = 12;
 const SHEET_BANNERS = [
-  ["短片清单", "主动学习短片清单", "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。 "],
-  ["人工动作", "人工动作", "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。 "],
-  ["候选提示", "候选提示", "只读模型提示；它们是参考，不是人工审核结果。 "],
-  ["标签说明", "标签说明", "请先阅读再填写“人工动作”页。 "],
+  ["短片清单", "主动学习短片清单", "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。"],
+  ["人工动作", "人工动作", "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。"],
+  ["候选提示", "候选提示", "只读模型提示；它们是参考，不是人工审核结果。"],
+  ["标签说明", "标签说明", "请先阅读再填写“人工动作”页。"],
 ];
 export const CLIP_HEADERS = [
   "序号", "短片ID", "播放短片", "代理文件", "片段长度(秒)", "原视频开始",
@@ -194,9 +196,9 @@ function assertManualRows(sheet, { allowManualValues }) {
     }
     if ([action, start, end, side, note].every((value) => value === null)) continue;
     invariant(ACTIONS.includes(action), `Manual row ${index + 4} needs an allowed action.`);
-    invariant(SIDES.includes(side), `Manual row ${index + 4} needs far or near.`);
+    invariant(side === null || SIDES.includes(side), `Manual row ${index + 4} needs far or near.`);
     if (action === "background") {
-      invariant(start === null && end === null, `Manual background row ${index + 4} must leave both time cells blank.`);
+      invariant(start === null && end === null || (Number.isInteger(start) && start >= 0 && Number.isInteger(end) && end > start), `Manual background row ${index + 4} needs paired times or both cells blank.`);
     } else {
       invariant(Number.isFinite(start) && Number.isInteger(start) && start >= 0 && Number.isFinite(end) && Number.isInteger(end) && end >= 0, `Manual row ${index + 4} needs non-negative finite whole-second times.`);
     }
@@ -204,11 +206,18 @@ function assertManualRows(sheet, { allowManualValues }) {
   }
 }
 
-export async function verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues = false } = {}) {
+export async function verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues = false, selectionBytes: suppliedSelectionBytes = null, workbookBytes: suppliedWorkbookBytes = null, boundEvidenceOverrides = null } = {}) {
   const absoluteSelection = path.resolve(selectionPath);
   const absoluteWorkbook = path.resolve(workbookPath);
-  const selectionBytes = await fs.readFile(absoluteSelection);
-  const workbookBytes = await fs.readFile(absoluteWorkbook);
+  const selectionBytes = suppliedSelectionBytes ?? await fs.readFile(absoluteSelection);
+  const workbookBytes = suppliedWorkbookBytes ?? await fs.readFile(absoluteWorkbook);
+  invariant(selectionBytes instanceof Uint8Array && workbookBytes instanceof Uint8Array, "Input snapshots must be UTF-8 bytes.");
+  if (boundEvidenceOverrides) {
+    const expectedSelectionPath = path.relative(process.cwd(), absoluteSelection).split(path.sep).join("/");
+    const expectedWorkbookPath = path.relative(process.cwd(), absoluteWorkbook).split(path.sep).join("/");
+    invariant(boundEvidenceOverrides.selectionBinding?.path === expectedSelectionPath && boundEvidenceOverrides.selectionBinding?.sha256 === sha256(selectionBytes), "Bound evidence selection binding does not match supplied snapshot.");
+    invariant(boundEvidenceOverrides.workbookBinding?.path === expectedWorkbookPath && boundEvidenceOverrides.workbookBinding?.sha256 === sha256(workbookBytes), "Bound evidence workbook binding does not match supplied snapshot.");
+  }
   const { selection, manifest, projection } = await verifyProxyBatch(absoluteSelection, path.dirname(absoluteWorkbook), { selectionBytes });
   const workbook = await importWorkbookSnapshot(absoluteWorkbook, workbookBytes);
   const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
@@ -217,47 +226,8 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const actions = workbook.worksheets.getItem("人工动作");
   const hints = workbook.worksheets.getItem("候选提示");
   const labels = workbook.worksheets.getItem("标签说明");
-  for (const [sheetName, title, instruction] of SHEET_BANNERS) {
-    const sheet = workbook.worksheets.getItem(sheetName);
-    assert.deepEqual(sheet.getRange("A1").values, [[title]], `${sheetName} title`);
-    assert.deepEqual(
-      sheet.getRange("A2").values,
-      [[instruction]],
-      `${sheetName} instruction`,
-    );
-  }
-  exactUsedRange(clips, 43, CLIP_HEADERS.length, "Clip sheet");
-  exactUsedRange(actions, 3 + 40 * ACTION_SLOTS_PER_CLIP, ACTION_HEADERS.length, "Action sheet");
-  exactUsedRange(hints, 3 + projection.hintRows.length, HINT_HEADERS.length, "Hint sheet");
-  exactUsedRange(labels, 10, 2, "Label sheet");
-  assert.deepEqual(clips.getRange("A3:K3").values[0], CLIP_HEADERS, "Clip headers");
-  assert.deepEqual(actions.getRange("A3:I3").values[0], ACTION_HEADERS, "Action headers");
-  assert.deepEqual(hints.getRange("A3:J3").values[0], HINT_HEADERS, "Hint headers");
-  assert.deepEqual(normalizeRows(clips.getRange("A4:B43").values), projection.clipRows.map((row) => row.slice(0, 2)), "Clip identifiers");
-  assert.deepEqual(normalizeRows(clips.getRange("D4:K43").values), projection.clipRows.map((row) => row.slice(3)), "Clip read-only values");
-  assert.deepEqual(normalizeRows(hints.getRange(`A4:J${3 + projection.hintRows.length}`).values), projection.hintRows, "Hint read-only values");
   const actionRows = actions.getRange("A4:I483").values;
-  const actionValues = normalizeRows(actionRows);
-  assert.deepEqual(actionValues.map((row) => [row[0], row[1], row[3]]), projection.actionRows.map((row) => [row[0], row[1], row[3]]), "Action read-only values");
-  for (const [index, clip] of selection.clips.entries()) {
-    assert.equal(clips.getRange(`C${index + 4}`).formulas[0][0], `=HYPERLINK("clips/${clip.clip_id}.mp4","播放")`, `Clip hyperlink ${clip.clip_id}`);
-  }
-  for (const [index, row] of projection.actionRows.entries()) {
-    assert.equal(actions.getRange(`C${index + 4}`).formulas[0][0], `=HYPERLINK("clips/${row[0]}.mp4","播放")`, `Action hyperlink row ${index + 4}`);
-  }
-  assert.deepEqual(listValidation(actions.getRange("E4:E483"), "Action"), ACTIONS);
-  wholeNumberValidation(actions.getRange("F4:G483"), "Action time");
-  assert.deepEqual(listValidation(actions.getRange("H4:H483"), "Action side"), SIDES);
-  assert.deepEqual(labels.getRange("A3:B10").values, [
-    ["规则", "说明"],
-    ["receive / dig", "receive 仅指接对方发球的一传；dig 仅指对方进攻后的防守起球。"],
-    ["相对秒", "片段内开始秒和结束秒必须填写非负整数，单位是相对当前短片的秒。"],
-    ["background", "background 必须单独使用，且开始秒与结束秒两个单元格都必须保持空白。"],
-    ["人工侧别", "background 仍须选择当前 far 或 near 的球队裁剪；far/near 只表示画面远端/近端裁剪，不表示球队身份。"],
-    ["完成方式", "没有状态列、审核列或 checkbox；填写人工确认动作即是人工记录。"],
-    ["容量", "每个短片固定 12 个动作槽。若 12 槽都不足，请不要覆盖现有行，应请求扩容版本。"],
-    ["代理文件", "代理短片无音频且已降分辨率，只用于便携复核。"],
-  ], "Label instructions");
+  const semantic = await verifyWorkbookSemantics(workbook, selection, projection, sha256(workbookBytes), actionRows, { boundEvidenceOverrides });
   assertManualRows(actions, { allowManualValues });
   await scanFormulaErrors(workbook, "Workbook");
   const result = { batch_id: manifest.batch_id, clip_count: selection.clips.length };
@@ -266,7 +236,12 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
     selectionBytes: { value: selectionBytes },
     workbookBytes: { value: workbookBytes },
     actionRows: { value: actionRows },
+    canonicalActionRows: { value: semantic.canonicalActionRows },
+    normalizationAudit: { value: semantic.normalizationAudit },
+    compatibilityAudit: { value: semantic.compatibility },
+    boundEvidenceOverrides: { value: boundEvidenceOverrides },
   });
+  if (boundEvidenceOverrides) validateEvidenceOverrideReferences(boundEvidenceOverrides, { selection, canonicalActionRows: semantic.canonicalActionRows });
   return result;
 }
 
