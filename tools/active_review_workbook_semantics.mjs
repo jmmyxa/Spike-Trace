@@ -8,6 +8,19 @@ const BANNER_CELLS = [
 ];
 const ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
 const SIDES = ["far", "near"];
+const CLIP_HEADERS = ["序号", "短片ID", "播放短片", "代理文件", "片段长度(秒)", "原视频开始", "原视频结束", "时间分层", "选择桶", "选择原因", "候选提示数"];
+const ACTION_HEADERS = ["短片ID", "动作序号", "播放短片", "片段长度(秒)", "人工确认动作", "片段内开始秒", "片段内结束秒", "人工侧别", "备注"];
+const HINT_HEADERS = ["短片ID", "候选ID", "相对开始秒", "相对结束秒", "预测动作", "置信度", "观察裁剪", "重复组", "冲突组", "来源候选ID"];
+const LABEL_VALUES = [
+  ["规则", "说明"],
+  ["receive / dig", "receive 仅指接对方发球的一传；dig 仅指对方进攻后的防守起球。"],
+  ["相对秒", "片段内开始秒和结束秒必须填写非负整数，单位是相对当前短片的秒。"],
+  ["background", "background 必须单独使用，且开始秒与结束秒两个单元格都必须保持空白。"],
+  ["人工侧别", "background 仍须选择当前 far 或 near 的球队裁剪；far/near 只表示画面远端/近端裁剪，不表示球队身份。"],
+  ["完成方式", "没有状态列、审核列或 checkbox；填写人工确认动作即是人工记录。"],
+  ["容量", "每个短片固定 12 个动作槽。若 12 槽都不足，请不要覆盖现有行，应请求扩容版本。"],
+  ["代理文件", "代理短片无音频且已降分辨率，只用于便携复核。"],
+];
 
 function blank(value) { return value === null || value === undefined || value === ""; }
 function normalize(value) { return blank(value) ? null : value; }
@@ -18,6 +31,8 @@ function rowInRange(range, row) {
   const match = /^C(\d+):C(\d+)$/.exec(range ?? "");
   return Boolean(match && row >= Number(match[1]) && row <= Number(match[2]));
 }
+function sharedFormula(cell) { return typeof cell === "object" && cell !== null ? cell.sharedFormula : undefined; }
+function formulaText(cell) { return typeof cell === "string" ? cell : cell?.formula; }
 
 async function readWorkbookSemanticSnapshot(workbook) {
   const names = [];
@@ -53,7 +68,7 @@ function compatibilityPayload(boundEvidenceOverrides) {
 function allowedBanner(snapshot, sheet, cell, value, compatibility) {
   const expected = BANNER_CELLS.find((entry) => entry[0] === sheet && entry[1] === cell)?.[2];
   if (value === expected) return;
-  const permission = compatibility?.trimmed_banner_cells?.find((entry) => entry.sheet === sheet && entry.cell === cell);
+  const permission = cell === "A2" ? compatibility?.trimmed_banner_cells?.find((entry) => entry.sheet === sheet && entry.cell === cell) : null;
   if (!permission || permission.expected_value.trimEnd() !== expected || permission.actual_value !== value || value !== permission.expected_value.trimEnd()) fail(`${sheet} ${cell} banner mismatch.`);
 }
 
@@ -75,6 +90,10 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
   const clipValues = clipSheet.values;
   const actionValues = actionSheet.values;
   const normalized = (rows) => rows.map((row) => row.map(normalize));
+  assert.deepEqual(clips.values[2], CLIP_HEADERS, "Clip headers");
+  assert.deepEqual(actions.values[2], ACTION_HEADERS, "Action headers");
+  assert.deepEqual(hints.values[2], HINT_HEADERS, "Hint headers");
+  assert.deepEqual(labels.values.slice(2, 10), LABEL_VALUES, "Label instructions");
   assert.deepEqual(normalized(clipValues.slice(3).map((row) => row.slice(0, 2))), projection.clipRows.map((row) => row.slice(0, 2)), "Clip identifiers");
   assert.deepEqual(normalized(clipValues.slice(3).map((row) => row.slice(3, 11))), projection.clipRows.map((row) => row.slice(3)), "Clip read-only values");
   assert.deepEqual(normalized(hints.values.slice(3)), projection.hintRows, "Hint read-only values");
@@ -88,20 +107,22 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
   assert.deepEqual(actualActionReadOnly, expectedActionReadOnly, "Action read-only values");
   for (const [index, clip] of selection.clips.entries()) {
     const cell = clipSheet.formulas[index + 3][2];
-    assert.equal(typeof cell === "string" ? cell : cell?.formula, expectedHyperlink(clip.clip_id), `Clip hyperlink ${clip.clip_id}`);
+    assert.equal(formulaText(cell), expectedHyperlink(clip.clip_id), `Clip hyperlink ${clip.clip_id}`);
+    assert.equal(clipSheet.values[index + 3][2], "播放", `Clip hyperlink display ${clip.clip_id}`);
   }
-  for (const [index, row] of projection.actionRows.entries()) {
-    const formulaCell = actionSheet.formulas[index + 3]?.[2];
-    const formula = typeof formulaCell === "string" ? formulaCell : formulaCell?.formula;
-    const shared = formulaCell?.sharedFormula;
-    const expected = expectedHyperlink(row[0]);
-    if (formula !== expected) {
-      const permission = compatibility?.shared_formula_ranges?.find((entry) => entry.sheet === "人工动作" && entry.expected_display_value === "播放" && rowInRange(entry.range, index + 4) && entry.block_size === 12);
-      const sharedRange = shared?.ref ?? permission?.range;
-      if (!shared || !permission || (shared.ref && shared.ref !== permission.range) || !sharedRange) fail(`Action hyperlink row ${index + 4} is invalid.`);
+  for (let block = 0; block < selection.clips.length; block += 1) {
+    const start = 4 + block * 12;
+    const range = `C${start}:C${start + 11}`;
+    const cells = actionSheet.formulas.slice(start - 1, start + 11).map((row) => row[2]);
+    const expected = expectedHyperlink(selection.clips[block].clip_id);
+    const expanded = cells.every((cell) => formulaText(cell) === expected && sharedFormula(cell) === undefined);
+    if (!expanded) {
+      const permission = compatibility?.shared_formula_ranges?.find((entry) => entry.sheet === "人工动作" && entry.range === range && entry.block_size === 12 && entry.expected_display_value === "播放");
+      const references = cells.map(sharedFormula);
+      const master = references.find((entry) => entry?.ref === range);
+      if (!permission || !master || !Number.isInteger(master.index) || references.some((entry) => !entry || entry.index !== master.index || (entry.ref !== null && entry.ref !== range) || entry.text !== "") || cells.some((cell) => formulaText(cell) !== null && formulaText(cell) !== expected)) fail(`Action shared hyperlink block ${range} is invalid.`);
     }
-    const display = actionSheet.values[index + 3]?.[2];
-    if (display !== "播放") fail(`Action hyperlink display row ${index + 4} is invalid.`);
+    for (let slot = 0; slot < 12; slot += 1) if (actionSheet.values[start - 1 + slot][2] !== "播放") fail(`Action hyperlink display row ${start + slot} is invalid.`);
   }
   const expectedGaps = new Map((compatibility?.validation_import_gaps ?? []).map((gap) => [gap.range, gap]));
   const validationRules = [["E4:E483", actionSheet.validations.action?.E], ["F4:G483", actionSheet.validations.action?.FG], ["H4:H483", actionSheet.validations.action?.H]];
@@ -119,7 +140,7 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
   return { snapshot, workbookSha256, compatibility };
 }
 
-function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEvidenceOverrides } = {}) {
+function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEvidenceOverrides, requirePopulatedSources = true } = {}) {
   const repairs = compatibilityPayload(boundEvidenceOverrides)?.read_only_repairs ?? [];
   const canonicalActionRows = [];
   const normalizationAudit = [];
@@ -142,12 +163,16 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
     if (teamSide !== null && !SIDES.includes(teamSide)) fail(`Manual row ${index + 4} needs far or near.`);
     if ((start === null) !== (end === null) || (start !== null && (!Number.isInteger(start) || start < 0 || !Number.isInteger(end) || end <= start || end > clip.duration_seconds))) fail(`Manual row ${index + 4} needs paired non-negative whole-second times within the clip.`);
     if (reviewLabel === "background" && start === null && end === null) { /* clip sentinel checked below */ }
-    canonicalActionRows.push({ action_ref: `${clip.clip_id}/action-${String(slot).padStart(3, "0")}`, clip_id: clip.clip_id, source_action_slot: slot, source_row: index + 4, raw_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, normalized_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, background_scope: reviewLabel === "background" ? (start === null ? "clip_sentinel" : "timed_interval") : null, side_inherited: false, source_repairs: repair ? [repair] : [] });
+    canonicalActionRows.push({ action_ref: `${clip.clip_id}/action-${String(slot).padStart(3, "0")}`, clip_id: clip.clip_id, source_action_slot: slot, source_row: index + 4, raw_values: { clip_id: rawReadOnlyClip, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, normalized_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, background_scope: reviewLabel === "background" ? (start === null ? "clip_sentinel" : "timed_interval") : null, side_inherited: false, source_repairs: repair ? [repair] : [] });
   }
   const byClip = new Map();
   for (const row of canonicalActionRows) { if (!byClip.has(row.clip_id)) byClip.set(row.clip_id, []); byClip.get(row.clip_id).push(row); }
   for (const clip of selection.clips) {
     const rows = byClip.get(clip.clip_id) ?? [];
+    if (rows.length === 0) {
+      if (requirePopulatedSources) fail(`Clip ${clip.clip_id} has zero populated source rows.`);
+      continue;
+    }
     let side = null;
     let sentinel = null;
     for (const row of rows) {

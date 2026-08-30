@@ -229,6 +229,12 @@ async function main() {
     const names = Array.from({ length: 4 }, (_, index) => workbook.worksheets.getItemAt(index).name);
     const actionSheet = workbook.worksheets.getItem("人工动作");
     assert.deepEqual(names, SHEET_NAMES);
+    assert.deepEqual(SHEET_NAMES.map((name) => workbook.worksheets.getItem(name).getRange("A2").values[0][0]), [
+      "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。",
+      "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。",
+      "只读模型提示；它们是参考，不是人工审核结果。",
+      "请先阅读再填写“人工动作”页。",
+    ], "new workbook banners must not have trailing spaces");
     assert.deepEqual(actionSheet.getRange("A3:I3").values[0], ["短片ID", "动作序号", "播放短片", "片段长度(秒)", "人工确认动作", "片段内开始秒", "片段内结束秒", "人工侧别", "备注"]);
     assert.equal(actionSheet.getUsedRange().rowCount, 3 + 40 * 12);
     assert.equal(actionSheet.getRange("C4").formulas[0][0], '=HYPERLINK("clips/round-01-clip-001.mp4","播放")');
@@ -264,6 +270,8 @@ async function main() {
       ["added sheet", async (book) => book.worksheets.add("extra").getRange("A1").values = [["non-empty"]]],
       ["appended row", async (book) => book.worksheets.getItem("人工动作").getRange("A484").values = [["extra"]]],
       ["changed hint", async (book) => book.worksheets.getItem("候选提示").getRange("B4").values = [["changed-hint"]]],
+      ["changed action header", async (book) => book.worksheets.getItem("人工动作").getRange("E3").values = [["changed-header"]]],
+      ["changed hyperlink display", async (book) => book.worksheets.getItem("人工动作").getRange("C4").values = [["changed-display"]]],
       ["validation loss", async (book) => book.worksheets.getItem("人工动作").getRange("E4:E483").dataValidation = null],
       ["prefilled manual cell", async (book) => book.worksheets.getItem("人工动作").getRange("E4").values = [["attack"]]],
       ["formula error", async (book) => book.worksheets.getItem("人工动作").getRange("C4").formulas = [["=#REF!"]]],

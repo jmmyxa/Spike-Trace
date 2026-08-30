@@ -227,7 +227,7 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const hints = workbook.worksheets.getItem("候选提示");
   const labels = workbook.worksheets.getItem("标签说明");
   const actionRows = actions.getRange("A4:I483").values;
-  const semantic = await verifyWorkbookSemantics(workbook, selection, projection, sha256(workbookBytes), actionRows, { boundEvidenceOverrides });
+  const semantic = await verifyWorkbookSemantics(workbook, selection, projection, sha256(workbookBytes), actionRows, { boundEvidenceOverrides, requirePopulatedSources: allowManualValues });
   assertManualRows(actions, { allowManualValues });
   await scanFormulaErrors(workbook, "Workbook");
   const result = { batch_id: manifest.batch_id, clip_count: selection.clips.length };
