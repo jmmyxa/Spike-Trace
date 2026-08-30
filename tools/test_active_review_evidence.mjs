@@ -18,12 +18,14 @@ import {
 import { verifyWorkbookSemantics } from "./active_review_workbook_semantics.mjs";
 import {
   composeEvidenceSynthesisInput,
+  composeActiveReviewEvidence,
   deriveResultSetId,
 } from "./compose_active_review_evidence.mjs";
 
 assert.equal(typeof loadEvidenceOverrideEnvelope, "function");
 assert.equal(typeof validateEvidenceOverrideReferences, "function");
 assert.equal(typeof composeEvidenceSynthesisInput, "function");
+assert.equal(typeof composeActiveReviewEvidence, "function");
 assert.equal(typeof deriveResultSetId, "function");
 
 const SEMANTIC_ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
@@ -80,6 +82,7 @@ assert.match(compositionPayload.visibility_observations[0].visibility_ref, /off_
 assert.match(compositionPayload.outcome_observations[0].outcome_ref, /outcome-001$/);
 assert.deepEqual(compositionPayload.normalization_audit, compositionAudit);
 assert.equal("training_decision" in compositionPayload, false);
+assert.equal(compositionPayload.result_set_id, "batch-1/result-549fd199e806acab");
 assert.equal(compositionPayload.result_set_id, deriveResultSetId({ batchId: "batch-1", roundId: "round-01", selectionSha256: "a".repeat(64), workbookSha256: "b".repeat(64), evidenceOverridesSha256: "c".repeat(64) }));
 assert.throws(() => composeEvidenceSynthesisInput({ selection: compositionSelection, canonicalActionRows: compositionRows, validatedOverrides: { ...compositionOverrides, visibilityObservations: [] }, normalizationAudit: compositionAudit }), /lacks matching off_camera visibility coverage/);
 
@@ -113,17 +116,128 @@ async function verifyRealEvidence(argv) {
   assert.equal(payload.selection.path, normalizeRepoPath(selectionSnapshot.path));
   assert.equal(payload.workbook.path, normalizeRepoPath(workbookSnapshot.path));
   assert.equal(payload.video.path, selection.video.path);
+  assert.equal(payload.selection.path, normalizeRepoPath(selectionSnapshot.path));
+  assert.equal(payload.workbook.path, normalizeRepoPath(workbookSnapshot.path));
+  assert.equal(verifiedWorkbook.selection.clips.length, 40);
   assert.equal(payload.source_review_rows.length, 83);
   assert.equal(payload.source_repairs.length, 1);
   assert.equal(payload.action_observations.filter((row) => row.source_action_slot !== null).length, 83);
   assert.equal(new Set(payload.source_review_rows.map((row) => row.action_ref)).size, 83);
+  const sourceActions = payload.action_observations.filter((row) => row.source_action_slot !== null);
+  assert.ok(sourceActions.every((row) => Number.isInteger(row.source_action_slot) && row.source_action_slot > 0));
+  assert.equal(new Set(sourceActions.map((row) => row.action_ref)).size, 83);
+  assert.ok(payload.action_observations.filter((row) => row.source_action_slot === null).every((row) => row.action_ref.includes("/supplemental-") && row.source_action_slot === null));
+  const inherited = sourceActions.filter((row) => row.side_inherited);
+  assert.equal(inherited.length, 42);
+  assert.equal(new Set(inherited.map((row) => row.clip_id)).size, 14);
+  assert.ok(inherited.every((row) => row.team_side === "near" && row.raw_values.team_side === null));
   assert.ok(payload.action_observations.every((row) => row.visibility && row.evidence_basis));
+  const actionsFor = (suffix) => payload.action_observations.filter((row) => row.clip_id === `round-01-clip-${suffix}`);
+  const visibleFor = (suffix) => payload.visibility_observations.filter((row) => row.clip_id === `round-01-clip-${suffix}`);
+  const clip006 = actionsFor("006");
+  assert.deepEqual(clip006.filter((row) => row.source_action_slot === 1).map((row) => [row.review_label, row.relative_start_seconds, row.relative_end_seconds]), [["background", 0, 9]]);
+  assert.deepEqual(clip006.filter((row) => row.source_action_slot !== null).map((row) => row.source_action_slot), [1, 2, 3, 4]);
+  for (const suffix of ["009", "010"]) {
+    const excludedServe = actionsFor(suffix).find((row) => row.review_label === "serve" && row.visibility === "off_camera");
+    assert.ok(excludedServe);
+    assert.ok(visibleFor(suffix).some((row) => row.event_kind === "off_camera" && row.related_action_refs.includes(excludedServe.action_ref)));
+  }
+  assert.equal(actionsFor("011").filter((row) => row.source_action_slot === null && row.review_label === "block" && row.visibility === "direct_clear").length, 1);
+  assert.equal(payload.action_participants.filter((row) => row.action_ref.startsWith("round-01-clip-011/")).length, 0);
+  const clip017 = actionsFor("017").filter((row) => row.review_label === "free_ball");
+  assert.ok(clip017.length === 1 && ((clip017[0].interval_scope === "timed" && clip017[0].visibility === "direct_clear") || (clip017[0].interval_scope === "clip_bounds" && clip017[0].visibility === "unresolved")));
+  const clip018 = actionsFor("018").find((row) => row.review_label === "free_ball" && row.relative_start_seconds === 8 && row.relative_end_seconds === 9 && row.visibility === "direct_clear");
+  assert.ok(clip018);
+  assert.ok(payload.outcome_observations.some((row) => row.outcome === "point_lost" && row.result_type === "free_ball_error" && row.related_action_refs.includes(clip018.action_ref)));
+  assert.equal(actionsFor("023").filter((row) => row.review_label === "dig" && row.visibility === "direct_clear").length, 0);
+  const clip024 = actionsFor("024").find((row) => row.source_action_slot === 5);
+  assert.deepEqual([clip024.review_label, clip024.relative_start_seconds, clip024.relative_end_seconds], ["free_ball", 11, 12]);
+  const clip034Serve = actionsFor("034").find((row) => row.review_label === "serve");
+  assert.ok(clip034Serve && clip034Serve.visibility === "direct_clear" && clip034Serve.evidence_basis === "direct_video");
+  assert.ok(payload.outcome_observations.some((row) => row.evidence_basis === "referee_signal" && row.related_action_refs.includes(clip034Serve.action_ref)));
+  assert.ok(actionsFor("035").some((row) => row.visibility === "fully_occluded" && row.interval_scope === "clip_bounds"));
+  assert.ok(visibleFor("035").some((row) => row.event_kind === "occlusion" && row.interval_scope === "clip_bounds"));
+  for (const suffix of ["007", "014"]) assert.ok(actionsFor(suffix).every((row) => row.source_action_slot !== null));
   await assertStableInput(selectionSnapshot.path, selectionSnapshot.bytes, "Selection");
   await assertStableInput(workbookSnapshot.path, workbookSnapshot.bytes, "Workbook");
   await assertStableInput(overrideSnapshot.path, overrideSnapshot.bytes, "Evidence override");
 }
 
 if (process.argv[2] === "--real") await verifyRealEvidence(process.argv.slice(2));
+
+async function composerFixture() {
+  const fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "active-review-composer-"));
+  const input = path.join(fixtureRoot, "input");
+  await fs.mkdir(input);
+  const videoPath = path.join(fixtureRoot, "video.mp4");
+  const videoBytes = Buffer.from("frozen-video", "utf8");
+  await fs.writeFile(videoPath, videoBytes);
+  const selection = { batch_id: "batch-1", round_id: "round-01", video: { video_id: "video-1", path: "video.mp4", sha256: sha256(videoBytes), fps: 30, frame_count: 300, width: 100, height: 50, duration_seconds: 10, crops: { far: [0, 0, 100, 25], near: [0, 25, 100, 50] } }, clips: [{ clip_id: "clip-001", start_seconds: 100, end_seconds: 110, duration_seconds: 10 }] };
+  const selectionPath = path.join(input, "selection.json");
+  const workbookPath = path.join(input, "review.xlsx");
+  const overridePath = path.join(input, "override.json");
+  const selectionBytes = Buffer.from(JSON.stringify(selection), "utf8");
+  const workbookBytes = Buffer.from("frozen-workbook", "utf8");
+  const override = { format: "spiketrace.active-review-evidence-overrides", format_version: 1, review_set_key: "review/round-01", batch_id: "batch-1", round_id: "round-01", selection: { path: "input/selection.json", sha256: sha256(selectionBytes) }, workbook: { path: "input/review.xlsx", sha256: sha256(workbookBytes) }, video: { path: "video.mp4", sha256: sha256(videoBytes) }, workbook_compatibility: { trimmed_banner_cells: [], shared_formula_ranges: [], validation_import_gaps: [], read_only_repairs: [] }, action_overrides: [], supplemental_actions: [], outcome_observations: [], visibility_observations: [], action_participants: [] };
+  await fs.writeFile(selectionPath, selectionBytes);
+  await fs.writeFile(workbookPath, workbookBytes);
+  await fs.writeFile(overridePath, JSON.stringify(override));
+  const canonicalActionRows = [{ action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, background_scope: null, side_inherited: false, source_repairs: [] }];
+  let receivedRepoRoot = null;
+  const io = { verifyWorkbookFile: async (receivedSelectionPath, receivedWorkbookPath, options) => { assert.equal(receivedSelectionPath, selectionPath); assert.equal(receivedWorkbookPath, workbookPath); assert.deepEqual(options.selectionBytes, selectionBytes); assert.deepEqual(options.workbookBytes, workbookBytes); receivedRepoRoot = options.repoRoot; return { selection, canonicalActionRows, normalizationAudit: [] }; } };
+  return { fixtureRoot, selectionPath, workbookPath, overridePath, videoPath, canonicalActionRows, io, receivedRepoRoot: () => receivedRepoRoot };
+}
+
+async function assertNoComposerLeak(fixture, outputPath) {
+  assert.equal(await fs.stat(outputPath).then(() => true).catch(() => false), false);
+  assert.equal((await fs.readdir(path.dirname(outputPath))).some((entry) => entry.startsWith(`.${path.basename(outputPath)}.tmp-`)), false);
+}
+
+for (const [name, mutate] of [
+  ["selection", async (fixture) => fs.writeFile(fixture.selectionPath, "changed")],
+  ["workbook", async (fixture) => fs.writeFile(fixture.workbookPath, "changed")],
+  ["override", async (fixture) => fs.writeFile(fixture.overridePath, "changed")],
+  ["video", async (fixture) => fs.writeFile(fixture.videoPath, "changed")],
+]) {
+  const fixture = await composerFixture();
+  try {
+    const outputPath = path.join(fixture.fixtureRoot, `${name}.json`);
+    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.fixtureRoot, io: fixture.io, afterVerification: () => mutate(fixture) }), /changed during (extraction|composition)/);
+    await assertNoComposerLeak(fixture, outputPath);
+    assert.equal(fixture.receivedRepoRoot(), fixture.fixtureRoot);
+  } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
+}
+
+for (const [name, makeIo] of [
+  ["write", () => ({ open: async (...args) => { const handle = await fs.open(...args); return { writeFile: async () => { throw new Error("write failure"); }, sync: handle.sync.bind(handle), close: handle.close.bind(handle) }; } })],
+  ["sync", () => ({ open: async (...args) => { const handle = await fs.open(...args); return { writeFile: handle.writeFile.bind(handle), sync: async () => { throw new Error("sync failure"); }, close: handle.close.bind(handle) }; } })],
+  ["publish", () => ({ link: async () => { throw new Error("publish failure"); } })],
+]) {
+  const fixture = await composerFixture();
+  try {
+    const outputPath = path.join(fixture.fixtureRoot, `${name}.json`);
+    await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.fixtureRoot, io: { ...fixture.io, ...makeIo() } }));
+    await assertNoComposerLeak(fixture, outputPath);
+  } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
+}
+
+const firstComposer = await composerFixture();
+const secondComposer = await composerFixture();
+try {
+  const firstOutput = path.join(firstComposer.fixtureRoot, "result.json");
+  const secondOutput = path.join(secondComposer.fixtureRoot, "result.json");
+  await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, firstOutput, { repoRoot: firstComposer.fixtureRoot, io: firstComposer.io });
+  await composeActiveReviewEvidence(secondComposer.selectionPath, secondComposer.workbookPath, secondComposer.overridePath, secondOutput, { repoRoot: secondComposer.fixtureRoot, io: secondComposer.io });
+  assert.deepEqual(await fs.readFile(firstOutput), await fs.readFile(secondOutput));
+  const collisionPath = path.join(firstComposer.fixtureRoot, "collision.json");
+  await fs.writeFile(collisionPath, "existing");
+  await assert.rejects(() => composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, collisionPath, { repoRoot: firstComposer.fixtureRoot, io: firstComposer.io }));
+  assert.deepEqual(await fs.readFile(collisionPath), Buffer.from("existing"));
+  assert.equal((await fs.readdir(firstComposer.fixtureRoot)).some((entry) => entry.startsWith(".collision.json.tmp-")), false);
+} finally {
+  await fs.rm(firstComposer.fixtureRoot, { recursive: true, force: true });
+  await fs.rm(secondComposer.fixtureRoot, { recursive: true, force: true });
+}
 
 function semanticWorkbook({ mutate } = {}) {
   const clips = Array.from({ length: 43 }, () => Array(11).fill(null));
@@ -257,6 +371,8 @@ try {
   const supplementalBound = await loadVariant({ ...overrideValue, supplemental_actions: [supplemental], outcome_observations: [{ outcome_index: 2, related_action_refs: ["clip-001/supplemental-001"], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] });
   await assert.rejects(async () => validateEvidenceOverrideReferences(supplementalBound, { selection: selectionValue, canonicalActionRows: [] }), /outcome_observations\[0\]\.outcome_index/);
   await assert.rejects(() => loadVariant({ ...overrideValue, outcome_observations: [{ outcome_index: 1, related_action_refs: ["clip-001/action-001"], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] }).then((b) => validateEvidenceOverrideReferences(b, { selection: selectionValue, canonicalActionRows: [] })), /does not resolve to an action/);
+  await assert.rejects(() => loadVariant({ ...overrideValue, outcome_observations: [{ outcome_index: 1, related_action_refs: [], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] }), /outcome_observations\[0\]\.related_action_refs/);
+  await assert.rejects(() => loadVariant({ ...overrideValue, visibility_observations: [{ visibility_index: 1, event_kind: "off_camera", clip_id: "clip-001", team_side: "far", relative_start_seconds: 1, relative_end_seconds: 2, interval_scope: "timed", related_action_refs: [], note: "", reason: "gap" }] }), /visibility_observations\[0\]\.related_action_refs/);
   const participant = { action_ref: "clip-001/action-001", track_id: null, identity_ref: null, player_number: null, participation: "support", touch_status: "unknown", assignment_status: "unresolved", assignment_confidence: null, evidence: [] };
   await assert.rejects(() => loadVariant({ ...overrideValue, action_participants: [{ ...participant, assignment_status: "confirmed" }] }), /action_participants\[0\]/);
   await assert.rejects(() => loadEvidenceOverrideEnvelope(path.join(root, "override.json"), {

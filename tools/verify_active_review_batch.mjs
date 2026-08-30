@@ -206,15 +206,15 @@ function assertManualRows(sheet, { allowManualValues }) {
   }
 }
 
-export async function verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues = false, selectionBytes: suppliedSelectionBytes = null, workbookBytes: suppliedWorkbookBytes = null, boundEvidenceOverrides = null } = {}) {
+export async function verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues = false, selectionBytes: suppliedSelectionBytes = null, workbookBytes: suppliedWorkbookBytes = null, boundEvidenceOverrides = null, repoRoot = process.cwd() } = {}) {
   const absoluteSelection = path.resolve(selectionPath);
   const absoluteWorkbook = path.resolve(workbookPath);
   const selectionBytes = suppliedSelectionBytes ?? await fs.readFile(absoluteSelection);
   const workbookBytes = suppliedWorkbookBytes ?? await fs.readFile(absoluteWorkbook);
   invariant(selectionBytes instanceof Uint8Array && workbookBytes instanceof Uint8Array, "Input snapshots must be UTF-8 bytes.");
   if (boundEvidenceOverrides) {
-    const expectedSelectionPath = path.relative(process.cwd(), absoluteSelection).split(path.sep).join("/");
-    const expectedWorkbookPath = path.relative(process.cwd(), absoluteWorkbook).split(path.sep).join("/");
+    const expectedSelectionPath = path.relative(path.resolve(repoRoot), absoluteSelection).split(path.sep).join("/");
+    const expectedWorkbookPath = path.relative(path.resolve(repoRoot), absoluteWorkbook).split(path.sep).join("/");
     invariant(boundEvidenceOverrides.selectionBinding?.path === expectedSelectionPath && boundEvidenceOverrides.selectionBinding?.sha256 === sha256(selectionBytes), "Bound evidence selection binding does not match supplied snapshot.");
     invariant(boundEvidenceOverrides.workbookBinding?.path === expectedWorkbookPath && boundEvidenceOverrides.workbookBinding?.sha256 === sha256(workbookBytes), "Bound evidence workbook binding does not match supplied snapshot.");
   }

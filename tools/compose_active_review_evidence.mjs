@@ -59,7 +59,8 @@ export function deriveResultSetId({ batchId, roundId, selectionSha256, workbookS
   for (const [name, value] of Object.entries({ batchId, roundId, selectionSha256, workbookSha256, evidenceOverridesSha256 })) {
     invariant(typeof value === "string" && value.length > 0, `Result set ${name} is invalid.`);
   }
-  return `active-review-${sha256(Buffer.from(`${batchId}\n${roundId}\n${selectionSha256}\n${workbookSha256}\n${evidenceOverridesSha256}`, "utf8")).slice(0, 24)}`;
+  const canonical = ["spiketrace.active-review-observations", "2", batchId, roundId, selectionSha256, workbookSha256, evidenceOverridesSha256].join("\0");
+  return `${batchId}/result-${sha256(Buffer.from(canonical, "utf8")).slice(0, 16)}`;
 }
 
 function absoluteTime(clip, relative) {
@@ -210,12 +211,13 @@ export async function composeActiveReviewEvidence(selectionPath, workbookPath, o
     workbookBytes: workbookSnapshot.bytes,
     repoRoot: root,
   });
-  const { verifyWorkbookFile } = await import("./verify_active_review_batch.mjs");
+  const verifyWorkbookFile = io.verifyWorkbookFile ?? (await import("./verify_active_review_batch.mjs")).verifyWorkbookFile;
   const verifiedWorkbook = await verifyWorkbookFile(selectionSnapshot.path, workbookSnapshot.path, {
     allowManualValues: true,
     selectionBytes: selectionSnapshot.bytes,
     workbookBytes: workbookSnapshot.bytes,
     boundEvidenceOverrides,
+    repoRoot: root,
   });
   const validatedOverrides = validateEvidenceOverrideReferences(boundEvidenceOverrides, { selection: verifiedWorkbook.selection, canonicalActionRows: verifiedWorkbook.canonicalActionRows });
   const payload = composeEvidenceSynthesisInput({ selection: verifiedWorkbook.selection, canonicalActionRows: verifiedWorkbook.canonicalActionRows, validatedOverrides, normalizationAudit: verifiedWorkbook.normalizationAudit });
