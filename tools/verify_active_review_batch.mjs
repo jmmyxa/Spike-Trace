@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
+import { parseJsonObjectStrict, sha256, sha256File as sharedSha256File } from "./active_review_io.mjs";
 
 export const SHEET_NAMES = ["短片清单", "人工动作", "候选提示", "标签说明"];
 export const ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
@@ -45,28 +46,7 @@ function normalizeRows(rows) {
   return rows.map((row) => row.map(normalize));
 }
 
-function sha256(data) {
-  return crypto.createHash("sha256").update(data).digest("hex");
-}
-
-export async function sha256File(filePath, { open = fs.open, chunkBytes = 1024 * 1024 } = {}) {
-  invariant(Number.isInteger(chunkBytes) && chunkBytes > 0, "SHA-256 chunk size must be a positive integer.");
-  const hash = crypto.createHash("sha256");
-  const handle = await open(filePath, "r");
-  const buffer = Buffer.allocUnsafe(chunkBytes);
-  let position = 0;
-  try {
-    while (true) {
-      const { bytesRead } = await handle.read(buffer, 0, buffer.length, position);
-      if (bytesRead === 0) break;
-      hash.update(buffer.subarray(0, bytesRead));
-      position += bytesRead;
-    }
-  } finally {
-    await handle.close();
-  }
-  return hash.digest("hex");
-}
+export const sha256File = sharedSha256File;
 
 function pathInside(root, value, label) {
   invariant(typeof value === "string" && value.length > 0, `${label} must be a non-empty path.`);
@@ -148,10 +128,10 @@ export async function verifyProxyBatch(selectionPath, batchDir, { repoRoot = pro
   const absoluteSelection = path.resolve(selectionPath);
   const absoluteBatch = path.resolve(batchDir);
   const selectionBytes = suppliedSelectionBytes ?? await fs.readFile(absoluteSelection);
-  const selection = JSON.parse(selectionBytes.toString("utf8"));
+  const selection = parseJsonObjectStrict(selectionBytes, "Selection");
   const projection = selectionProjection(selection);
   const manifestPath = path.join(absoluteBatch, "proxy-manifest.json");
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  const manifest = parseJsonObjectStrict(await fs.readFile(manifestPath), "Proxy manifest");
   const selectionHash = sha256(selectionBytes);
   invariant(manifest.format_version === 1, "Proxy manifest must use format version 1.");
   invariant(manifest.selection_sha256 === selectionHash, "Proxy manifest selection SHA-256 does not match selection.");

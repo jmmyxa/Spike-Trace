@@ -16,12 +16,14 @@ import {
 } from "./verify_active_review_batch.mjs";
 import { buildActiveReviewBatch } from "./build_active_review_batch.mjs";
 import { extractActiveReviewResults } from "./extract_active_review_results.mjs";
+import { sha256File as sharedSha256File } from "./active_review_io.mjs";
 
 assert.deepEqual(SHEET_NAMES, ["短片清单", "人工动作", "候选提示", "标签说明"]);
 assert.deepEqual(ACTIONS, ["background", "serve", "receive", "set", "attack", "block", "dig"]);
 assert.deepEqual(SIDES, ["far", "near"]);
 assert.equal(ACTION_SLOTS_PER_CLIP, 12);
 assert.equal(typeof buildActiveReviewBatch, "function");
+assert.equal(sha256File, sharedSha256File, "verifier must re-export shared sha256File");
 
 const ROOT = path.resolve(".");
 

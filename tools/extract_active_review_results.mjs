@@ -1,8 +1,5 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
 
 import {
   ACTION_SLOTS_PER_CLIP,
@@ -10,6 +7,12 @@ import {
   SIDES,
   verifyWorkbookFile,
 } from "./verify_active_review_batch.mjs";
+import {
+  assertStableInput,
+  normalizeRepoPath,
+  publishJsonNoReplace,
+  sha256,
+} from "./active_review_io.mjs";
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -17,14 +20,6 @@ function invariant(condition, message) {
 
 function blank(value) {
   return value === null || value === undefined || value === "";
-}
-
-function sha256(bytes) {
-  return crypto.createHash("sha256").update(bytes).digest("hex");
-}
-
-export function normalizeRepoPath(value, repoRoot = process.cwd()) {
-  return path.relative(path.resolve(repoRoot), path.resolve(value)).split(path.sep).join("/");
 }
 
 function normalizeClipActions(clip, rows) {
@@ -73,40 +68,6 @@ function normalizeClipActions(clip, rows) {
   });
 }
 
-async function publishJson(outputPath, payload, io = {}) {
-  const open = io.open ?? fs.open;
-  const link = io.link ?? fs.link;
-  const unlink = io.unlink ?? fs.unlink;
-  const unique = io.randomUUID ?? randomUUID;
-  const absoluteOutput = path.resolve(outputPath);
-  const temporary = path.join(path.dirname(absoluteOutput), `.${path.basename(absoluteOutput)}.tmp-${process.pid}-${unique()}`);
-  const bytes = Buffer.from(`${JSON.stringify(payload, null, 2)}\n`, "utf8");
-  const exists = await fs.stat(absoluteOutput).then(() => true).catch((error) => {
-    if (error?.code === "ENOENT") return false;
-    throw error;
-  });
-  invariant(!exists, `Output draft already exists: ${absoluteOutput}`);
-  let handle;
-  try {
-    handle = await open(temporary, "wx");
-    await handle.writeFile(bytes);
-    await handle.sync();
-    await handle.close();
-    handle = undefined;
-    await link(temporary, absoluteOutput);
-  } finally {
-    if (handle) await handle.close().catch(() => undefined);
-    await unlink(temporary).catch((error) => {
-      if (error?.code !== "ENOENT") throw error;
-    });
-  }
-}
-
-async function assertStableInput(filePath, expectedBytes, label) {
-  const actualBytes = await fs.readFile(filePath);
-  invariant(Buffer.compare(actualBytes, expectedBytes) === 0, `${label} changed during extraction.`);
-}
-
 export async function extractActiveReviewResults(selectionPath, workbookPath, outputPath, { io, afterVerification } = {}) {
   const verified = await verifyWorkbookFile(selectionPath, workbookPath, { allowManualValues: true });
   if (afterVerification) await afterVerification();
@@ -137,7 +98,7 @@ export async function extractActiveReviewResults(selectionPath, workbookPath, ou
   };
   await assertStableInput(selectionPath, selectionBytes, "Selection");
   await assertStableInput(workbookPath, workbookBytes, "Workbook");
-  await publishJson(outputPath, draft, io);
+  await publishJsonNoReplace(outputPath, draft, { io });
   return draft;
 }
 
