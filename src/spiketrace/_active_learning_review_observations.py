@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Self
 
 _VISIBILITY_MERGE_GAP_SECONDS = 1.0
 
@@ -93,6 +93,14 @@ class ObservationSet:
     occlusion_events: tuple[VisibilityEvent, ...]
     off_camera_events: tuple[VisibilityEvent, ...]
     participants: tuple[ActionParticipant, ...]
+
+    @property
+    def affected_action_count(self) -> int:
+        return len({
+            action_ref
+            for event in self.occlusion_events + self.off_camera_events
+            for action_ref in event.related_action_refs
+        })
 
 
 def compose_observation_set(review: object, selection: object) -> ObservationSet:
@@ -185,8 +193,8 @@ def _action_observation(value: object) -> ActionObservation:
         clip_id=_field(value, "clip_id"),
         source_action_slot=_field(value, "source_action_slot"),
         source_row=_field(value, "source_row"),
-        raw_values=_field(value, "raw_values"),
-        normalized_values=_field(value, "normalized_values"),
+        raw_values=_freeze(_field(value, "raw_values")),
+        normalized_values=_freeze(_field(value, "normalized_values")),
         review_label=_field(value, "review_label"),
         relative_start_seconds=_field(value, "relative_start_seconds"),
         relative_end_seconds=_field(value, "relative_end_seconds"),
@@ -200,7 +208,9 @@ def _action_observation(value: object) -> ActionObservation:
         side_inherited=_field(value, "side_inherited"),
         note=_field(value, "note"),
         source_reason=_field(value, "source_reason"),
-        source_repairs=tuple(_field(value, "source_repairs")),
+        source_repairs=tuple(
+            _freeze(repair) for repair in _field(value, "source_repairs")
+        ),
     )
 
 
@@ -243,7 +253,7 @@ def _action_participant(value: object) -> ActionParticipant:
         touch_status=_field(value, "touch_status"),
         assignment_status=_field(value, "assignment_status"),
         assignment_confidence=_field(value, "assignment_confidence"),
-        evidence=tuple(_field(value, "evidence")),
+        evidence=tuple(_freeze(item) for item in _field(value, "evidence")),
     )
 
 
@@ -285,3 +295,40 @@ def _field(value: object, name: str) -> Any:
     if isinstance(value, dict):
         return value[name]
     return getattr(value, name)
+
+
+class _FrozenDict(dict[str, object]):
+    def __init__(self, values: dict[str, object]) -> None:
+        dict.__init__(self, values)
+
+    def __delitem__(self, key: str) -> None:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def __ior__(self, value: object) -> Self:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def __setitem__(self, key: str, value: object) -> None:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def clear(self) -> None:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def pop(self, key: str, default: object = None) -> object:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def popitem(self) -> tuple[str, object]:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def setdefault(self, key: str, default: object = None) -> object:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+    def update(self, *args: object, **kwargs: object) -> None:
+        raise TypeError("Frozen mappings cannot be modified.")
+
+
+def _freeze(value: object) -> object:
+    if isinstance(value, dict):
+        return _FrozenDict({key: _freeze(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze(item) for item in value)
+    return value

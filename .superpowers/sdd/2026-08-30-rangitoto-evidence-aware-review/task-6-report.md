@@ -82,3 +82,79 @@ git diff --check: exit 0
 
 - `ActionObservation` retains the brief's exact `dict[str, object]` annotations for raw and normalized values, while the validated v2 supplemental-action contract can supply `None` at runtime. This preserves the v2 source value unchanged; no coercion or contract change was made.
 - The provided `SPIKETRACE_PYTHON` environment variable was unset locally, so tests use the repository's `.venv\\Scripts\\python.exe` explicitly.
+
+## Review Fix Round 1
+
+### Scope
+
+- Deeply freeze authority mappings at the composition boundary so source mutations after composition and direct observation mutations cannot alter composed data.
+- Add the derived `ObservationSet.affected_action_count` property, counting the distinct union of action references across both merged visibility event kinds without storing a second summary value.
+
+### TDD RED
+
+Command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_observations -v
+```
+
+Actual failing output:
+
+```text
+FAIL: test_composition_deeply_freezes_nested_authority_data
+AssertionError: ['raw', 'changed'] != ('raw',)
+
+ERROR: test_counts_distinct_affected_actions_across_visibility_kinds
+AttributeError: 'ObservationSet' object has no attribute 'affected_action_count'
+
+Ran 6 tests in 0.001s
+FAILED (failures=1, errors=1)
+```
+
+### TDD GREEN and Verification
+
+Commands:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_observations -v
+.venv\Scripts\ruff.exe check src\spiketrace\_active_learning_review_observations.py tests\test_active_learning_review_observations.py
+git diff --check
+```
+
+Actual output:
+
+```text
+Ran 6 tests in 0.000s
+OK
+Ruff: All checks passed!
+git diff --check: exit 0
+```
+
+### Regression
+
+Command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_contract -v
+```
+
+Actual output:
+
+```text
+Ran 19 tests in 63.092s
+OK
+```
+
+### Self-Review
+
+- `_FrozenDict` remains a `dict` subclass, so standard JSON encoding retains normal object representation; nested arrays become tuples, which the standard JSON encoder renders as arrays.
+- `json.dumps(_freeze({'nested': {'values': ['value']}}))` produced `{"nested": {"values": ["value"]}}`.
+- The freeze recursively copies mappings and sequence values before storing them, so neither source aliases nor direct nested mutation survive the composition boundary.
+- `affected_action_count` is a read-only property calculated from event tuples, preventing a duplicated count from drifting from authority events.
+
+### Concerns
+
+- Only JSON-shaped mapping and sequence inputs are recursively frozen, matching the strict v2 contract. No new serializer or output module was introduced.

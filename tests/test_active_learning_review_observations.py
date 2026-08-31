@@ -130,6 +130,83 @@ class ObservationCompositionTests(unittest.TestCase):
 
         self.assertEqual(events[0].interval_scope, "clip_bounds")
 
+    def test_composition_deeply_freezes_nested_authority_data(self):
+        action_ref = "clip-003/action-001"
+        action = _action(action_ref, "block", source_slot=1, source_row=28)
+        action["raw_values"] = {"nested": {"values": ["raw"]}}
+        action["normalized_values"] = {"nested": {"values": ["normalized"]}}
+        action["source_repairs"] = [{"nested": {"values": ["repair"]}}]
+        participant = _participant(action_ref, "track-1", "confirmed")
+        participant["evidence"] = [{"nested": {"values": ["evidence"]}}]
+        review = {
+            "result_set_id": "rangitoto/round-01/result-frozen",
+            "action_observations": [action],
+            "outcome_observations": [],
+            "visibility_observations": [],
+            "action_participants": [participant],
+        }
+
+        observations = compose_observation_set(review, {"video": {"video_id": "match"}})
+        action["raw_values"]["nested"]["values"].append("changed")
+        action["normalized_values"]["nested"]["values"].append("changed")
+        action["source_repairs"][0]["nested"]["values"].append("changed")
+        participant["evidence"][0]["nested"]["values"].append("changed")
+
+        composed_action = observations.actions[0]
+        composed_participant = observations.participants[0]
+        self.assertEqual(composed_action.raw_values["nested"]["values"], ("raw",))
+        self.assertEqual(
+            composed_action.normalized_values["nested"]["values"], ("normalized",)
+        )
+        self.assertEqual(
+            composed_action.source_repairs[0]["nested"]["values"], ("repair",)
+        )
+        self.assertEqual(
+            composed_participant.evidence[0]["nested"]["values"], ("evidence",)
+        )
+        with self.assertRaises(TypeError):
+            composed_action.raw_values["new"] = "value"
+        with self.assertRaises(TypeError):
+            composed_action.source_repairs[0]["new"] = "value"
+        with self.assertRaises(TypeError):
+            composed_participant.evidence[0]["new"] = "value"
+        with self.assertRaises(AttributeError):
+            composed_action.raw_values["nested"]["values"].append("value")
+
+    def test_counts_distinct_affected_actions_across_visibility_kinds(self):
+        result_set_id = "rangitoto/round-01/result-summary"
+        occlusion = _visibility(
+            result_set_id, 1, "occlusion", "far", 10.0, 11.0, "shared", "occlusion"
+        )
+        occlusion["related_action_refs"] = ["shared", "occlusion-only"]
+        off_camera = _visibility(
+            result_set_id, 2, "off_camera", "far", 20.0, 21.0, "shared", "off-camera"
+        )
+        off_camera["related_action_refs"] = ["shared", "off-camera-only"]
+        observations = compose_observation_set(
+            {
+                "result_set_id": result_set_id,
+                "action_observations": [],
+                "outcome_observations": [],
+                "visibility_observations": [occlusion, off_camera],
+                "action_participants": [],
+            },
+            {"video": {"video_id": "match"}},
+        )
+        empty = compose_observation_set(
+            {
+                "result_set_id": "rangitoto/round-01/result-empty",
+                "action_observations": [],
+                "outcome_observations": [],
+                "visibility_observations": [],
+                "action_participants": [],
+            },
+            {"video": {"video_id": "match"}},
+        )
+
+        self.assertEqual(observations.affected_action_count, 3)
+        self.assertEqual(empty.affected_action_count, 0)
+
 
 def _action(
     action_ref: str,
