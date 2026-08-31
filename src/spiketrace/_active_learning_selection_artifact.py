@@ -311,11 +311,41 @@ def load_review_selection(
     root = Path(repo_root).expanduser().resolve()
     path = _resolved_path(selection_path, root, "selection JSON")
     try:
-        payload = _load_json_bytes(path.read_bytes(), description="selection JSON")
+        selection_bytes = path.read_bytes()
+        payload = _load_json_bytes(selection_bytes, description="selection JSON")
     except ActiveLearningError:
         raise
     except OSError as exc:
         raise ActiveLearningError(f"Cannot read selection JSON: {path}") from exc
+    if _verifier is verify_dual_crop_review and not payload.get("previous_selections"):
+        try:
+            from ._active_learning_review_contract import (
+                validate_merged_review_source_bytes,
+            )
+
+            source = _mapping(payload["source"], "selection source")
+            merged_path = _resolved_path(
+                source["merged_json"], root, "source merged JSON"
+            )
+            verified = validate_merged_review_source_bytes(
+                merged_path.read_bytes(),
+                merged_repo_path=_normalized_path(
+                    merged_path, root, "source merged JSON"
+                ),
+                repo_root=root,
+                require_video=require_video,
+            )
+            return _validate_selection_payload(
+                payload,
+                root,
+                require_video=require_video,
+                verifier=_verifier,
+                verified_merged=verified,
+            )
+        except ActiveLearningError:
+            raise
+        except (KeyError, OSError, TypeError, ValueError) as exc:
+            raise ActiveLearningError(f"Invalid selection JSON: {exc}") from exc
     return _validate_selection_payload(
         payload, root, require_video=require_video, verifier=_verifier
     )

@@ -1947,6 +1947,38 @@ class SelectionContractTests(unittest.TestCase):
 
 
 class SelectionVerifierIntegrationTests(unittest.TestCase):
+    def test_legacy_loader_reads_selection_and_merged_artifact_once(self):
+        selection_path = ROOT / "data/active-learning/rangitoto/round-01-selection.json"
+        selection = json.loads(selection_path.read_text(encoding="utf-8"))
+        merged_path = ROOT / selection["source"]["merged_json"]
+        reads = {selection_path.resolve(): 0, merged_path.resolve(): 0}
+        allowed_opens = {selection_path.resolve(): 0, merged_path.resolve(): 0}
+        original = Path.read_bytes
+
+        def count_reads(path):
+            resolved = path.resolve()
+            if resolved in reads:
+                reads[resolved] += 1
+                allowed_opens[resolved] += 1
+            return original(path)
+
+        original_open = Path.open
+
+        def reject_reopen(path, *args, **kwargs):
+            if path.resolve() in reads:
+                if allowed_opens[path.resolve()]:
+                    allowed_opens[path.resolve()] -= 1
+                    return original_open(path, *args, **kwargs)
+                raise AssertionError("legacy loader reopened a frozen artifact")
+            return original_open(path, *args, **kwargs)
+
+        with (
+            patch.object(Path, "read_bytes", count_reads),
+            patch.object(Path, "open", reject_reopen),
+        ):
+            load_review_selection(selection_path, repo_root=ROOT, require_video=False)
+        self.assertEqual(reads, {selection_path.resolve(): 1, merged_path.resolve(): 1})
+
     def test_byte_selection_loader_matches_path_loader_for_identical_bytes(self):
         selection_path = ROOT / "data/active-learning/rangitoto/round-01-selection.json"
         selection = json.loads(selection_path.read_text(encoding="utf-8"))

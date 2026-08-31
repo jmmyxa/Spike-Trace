@@ -66,3 +66,17 @@ custom verifier injection remains on the compatibility path.
 
 Fresh contract verification exits `0` (`Ran 7 tests ... OK`) and Ruff exits
 `0`.
+
+## Fix Round 3 RED/GREEN
+
+The legacy-loader RED regression rejected any second raw open after its
+selection/merged `read_bytes` snapshots. The old path re-hashed the merged
+file through a second open. The default path now parses both frozen byte
+snapshots once, validates the merged bytes through the byte core, and passes
+the verified object into selection validation. The custom verifier and
+previous-selection compatibility route stay available without changing their
+legacy behavior.
+
+The contract matrix now checks all five live snapshot mutations and a real
+dangling outcome reference. Fresh verification exits `0`: contract (`Ran 9`),
+dual-crop plus selection (`Ran 76`), combined (`Ran 85`), with Ruff clean.

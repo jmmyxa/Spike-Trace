@@ -197,6 +197,46 @@ class ReviewContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "source repair"):
                 load_review_sources_v2(snapshots, selected)
 
+    def test_snapshot_stability_rejects_each_frozen_source_mutation(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            for attribute in ("selection", "review_input", "workbook", "evidence_overrides", "merged_candidates"):
+                with self.subTest(attribute=attribute):
+                    snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+                    getattr(snapshots, attribute).absolute_path.write_bytes(b"changed")
+                    with self.assertRaisesRegex(ValueError, "changed"):
+                        assert_review_snapshots_stable(snapshots)
+                    getattr(snapshots, attribute).absolute_path.write_bytes(getattr(snapshots, attribute).raw)
+
+    def test_rejects_actual_dangling_outcome_reference(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["outcome_observations"][0]["related_action_refs"] = ["missing/action-001"]
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+            with self.assertRaisesRegex(ValueError, "dangling"):
+                load_review_sources_v2(snapshots, selected)
+
 
 def _repo(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
