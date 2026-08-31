@@ -1,3 +1,4 @@
 data/annotations/*.csv text eol=crlf
 outputs/**/merged_candidates.csv text eol=lf
 *.json text eol=lf
+tests/fixtures/active_review_v1_expected_manifest.csv text eol=lf

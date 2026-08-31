@@ -1,0 +1,672 @@
+{
+  "format_version": 1,
+  "batch_id": "rangitoto-round-01",
+  "round_id": "round-01",
+  "time_precision_seconds": 1,
+  "selection_sha256": "1abfa7fd08a7e923a544f0da4bf7fdc43fc28fcdb20c48e850192038855b138e",
+  "review_input_sha256": "0d971b45b70a63af3c3f269e8f8f626371573d51206516166c5c0b41cde01a7f",
+  "base_manifest_sha256": "0495cc935d938e61c4a9be39962c39c8dd9c31d233cb9323277ecb731e0dd585",
+  "output_manifest": "data/annotations/round-01.csv",
+  "output_manifest_sha256": "e973abae145f3f22e45e332944db124af35c66b4ac9c6294dffa90283fdc6021",
+  "settings": {
+    "legacy_base_match_id": "usa-germany-2024-olympics",
+    "review_match_id": "rangitoto-taka-national-final",
+    "effective_video_root": {
+      "kind": "repo_relative",
+      "path": "data/annotations"
+    },
+    "background_guard_seconds": 0.5,
+    "requested_max_background_windows": 0,
+    "effective_max_background_windows": 0,
+    "background_seed": 42,
+    "require_files": false
+  },
+  "clips": [
+    {
+      "clip_id": "round-01-clip-001",
+      "ordinal": 1,
+      "source_start_seconds": 0.0,
+      "source_end_seconds": 5.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-002",
+      "ordinal": 2,
+      "source_start_seconds": 10.0,
+      "source_end_seconds": 15.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-003",
+      "ordinal": 3,
+      "source_start_seconds": 100.0,
+      "source_end_seconds": 105.0,
+      "actions": [
+        {
+          "action": "receive",
+          "relative_start_seconds": 1,
+          "relative_end_seconds": 2,
+          "team_side": "far",
+          "note": "clean receive"
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-004",
+      "ordinal": 4,
+      "source_start_seconds": 120.0,
+      "source_end_seconds": 125.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-005",
+      "ordinal": 5,
+      "source_start_seconds": 130.0,
+      "source_end_seconds": 135.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-006",
+      "ordinal": 6,
+      "source_start_seconds": 140.0,
+      "source_end_seconds": 145.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-007",
+      "ordinal": 7,
+      "source_start_seconds": 160.0,
+      "source_end_seconds": 165.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-008",
+      "ordinal": 8,
+      "source_start_seconds": 180.0,
+      "source_end_seconds": 185.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-009",
+      "ordinal": 9,
+      "source_start_seconds": 200.0,
+      "source_end_seconds": 205.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-010",
+      "ordinal": 10,
+      "source_start_seconds": 220.0,
+      "source_end_seconds": 225.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-011",
+      "ordinal": 11,
+      "source_start_seconds": 240.0,
+      "source_end_seconds": 245.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-012",
+      "ordinal": 12,
+      "source_start_seconds": 260.0,
+      "source_end_seconds": 265.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-013",
+      "ordinal": 13,
+      "source_start_seconds": 280.0,
+      "source_end_seconds": 285.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-014",
+      "ordinal": 14,
+      "source_start_seconds": 300.0,
+      "source_end_seconds": 305.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-015",
+      "ordinal": 15,
+      "source_start_seconds": 320.0,
+      "source_end_seconds": 325.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-016",
+      "ordinal": 16,
+      "source_start_seconds": 340.0,
+      "source_end_seconds": 345.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-017",
+      "ordinal": 17,
+      "source_start_seconds": 360.0,
+      "source_end_seconds": 365.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-018",
+      "ordinal": 18,
+      "source_start_seconds": 380.0,
+      "source_end_seconds": 385.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-019",
+      "ordinal": 19,
+      "source_start_seconds": 400.0,
+      "source_end_seconds": 405.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-020",
+      "ordinal": 20,
+      "source_start_seconds": 420.0,
+      "source_end_seconds": 425.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-021",
+      "ordinal": 21,
+      "source_start_seconds": 440.0,
+      "source_end_seconds": 445.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-022",
+      "ordinal": 22,
+      "source_start_seconds": 460.0,
+      "source_end_seconds": 465.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-023",
+      "ordinal": 23,
+      "source_start_seconds": 480.0,
+      "source_end_seconds": 485.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-024",
+      "ordinal": 24,
+      "source_start_seconds": 518.0,
+      "source_end_seconds": 523.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-025",
+      "ordinal": 25,
+      "source_start_seconds": 538.0,
+      "source_end_seconds": 543.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-026",
+      "ordinal": 26,
+      "source_start_seconds": 558.0,
+      "source_end_seconds": 563.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-027",
+      "ordinal": 27,
+      "source_start_seconds": 578.0,
+      "source_end_seconds": 583.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-028",
+      "ordinal": 28,
+      "source_start_seconds": 598.0,
+      "source_end_seconds": 603.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-029",
+      "ordinal": 29,
+      "source_start_seconds": 618.0,
+      "source_end_seconds": 623.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-030",
+      "ordinal": 30,
+      "source_start_seconds": 638.0,
+      "source_end_seconds": 643.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-031",
+      "ordinal": 31,
+      "source_start_seconds": 658.0,
+      "source_end_seconds": 663.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-032",
+      "ordinal": 32,
+      "source_start_seconds": 698.0,
+      "source_end_seconds": 703.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-033",
+      "ordinal": 33,
+      "source_start_seconds": 718.0,
+      "source_end_seconds": 723.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-034",
+      "ordinal": 34,
+      "source_start_seconds": 738.0,
+      "source_end_seconds": 743.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-035",
+      "ordinal": 35,
+      "source_start_seconds": 758.0,
+      "source_end_seconds": 763.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-036",
+      "ordinal": 36,
+      "source_start_seconds": 798.0,
+      "source_end_seconds": 803.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-037",
+      "ordinal": 37,
+      "source_start_seconds": 818.0,
+      "source_end_seconds": 823.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-038",
+      "ordinal": 38,
+      "source_start_seconds": 838.0,
+      "source_end_seconds": 843.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-039",
+      "ordinal": 39,
+      "source_start_seconds": 858.0,
+      "source_end_seconds": 863.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "clip_id": "round-01-clip-040",
+      "ordinal": 40,
+      "source_start_seconds": 905.0,
+      "source_end_seconds": 910.0,
+      "actions": [
+        {
+          "action": "background",
+          "relative_start_seconds": 0,
+          "relative_end_seconds": 5.0,
+          "team_side": "near",
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "absolute_actions": [
+    {
+      "batch_id": "rangitoto-round-01",
+      "clip_id": "round-01-clip-003",
+      "action_slot": 1,
+      "action": "receive",
+      "team_side": "far",
+      "relative_start_seconds": 1,
+      "relative_end_seconds": 2,
+      "start_seconds": 101.0,
+      "end_seconds": 102.0,
+      "crop": [
+        0,
+        0,
+        1920,
+        645
+      ],
+      "note": "clean receive"
+    }
+  ],
+  "generated_background_windows": [],
+  "positive_action_count": 1,
+  "summary": {
+    "records": 3,
+    "videos": 2,
+    "duration_seconds": 3.5,
+    "records_by_split": {
+      "train": 3
+    },
+    "videos_by_split": {
+      "test": 0,
+      "train": 2,
+      "val": 0
+    },
+    "records_by_label": {
+      "attack": 1,
+      "receive": 1,
+      "serve": 1
+    },
+    "positive_action_count": 1,
+    "generated_background_count": 0,
+    "added_records_by_label": {
+      "background": 0,
+      "receive": 1
+    }
+  }
+}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import csv
 import hashlib
+import importlib
 import json
 import os
 import tempfile
@@ -13,10 +14,29 @@ from pathlib import Path
 from unittest import mock
 
 from spiketrace import active_learning_selection
-from spiketrace.active_learning_review import apply_active_review
+from spiketrace.active_learning_review import (
+    apply_active_review,
+    apply_active_review_v2,
+)
 from spiketrace.cli import build_parser, run_command
 from spiketrace.errors import ActiveLearningError
 from spiketrace.manifest import load_manifest
+from tests.test_active_learning_review_contract import (
+    _json_bytes as contract_json_bytes,
+)
+from tests.test_active_learning_review_contract import _valid_review as valid_v2_review
+from tests.test_active_learning_review_contract import (
+    _valid_selection as valid_v2_selection,
+)
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+EXPECTED_V1_MANIFEST_BYTES = (
+    _FIXTURES / "active_review_v1_expected_manifest.csv"
+).read_bytes()
+EXPECTED_V1_RESULTS_BYTES = (
+    _FIXTURES / "active_review_v1_expected_results.json"
+).read_bytes()
+EXPECTED_V1_RESULT = json.loads(EXPECTED_V1_RESULTS_BYTES)
 
 
 def sha256_file(path: Path) -> str:
@@ -346,6 +366,24 @@ class ApplyActiveReviewTests(unittest.TestCase):
 
         self.assertEqual(result["time_precision_seconds"], 1)
         self.assertEqual(persisted["time_precision_seconds"], 1)
+
+    def test_v1_result_and_bytes_do_not_drift_when_v2_output_module_is_imported(self):
+        actual_before_import = self.apply(max_background_windows=0)
+
+        self.assertEqual(actual_before_import, EXPECTED_V1_RESULT)
+        self.assertEqual(self.output_manifest.read_bytes(), EXPECTED_V1_MANIFEST_BYTES)
+        self.assertEqual(self.output_results.read_bytes(), EXPECTED_V1_RESULTS_BYTES)
+        self.output_manifest.unlink()
+        self.output_results.unlink()
+
+        from spiketrace import _active_learning_review_outputs
+
+        importlib.reload(_active_learning_review_outputs)
+        actual = self.apply(max_background_windows=0)
+
+        self.assertEqual(actual, EXPECTED_V1_RESULT)
+        self.assertEqual(self.output_manifest.read_bytes(), EXPECTED_V1_MANIFEST_BYTES)
+        self.assertEqual(self.output_results.read_bytes(), EXPECTED_V1_RESULTS_BYTES)
 
 
 class HardNegativeTests(unittest.TestCase):
@@ -1205,6 +1243,260 @@ class ActiveReviewValidationTests(unittest.TestCase):
         other_drive = "E:" if self.root.drive.upper() != "E:" else "C:"
         with self.assertRaisesRegex(ActiveLearningError, "volume"):
             self.apply(video_root=Path(f"{other_drive}/spiketrace-external-video-root"))
+
+
+class ApplyActiveReviewV2Tests(unittest.TestCase):
+    def setUp(self):
+        repository = Path(__file__).resolve().parents[1]
+        self.repository = repository
+        self.temporary = tempfile.TemporaryDirectory(dir=repository / "tests")
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name)
+        self.video = self.directory / (
+            "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_"
+            "Media_k3PdQgm2jVs_001_1080p.mp4"
+        )
+        self.video.write_bytes(b"small-v2-video")
+        video_sha256 = sha256_file(self.video)
+
+        merged = json.loads(
+            (repository / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        merged["video"]["path"] = self.video.relative_to(repository).as_posix()
+        for side in ("far", "near"):
+            merged["input_runs"][side]["settings"]["video_sha256"] = video_sha256
+        merged_bytes = contract_json_bytes(merged)
+        self.merged = self.directory / "merged.json"
+        self.merged.write_bytes(merged_bytes)
+
+        selection = valid_v2_selection(self.directory, merged_bytes)
+        selection["video"]["path"] = self.video.relative_to(repository).as_posix()
+        selection["video"]["sha256"] = video_sha256
+        selection_bytes = contract_json_bytes(selection)
+        self.selection = self.directory / "selection.json"
+        self.selection.write_bytes(selection_bytes)
+        workbook_bytes = b"v2 workbook"
+        (self.directory / "review.xlsx").write_bytes(workbook_bytes)
+        overrides_bytes = b"{}\n"
+        (self.directory / "overrides.json").write_bytes(overrides_bytes)
+        review = valid_v2_review(
+            selection, selection_bytes, workbook_bytes, overrides_bytes
+        )
+        self.review = self.directory / "review-v2.json"
+        self.review.write_bytes(contract_json_bytes(review))
+
+        self.base_manifest = self.directory / "base.csv"
+        with self.base_manifest.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=(
+                    "video_path", "start_seconds", "end_seconds", "label", "split",
+                    "match_id",
+                ),
+            )
+            writer.writeheader()
+            writer.writerow({
+                "video_path": self.video.name, "start_seconds": "1", "end_seconds": "2",
+                "label": "serve", "split": "train", "match_id": "",
+            })
+        self.output_dir = self.directory / "bundle"
+        self.verifier_patches = (
+            mock.patch(
+                "spiketrace._active_learning_review_contract._verify_merged_bytes",
+                return_value={"verified": True},
+            ),
+            mock.patch(
+                "spiketrace._active_learning_review_projection.verify_dual_crop_review_bytes",
+                return_value={"verified": True},
+            ),
+        )
+        for patcher in self.verifier_patches:
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def apply(self, **kwargs):
+        return apply_active_review_v2(
+            self.base_manifest,
+            self.selection,
+            self.review,
+            self.output_dir,
+            repo_root=self.repository,
+            legacy_base_match_id="legacy-match",
+            review_match_id="review-match",
+            video_root=self.directory,
+            max_background_windows=0,
+            **kwargs,
+        )
+
+    def test_publishes_v2_bundle_from_frozen_merged_artifact_and_returns_authority(self):
+        from spiketrace import _active_learning_review_contract as contract_module
+        from spiketrace import _active_learning_review_projection as projection_module
+        from spiketrace._active_learning_review_contract import FrozenArtifact
+
+        with mock.patch.object(
+            contract_module,
+            "snapshot_review_sources_v2",
+            wraps=contract_module.snapshot_review_sources_v2,
+        ) as snapshot, mock.patch.object(
+            projection_module,
+            "build_training_projection",
+            wraps=projection_module.build_training_projection,
+        ) as project:
+            result = self.apply()
+
+        self.assertEqual(snapshot.call_count, 1)
+        self.assertIsInstance(project.call_args.args[2], FrozenArtifact)
+        self.assertEqual(project.call_args.args[2].absolute_path, self.merged.resolve())
+        self.assertEqual(result, json.loads((self.output_dir / "round-01-results.json").read_bytes()))
+        self.assertTrue(result["sources"]["verification"]["source_video_file_checked"])
+        records = load_manifest(
+            self.output_dir / "action_training_round_01.csv",
+            video_root=self.directory,
+            require_files=True,
+        )
+        self.assertEqual(records[0].split, "train")
+
+    def test_missing_video_is_allowed_only_without_file_requirement(self):
+        original_exists = Path.exists
+        video_key = os.path.normcase(os.path.abspath(self.video))
+
+        def selective_exists(path):
+            if os.path.normcase(os.path.abspath(path)) == video_key:
+                return False
+            return original_exists(path)
+
+        with mock.patch.object(Path, "exists", selective_exists):
+            result = self.apply(require_files=False)
+        self.assertFalse(result["sources"]["verification"]["source_video_file_checked"])
+
+        self.output_dir = self.directory / "required-bundle"
+        with (
+            mock.patch.object(Path, "exists", selective_exists),
+            self.assertRaisesRegex(ValueError, "does not exist"),
+        ):
+            self.apply(require_files=True)
+        self.assertFalse(self.output_dir.exists())
+
+    def test_every_bound_source_mutation_in_publication_callback_prevents_final_directory(self):
+        from spiketrace import _active_learning_review_outputs as output_module
+
+        original_publish = output_module.publish_result_bundle
+
+        def mutation_publisher(bound_source: Path, bound_bytes: bytes):
+            def mutate_before_callback(output_dir, bundle, **kwargs):
+                callback = kwargs["before_publish"]
+
+                def wrapped_callback():
+                    bound_source.write_bytes(bound_bytes + b"changed")
+                    callback()
+
+                kwargs["before_publish"] = wrapped_callback
+                return original_publish(output_dir, bundle, **kwargs)
+
+            return mutate_before_callback
+
+        sources = (
+            self.selection,
+            self.review,
+            self.directory / "review.xlsx",
+            self.directory / "overrides.json",
+            self.merged,
+            self.base_manifest,
+            self.video,
+        )
+        for index, source in enumerate(sources):
+            with self.subTest(source=source.name):
+                self.output_dir = self.directory / f"bundle-{index}"
+                original_bytes = source.read_bytes()
+
+                try:
+                    with (
+                        mock.patch(
+                            "spiketrace._active_learning_review_outputs.publish_result_bundle",
+                            side_effect=mutation_publisher(source, original_bytes),
+                        ),
+                        self.assertRaisesRegex(ValueError, "changed"),
+                    ):
+                        self.apply()
+                finally:
+                    source.write_bytes(original_bytes)
+                self.assertFalse(self.output_dir.exists())
+                self.assertEqual(
+                    list(self.directory.glob(f".{self.output_dir.name}.staging-*")), []
+                )
+
+    def test_rejects_review_video_already_present_in_validation_split(self):
+        rows = read_csv_rows(self.base_manifest)
+        rows[0]["split"] = "val"
+        with self.base_manifest.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=tuple(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+
+        with self.assertRaisesRegex(ActiveLearningError, "val or test"):
+            self.apply()
+        self.assertFalse(self.output_dir.exists())
+
+    def test_rejects_invalid_guard_even_when_background_cap_is_zero(self):
+        with self.assertRaisesRegex(ActiveLearningError, "finite and nonnegative"):
+            self.apply(background_guard_seconds=float("nan"))
+
+        self.assertFalse(self.output_dir.exists())
+
+    def test_output_collision_preserves_first_complete_bundle(self):
+        self.apply()
+        expected = {
+            path.name: path.read_bytes() for path in self.output_dir.iterdir()
+        }
+
+        with self.assertRaises(OSError):
+            self.apply()
+
+        self.assertEqual(
+            {path.name: path.read_bytes() for path in self.output_dir.iterdir()},
+            expected,
+        )
+        self.assertEqual(list(self.directory.glob(".bundle.staging-*")), [])
+
+
+class ActiveReviewV2CliTests(unittest.TestCase):
+    def test_apply_active_review_v2_parser_and_forwarding(self):
+        args = build_parser().parse_args([
+            "apply-active-review-v2", "base.csv", "selection.json", "review.json",
+            "bundle", "--repo-root", ".", "--legacy-base-match-id", "legacy",
+            "--review-match-id", "review", "--video-root", "videos",
+            "--background-guard-seconds", "0.75", "--max-background-windows", "3",
+            "--background-seed", "11", "--allow-missing-videos",
+        ])
+
+        with mock.patch(
+            "spiketrace.active_learning_review.apply_active_review_v2",
+            return_value={"ok": True},
+        ) as apply_v2:
+            self.assertEqual(run_command(args), {"ok": True})
+
+        apply_v2.assert_called_once_with(
+            Path("base.csv"), Path("selection.json"), Path("review.json"), Path("bundle"),
+            repo_root=Path("."), legacy_base_match_id="legacy", review_match_id="review",
+            video_root=Path("videos"), background_guard_seconds=0.75,
+            max_background_windows=3, background_seed=11, require_files=False,
+        )
+
+    def test_verify_bundle_parser_and_forwarding(self):
+        args = build_parser().parse_args([
+            "verify-active-review-bundle", "bundle",
+        ])
+
+        with mock.patch(
+            "spiketrace._active_learning_review_outputs.validate_result_bundle",
+            return_value={"summary": {"training_rows": 3}},
+        ) as validate:
+            result = run_command(args)
+
+        validate.assert_called_once_with(Path("bundle"))
+        self.assertEqual(result, {"summary": {"training_rows": 3}})
 
 
 if __name__ == "__main__":

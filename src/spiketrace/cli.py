@@ -222,6 +222,31 @@ def build_parser() -> argparse.ArgumentParser:
     active_review_parser.add_argument("--max-background-windows", type=int)
     active_review_parser.add_argument("--background-seed", type=int)
     active_review_parser.add_argument("--allow-missing-videos", action="store_true")
+
+    active_review_v2_parser = subparsers.add_parser(
+        "apply-active-review-v2",
+        help="Apply evidence-aware review input and publish a synchronized bundle.",
+    )
+    active_review_v2_parser.add_argument("base_manifest", type=Path)
+    active_review_v2_parser.add_argument("selection", type=Path)
+    active_review_v2_parser.add_argument("review_input", type=Path)
+    active_review_v2_parser.add_argument("output_dir", type=Path)
+    active_review_v2_parser.add_argument("--repo-root", type=Path, required=True)
+    active_review_v2_parser.add_argument("--legacy-base-match-id", required=True)
+    active_review_v2_parser.add_argument("--review-match-id", required=True)
+    active_review_v2_parser.add_argument("--video-root", type=Path)
+    active_review_v2_parser.add_argument(
+        "--background-guard-seconds", type=float, default=0.5
+    )
+    active_review_v2_parser.add_argument("--max-background-windows", type=int)
+    active_review_v2_parser.add_argument("--background-seed", type=int)
+    active_review_v2_parser.add_argument("--allow-missing-videos", action="store_true")
+
+    verify_review_bundle_parser = subparsers.add_parser(
+        "verify-active-review-bundle",
+        help="Verify a synchronized evidence-aware active-review bundle.",
+    )
+    verify_review_bundle_parser.add_argument("output_dir", type=Path)
     return parser
 
 
@@ -373,6 +398,29 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
             background_seed=args.background_seed,
             require_files=not args.allow_missing_videos,
         )
+
+    if args.command == "apply-active-review-v2":
+        from .active_learning_review import apply_active_review_v2
+
+        return apply_active_review_v2(
+            args.base_manifest,
+            args.selection,
+            args.review_input,
+            args.output_dir,
+            repo_root=args.repo_root,
+            legacy_base_match_id=args.legacy_base_match_id,
+            review_match_id=args.review_match_id,
+            video_root=args.video_root,
+            background_guard_seconds=args.background_guard_seconds,
+            max_background_windows=args.max_background_windows,
+            background_seed=args.background_seed,
+            require_files=not args.allow_missing_videos,
+        )
+
+    if args.command == "verify-active-review-bundle":
+        from ._active_learning_review_outputs import validate_result_bundle
+
+        return validate_result_bundle(args.output_dir)
 
     raise ValueError(f"Unknown command: {args.command}")
 

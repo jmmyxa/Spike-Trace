@@ -485,6 +485,14 @@ SHA-256 `3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b`，
 [证据分层迁移实现计划](docs/superpowers/plans/2026-08-30-rangitoto-evidence-aware-review.md)
 生成 v2 权威结果、七类训练投影和同步 CSV；在实现完成前不需要用户补充确认。
 
+Task 8 已加入通用的 v2 输出层：`_active_learning_review_outputs.py` 负责确定性六文件渲染、
+跨文件验证和无覆盖原子目录发布，`apply_active_review_v2` 负责冻结来源并在发布前重验，相关行为由
+`tests/test_active_learning_review_outputs.py` 与 `tests/test_active_learning_review.py` 覆盖。可用
+`spiketrace apply-active-review-v2 ...` 发布一个新目录，并用
+`spiketrace verify-active-review-bundle OUTPUT_DIR` 只读复核；旧 `apply-active-review` 保持兼容。
+当前只完成通用代码和测试，真实 Rangitoto v2 输入与 durable 六文件结果仍由后续任务生成，仓库中尚未
+宣称存在最终 bundle。
+
 以下仅用于从头重建或审计，不是当前操作；命令采用不同目标路径，并且这些不可覆盖的目标必须
 尚不存在：
 

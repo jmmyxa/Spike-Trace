@@ -931,3 +931,173 @@ def apply_active_review(
         require_files=require_files,
     )
     return results
+
+
+def apply_active_review_v2(
+    base_manifest_path: str | Path,
+    selection_path: str | Path,
+    review_input_path: str | Path,
+    output_dir: str | Path,
+    *,
+    repo_root: str | Path,
+    legacy_base_match_id: str,
+    review_match_id: str,
+    video_root: str | Path | None = None,
+    background_guard_seconds: float = 0.5,
+    max_background_windows: int | None = None,
+    background_seed: int | None = None,
+    require_files: bool = True,
+) -> dict[str, object]:
+    from . import __version__
+    from ._active_learning_review_contract import (
+        ArtifactBinding,
+        assert_review_snapshots_stable,
+        load_review_selection_bytes,
+        load_review_sources_v2,
+        snapshot_review_sources_v2,
+    )
+    from ._active_learning_review_observations import compose_observation_set
+    from ._active_learning_review_outputs import (
+        BundleSettings,
+        publish_result_bundle,
+        render_result_bundle,
+    )
+    from ._active_learning_review_projection import build_training_projection
+
+    root = Path(repo_root).expanduser().resolve()
+    base_manifest = Path(base_manifest_path).expanduser().resolve()
+    destination = Path(output_dir).expanduser().resolve()
+    legacy_id, review_id = _validate_match_ids(legacy_base_match_id, review_match_id)
+    effective_video_root = (
+        Path(video_root).expanduser().resolve()
+        if video_root is not None
+        else base_manifest.parent.resolve()
+    )
+    base_bytes = _read_bytes(base_manifest, "base manifest")
+    base_binding = ArtifactBinding(
+        _relative_repo_path(base_manifest, root, "base manifest"),
+        _sha256_bytes(base_bytes),
+    )
+    base_snapshot: Path | None = None
+    try:
+        base_snapshot = _write_input_snapshot(
+            base_manifest, base_bytes, "base manifest"
+        )
+        base_records = load_manifest(
+            base_snapshot,
+            video_root=effective_video_root,
+            require_files=require_files,
+        )
+        base_fieldnames, base_rows = _read_source_table(base_snapshot)
+    finally:
+        if base_snapshot is not None:
+            base_snapshot.unlink(missing_ok=True)
+
+    snapshots = snapshot_review_sources_v2(review_input_path, selection_path, root)
+    selection = load_review_selection_bytes(
+        snapshots.selection.raw,
+        merged_bytes=snapshots.merged_candidates.raw,
+        merged_repo_path=snapshots.merged_candidates.repo_path,
+        repo_root=root,
+        require_video=require_files,
+    )
+    selection_video = _resolve_repo_path(
+        selection["video"]["path"], root, "Selection video path"
+    )
+    source_video_file_checked = selection_video.exists()
+    if source_video_file_checked:
+        if _sha256_file(selection_video) != selection["video"]["sha256"]:
+            raise ActiveLearningError("Selected source video SHA-256 does not match.")
+    elif require_files:
+        raise ActiveLearningError(f"Source video does not exist: {selection_video}")
+    if any(
+        record.video_path == selection_video and record.split in {"val", "test"}
+        for record in base_records
+    ):
+        raise ActiveLearningError(
+            "The reviewed source video already appears in a val or test split."
+        )
+    review = load_review_sources_v2(snapshots, selection)
+    observations = compose_observation_set(review, selection)
+    guard, _, _, actual_seed = _background_settings(
+        background_guard_seconds=background_guard_seconds,
+        max_background_windows=max_background_windows,
+        background_seed=background_seed,
+        selection=selection,
+        positive_count=0,
+    )
+    projection = build_training_projection(
+        observations,
+        selection,
+        snapshots.merged_candidates,
+        guard,
+        max_background_windows,
+        actual_seed,
+    )
+    _validate_blank_base_match_ids(base_rows, effective_video_root)
+    settings = BundleSettings(
+        generator_version=f"spike-trace/{__version__}",
+        legacy_base_match_id=legacy_id,
+        review_match_id=review_id,
+        video_root_audit=_video_root_audit(effective_video_root, root),
+        training_video_path=_portable_video_path(
+            selection_video, effective_video_root
+        ),
+        source_video_file_checked=source_video_file_checked,
+        background_guard_seconds=guard,
+        max_background_windows=max_background_windows,
+        background_seed=actual_seed,
+    )
+    bundle = render_result_bundle(
+        review=review,
+        observations=observations,
+        projection=projection,
+        base_fieldnames=base_fieldnames,
+        base_rows=base_rows,
+        base_manifest_binding=base_binding,
+        settings=settings,
+    )
+
+    def publication_callback() -> None:
+        assert_review_snapshots_stable(snapshots)
+        try:
+            current_base = base_manifest.read_bytes()
+        except OSError as exc:
+            raise ValueError(
+                "base manifest changed or became unavailable during review application."
+            ) from exc
+        if current_base != base_bytes:
+            raise ValueError("base manifest changed during review application.")
+        if source_video_file_checked and (
+            not selection_video.exists()
+            or _sha256_file(selection_video) != review.video_binding.sha256
+        ):
+            raise ValueError("source video changed during review application.")
+
+    publish_result_bundle(
+        destination,
+        bundle,
+        before_publish=publication_callback,
+    )
+    return bundle.authority
+
+
+def _validate_blank_base_match_ids(
+    rows: list[dict[str, str | None]], effective_video_root: Path
+) -> None:
+    blank_match_videos: set[Path] = set()
+    for row in rows:
+        if (row.get("match_id") or "").strip():
+            continue
+        raw_video = Path((row.get("video_path") or "").strip()).expanduser()
+        blank_match_videos.add(
+            (
+                raw_video
+                if raw_video.is_absolute()
+                else effective_video_root / raw_video
+            ).resolve()
+        )
+    if len(blank_match_videos) > 1:
+        raise ActiveLearningError(
+            "Blank legacy match IDs resolve to more than one base video."
+        )

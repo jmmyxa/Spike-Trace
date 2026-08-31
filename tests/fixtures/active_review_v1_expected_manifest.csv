@@ -1,0 +1,4 @@
+video_path,start_seconds,end_seconds,label,team_side,player_number,split,crop_x1,crop_y1,crop_x2,crop_y2,match_id,review_status,notes,source_tag
+usa-germany.mp4,1,2,serve,ours,8,train,,,,,usa-germany-2024-olympics,reviewed,keep this exact note,legacy-import
+usa-germany.mp4,4.000,5.500,attack,ours,12,train,0,0,1920,645,usa-germany-2024-olympics,reviewed,,legacy-import
+../rangitoto.mp4,101.0,102.0,receive,far,,train,0,0,1920,645,rangitoto-taka-national-final,reviewed,"Active review batch=rangitoto-round-01; clip=round-01-clip-003; action_slot=1; relative_seconds=[1, 2]. Reviewer note: clean receive",
