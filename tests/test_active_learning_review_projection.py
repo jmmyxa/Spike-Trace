@@ -206,6 +206,42 @@ class TrainingProjectionTests(unittest.TestCase):
         )
         self.assertIsNone(project_training_windows(multi_confirmed, _selection("clip-001"))[0].player_number)
 
+    def test_rejects_eligible_same_side_overlaps_but_allows_other_side(self):
+        cases = (
+            ("same-label exact", ("attack", 101.0, 103.0), ("attack", 101.0, 103.0)),
+            ("different-label exact", ("attack", 101.0, 103.0), ("dig", 101.0, 103.0)),
+            ("partial", ("attack", 101.0, 104.0), ("dig", 103.0, 105.0)),
+            ("containment", ("attack", 101.0, 105.0), ("dig", 102.0, 104.0)),
+        )
+        for name, first, second in cases:
+            with self.subTest(name=name):
+                observations = _observations(actions=(
+                    _action(first[0], action_ref="clip-001/first", start=first[1], end=first[2]),
+                    _action(second[0], action_ref="clip-001/second", start=second[1], end=second[2]),
+                ))
+                with self.assertRaisesRegex(ValueError, "overlap"):
+                    project_training_windows(observations, _selection("clip-001"))
+        different_sides = _observations(actions=(
+            _action("attack", action_ref="clip-001/far", side="far", start=101.0, end=104.0),
+            _action("dig", action_ref="clip-001/near", side="near", start=102.0, end=103.0),
+        ))
+        self.assertEqual(len(project_training_windows(different_sides, _selection("clip-001"))), 2)
+
+    def test_excluded_timed_sequence_context_background_protects_without_training_row(self):
+        excluded = _action(
+            "background", action_ref="clip-001/context", start=102.0, end=104.0,
+            visibility="off_camera", evidence_basis="sequence_context",
+            background_scope="timed_interval",
+        )
+        eligible = _action("attack", action_ref="clip-001/attack", start=103.0, end=105.0)
+        observations = _observations(actions=(excluded, eligible))
+
+        windows = project_training_windows(observations, _selection("clip-001"))
+        protected = build_protected_intervals(observations, _selection("clip-001"))
+
+        self.assertEqual(tuple(item.source_ref for item in windows), ("clip-001/attack",))
+        self.assertIn(("clip-001/context", 102.0, 104.0), tuple((item.source_ref, item.start_seconds, item.end_seconds) for item in protected))
+
     def test_only_an_exact_single_sentinel_clip_side_can_donate(self):
         donor = _sentinel("clip-donor", "far")
         disqualified = _sentinel("clip-disqualified", "far")

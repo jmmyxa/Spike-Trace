@@ -29,6 +29,10 @@ _SOURCE_ROW_FIELDS = (
     "action_ref", "clip_id", "source_action_slot", "source_row", "raw_values",
     "normalized_values", "background_scope", "side_inherited", "source_repairs",
 )
+_SOURCE_ACTION_IDENTITY_FIELDS = (
+    "action_ref", "clip_id", "source_action_slot", "source_row", "raw_values",
+    "normalized_values", "side_inherited", "source_repairs",
+)
 _SOURCE_VALUE_FIELDS = (
     "clip_id", "review_label", "relative_start_seconds", "relative_end_seconds",
     "team_side", "note",
@@ -432,9 +436,9 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
             source = source_by_ref.get(ref)
             if source is None:
                 raise ValueError("action observation source ref is dangling.")
-            if any(action[field] != source[field] for field in _SOURCE_ROW_FIELDS):
+            if any(action[field] != source[field] for field in _SOURCE_ACTION_IDENTITY_FIELDS):
                 raise ValueError("action observation does not preserve its source row.")
-            _validate_source_action_values(action)
+            _validate_source_action_values(action, source)
         relative_start = action["relative_start_seconds"]
         relative_end = action["relative_end_seconds"]
         if not is_supplemental and (
@@ -512,22 +516,34 @@ def _validate_source_values(row: dict[str, object]) -> None:
     _exact(normalized, _SOURCE_VALUE_FIELDS, "source values")
     if normalized["clip_id"] != row["clip_id"] or raw["clip_id"] not in {None, row["clip_id"]}:
         raise ValueError("source values do not preserve the source clip.")
+    if normalized["review_label"] not in _LABELS or normalized["team_side"] not in {"far", "near"}:
+        raise ValueError("source values contain an invalid label or side.")
+    start, end = normalized["relative_start_seconds"], normalized["relative_end_seconds"]
+    if (start is None) != (end is None):
+        raise ValueError("source values must use paired times.")
+    if start is not None and (not isinstance(start, int) or isinstance(start, bool) or not isinstance(end, int) or isinstance(end, bool) or end <= start):
+        raise ValueError("source values contain an invalid interval.")
+    expected_scope = None
+    if normalized["review_label"] == "background":
+        expected_scope = "clip_sentinel" if start is None else "timed_interval"
+    if row["background_scope"] != expected_scope:
+        raise ValueError("source values background_scope is invalid.")
+    for field in ("review_label", "relative_start_seconds", "relative_end_seconds", "note"):
+        if raw[field] != normalized[field]:
+            raise ValueError("source values do not preserve raw and normalized values.")
 
 
-def _validate_source_action_values(action: dict[str, object]) -> None:
-    normalized = {
-        "clip_id": action["clip_id"], "review_label": action["review_label"],
-        "relative_start_seconds": action["relative_start_seconds"],
-        "relative_end_seconds": action["relative_end_seconds"],
-        "team_side": action["team_side"], "note": action["note"],
-    }
-    raw = normalized.copy()
-    if action["source_repairs"]:
-        raw["clip_id"] = None
-    if action["side_inherited"]:
-        raw["team_side"] = None
-    if action["normalized_values"] != normalized or action["raw_values"] != raw:
+def _validate_source_action_values(action: dict[str, object], source: dict[str, object]) -> None:
+    if action["normalized_values"] != source["normalized_values"] or action["raw_values"] != source["raw_values"]:
         raise ValueError("source values do not match action fields.")
+    normalized = source["normalized_values"]
+    if (
+        action["clip_id"] != normalized["clip_id"]
+        or action["relative_start_seconds"] != normalized["relative_start_seconds"]
+        or action["relative_end_seconds"] != normalized["relative_end_seconds"]
+        or action["team_side"] != normalized["team_side"]
+    ):
+        raise ValueError("action values do not preserve source timing or side.")
 
 
 def _validate_outcomes(value: object, actions: list[dict[str, object]], result_id: str) -> list[dict[str, object]]:

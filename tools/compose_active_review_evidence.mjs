@@ -67,6 +67,11 @@ function absoluteTime(clip, relative) {
   return relative === null ? null : clip.start_seconds + relative;
 }
 
+function effectiveBackgroundScope(reviewLabel, values) {
+  if (reviewLabel !== "background") return null;
+  return values.relative_start_seconds === null ? "clip_sentinel" : "timed_interval";
+}
+
 function actionObservation(row, clip, override) {
   const values = row.normalized_values;
   const timed = values.relative_start_seconds !== null;
@@ -91,7 +96,7 @@ function actionObservation(row, clip, override) {
     visibility,
     evidence_basis: evidenceBasis,
     interval_scope: timed ? "timed" : null,
-    background_scope: row.background_scope,
+    background_scope: effectiveBackgroundScope(reviewLabel, values),
     side_inherited: row.side_inherited,
     note,
     source_reason: override?.reason ?? null,

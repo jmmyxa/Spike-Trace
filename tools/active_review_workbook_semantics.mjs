@@ -227,10 +227,8 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
     for (const row of rows) {
       if (row.normalized_values.team_side !== null) { if (side !== null && side !== row.normalized_values.team_side) fail(`Clip ${clip.clip_id} has conflicting sides.`); side = row.normalized_values.team_side; }
       else { if (side === null) fail(`Clip ${clip.clip_id} has a blank first populated side.`); row.normalized_values.team_side = side; row.side_inherited = true; addAudit({ kind: "side_inheritance", clip_id: row.clip_id, action_ref: row.action_ref, source_row: row.source_row, raw_value: null, normalized_value: side, reason: "inherit side" }); }
-      if (row.review_label === "background" && row.background_scope === "clip_sentinel") { if (sentinel || rows.length !== 1) fail(`Clip ${clip.clip_id} untimed background must be the only populated row.`); sentinel = row; }
+      if (row.normalized_values.review_label === "background" && row.background_scope === "clip_sentinel") { if (sentinel || rows.length !== 1) fail(`Clip ${clip.clip_id} untimed background must be the only populated row.`); sentinel = row; }
     }
-    const timed = rows.filter((row) => row.background_scope === "timed_interval" || row.normalized_values.review_label !== "background");
-    for (let i = 0; i < timed.length; i += 1) for (let j = i + 1; j < timed.length; j += 1) if (timed[i].normalized_values.team_side === timed[j].normalized_values.team_side && timed[i].normalized_values.relative_start_seconds < timed[j].normalized_values.relative_end_seconds && timed[j].normalized_values.relative_start_seconds < timed[i].normalized_values.relative_end_seconds) fail(`Clip ${clip.clip_id} has overlapping timed rows.`);
   }
   const normalizationAudit = [...normalizationAuditByRow.entries()]
     .sort(([left], [right]) => left - right)

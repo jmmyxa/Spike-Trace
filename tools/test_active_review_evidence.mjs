@@ -56,12 +56,16 @@ const compositionSelection = {
 };
 const compositionRows = [
   { action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, background_scope: null, side_inherited: false, source_repairs: [] },
-  { action_ref: "clip-001/action-002", clip_id: "clip-001", source_action_slot: 2, source_row: 5, raw_values: { clip_id: "clip-001", review_label: "attack", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: null }, normalized_values: { clip_id: "clip-001", review_label: "attack", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+  { action_ref: "clip-001/action-002", clip_id: "clip-001", source_action_slot: 2, source_row: 5, raw_values: { clip_id: "clip-001", review_label: "dig", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: "被拦回的保护" }, normalized_values: { clip_id: "clip-001", review_label: "dig", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: "被拦回的保护" }, background_scope: null, side_inherited: true, source_repairs: [] },
+  { action_ref: "clip-001/action-003", clip_id: "clip-001", source_action_slot: 3, source_row: 6, raw_values: { clip_id: "clip-001", review_label: "background", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", note: "source background" }, normalized_values: { clip_id: "clip-001", review_label: "background", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", note: "source background" }, background_scope: "timed_interval", side_inherited: false, source_repairs: [] },
 ];
 const compositionBound = { overrideSha256: "c".repeat(64), overrideRepoPath: "evidence.json", selectionBinding: { path: "selection.json", sha256: "a".repeat(64) }, workbookBinding: { path: "review.xlsx", sha256: "b".repeat(64) }, payload: { review_set_key: "review/round-01" } };
 const compositionOverrides = {
   bound: compositionBound, sourceRepairs: [],
-  actionOverrides: [{ action_ref: "clip-001/action-002", replacement_review_label: "free_ball", visibility: "off_camera", evidence_basis: "sequence_context", replacement_note: "changed", reason: "off camera relabel" }],
+  actionOverrides: [
+    { action_ref: "clip-001/action-002", replacement_review_label: "background", visibility: "off_camera", evidence_basis: "sequence_context", replacement_note: "sequence context", reason: "block-cover context" },
+    { action_ref: "clip-001/action-003", replacement_review_label: "attack", visibility: null, evidence_basis: null, replacement_note: null, reason: "visible action" },
+  ],
   supplementalActions: [{ supplemental_index: 1, clip_id: "clip-001", review_label: "free_ball", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", visibility: "direct_clear", evidence_basis: "direct_video", interval_scope: "timed", note: "added", reason: "missed action" }],
   outcomes: [{ related_action_refs: ["clip-001/supplemental-001"], outcome: "point_lost", result_type: "free_ball_error", evidence_basis: "direct_video", status: "observed_or_inferred", note: "result" }],
   visibilityObservations: [{ event_kind: "off_camera", clip_id: "clip-001", team_side: "near", relative_start_seconds: 3, relative_end_seconds: 4, interval_scope: "timed", related_action_refs: ["clip-001/action-002"], note: "camera moved", reason: "visible gap" }], participants: [],
@@ -75,11 +79,18 @@ assert.equal(compositionPayload.time_precision_seconds, 1);
 assert.equal(compositionPayload.action_observations[0].visibility, "direct_clear");
 assert.equal(compositionPayload.action_observations[0].evidence_basis, "direct_video");
 assert.deepEqual(compositionPayload.action_observations[0].raw_values, compositionRows[0].raw_values);
-assert.equal(compositionPayload.action_observations[1].review_label, "free_ball");
-assert.equal(compositionPayload.action_observations[1].source_reason, "off camera relabel");
+assert.equal(compositionPayload.action_observations[1].review_label, "background");
+assert.equal(compositionPayload.action_observations[1].background_scope, "timed_interval");
+assert.equal(compositionPayload.action_observations[1].source_reason, "block-cover context");
 assert.equal(compositionPayload.action_observations[1].start_seconds, 103);
-assert.equal(compositionPayload.action_observations[2].action_ref, "clip-001/supplemental-001");
-assert.equal(compositionPayload.action_observations[2].source_action_slot, null);
+assert.equal(compositionPayload.source_review_rows[1].normalized_values.review_label, "dig");
+assert.equal(compositionPayload.source_review_rows[1].background_scope, null);
+assert.equal(compositionPayload.action_observations[2].review_label, "attack");
+assert.equal(compositionPayload.action_observations[2].background_scope, null);
+assert.equal(compositionPayload.source_review_rows[2].normalized_values.review_label, "background");
+assert.equal(compositionPayload.source_review_rows[2].background_scope, "timed_interval");
+assert.equal(compositionPayload.action_observations[3].action_ref, "clip-001/supplemental-001");
+assert.equal(compositionPayload.action_observations[3].source_action_slot, null);
 assert.equal(compositionPayload.visibility_observations[0].source_reason, "visible gap");
 assert.match(compositionPayload.visibility_observations[0].visibility_ref, /off_camera-source-001$/);
 assert.match(compositionPayload.outcome_observations[0].outcome_ref, /outcome-001$/);
@@ -254,7 +265,15 @@ function semanticWorkbook({ mutate } = {}) {
   const clipFormulas = Array.from({ length: 43 }, () => Array(11).fill(null));
   const actionFormulas = Array.from({ length: 483 }, () => Array(9).fill(null));
   for (const [index, values] of semanticProjection.clipRows.entries()) { clips[index + 3] = [...values]; clips[index + 3][2] = "播放"; clipFormulas[index + 3][2] = `=HYPERLINK("clips/${values[1]}.mp4","播放")`; }
-  for (const [index, values] of semanticProjection.actionRows.entries()) { actions[index + 3] = [...values]; actions[index + 3][2] = "播放"; actionFormulas[index + 3][2] = `=HYPERLINK("clips/${values[0]}.mp4","播放")`; actions[index + 3][4] = "background"; actions[index + 3][7] = "near"; }
+  for (const [index, values] of semanticProjection.actionRows.entries()) {
+    actions[index + 3] = [...values];
+    actions[index + 3][2] = "播放";
+    actionFormulas[index + 3][2] = `=HYPERLINK("clips/${values[0]}.mp4","播放")`;
+    if (index % 12 === 0) {
+      actions[index + 3][4] = "background";
+      actions[index + 3][7] = "near";
+    }
+  }
   clips[0][0] = semanticBanners[0][0]; clips[1][0] = semanticBanners[0][1]; clips[2] = ["序号", "短片ID", "播放短片", "代理文件", "片段长度(秒)", "原视频开始", "原视频结束", "时间分层", "选择桶", "选择原因", "候选提示数"];
   actions[0][0] = semanticBanners[1][0]; actions[1][0] = semanticBanners[1][1]; actions[2] = ["短片ID", "动作序号", "播放短片", "片段长度(秒)", "人工确认动作", "片段内开始秒", "片段内结束秒", "人工侧别", "备注"];
   hints[0][0] = semanticBanners[2][0]; hints[1][0] = semanticBanners[2][1]; hints[2] = ["短片ID", "候选ID", "相对开始秒", "相对结束秒", "预测动作", "置信度", "观察裁剪", "重复组", "冲突组", "来源候选ID"];
@@ -407,6 +426,32 @@ try {
     { kind: "read_only_repair", clip_id: "round-01-clip-002", action_ref: "round-01-clip-002/action-001", source_row: 16, raw_value: null, normalized_value: "round-01-clip-002", reason: "restore fixed identifier" },
   ]);
   assert.equal(semantic.canonicalActionRows.find((row) => row.source_row === 4).background_scope, "timed_interval");
+  const overlapCases = [
+    ["same-label exact duplicate", ["attack", 1, 3], ["attack", 1, 3]],
+    ["different-label exact overlap", ["attack", 1, 3], ["dig", 1, 3]],
+    ["partial overlap", ["attack", 1, 4], ["dig", 3, 5]],
+    ["containment overlap", ["attack", 1, 5], ["dig", 2, 4]],
+  ];
+  for (const [name, first, second] of overlapCases) {
+    const result = await semanticResult({ mutate: ({ actions }) => {
+      actions[3].splice(4, 5, first[0], first[1], first[2], "near", "first");
+      actions[4].splice(4, 5, second[0], second[1], second[2], null, "second");
+    } });
+    assert.deepEqual(result.canonicalActionRows.slice(0, 2), [
+      {
+        action_ref: "round-01-clip-001/action-001", clip_id: "round-01-clip-001", source_action_slot: 1, source_row: 4,
+        raw_values: { clip_id: "round-01-clip-001", review_label: first[0], relative_start_seconds: first[1], relative_end_seconds: first[2], team_side: "near", note: "first" },
+        normalized_values: { clip_id: "round-01-clip-001", review_label: first[0], relative_start_seconds: first[1], relative_end_seconds: first[2], team_side: "near", note: "first" },
+        background_scope: null, side_inherited: false, source_repairs: [],
+      },
+      {
+        action_ref: "round-01-clip-001/action-002", clip_id: "round-01-clip-001", source_action_slot: 2, source_row: 5,
+        raw_values: { clip_id: "round-01-clip-001", review_label: second[0], relative_start_seconds: second[1], relative_end_seconds: second[2], team_side: null, note: "second" },
+        normalized_values: { clip_id: "round-01-clip-001", review_label: second[0], relative_start_seconds: second[1], relative_end_seconds: second[2], team_side: "near", note: "second" },
+        background_scope: null, side_inherited: true, source_repairs: [],
+      },
+    ], name);
+  }
   await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { actions[15][0] = null; } }), /Action read-only values/);
   await assert.rejects(() => semanticResult({ mutate: ({ labels }) => { labels[3][1] = "tampered"; } }), /Label instructions/);
   await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { actions[2][4] = "tampered header"; } }), /Action headers/);
@@ -415,6 +460,7 @@ try {
   await assert.rejects(() => semanticResult({ mutate: ({ validations }) => { validations.E = { rule: { type: "list", values: ["attack"] } }; } }), /validation changed/);
   await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { for (let index = 3; index < 15; index += 1) actions[index].splice(4, 5, null, null, null, null, null); } }), /zero populated source rows/);
   await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { actions[3][5] = 0; actions[3][6] = 1; actions[4][4] = "attack"; actions[4][5] = 1; actions[4][6] = 2; actions[4][7] = "far"; } }), /conflicting sides/);
+  await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { actions[4].splice(4, 5, "attack", 1, 2, null, "mixed with sentinel"); } }), /untimed background must be the only populated row/);
   await assert.rejects(() => semanticResult({ mutate: ({ sheets }) => { sheets.push({ name: "extra", getUsedRange: () => ({ rowIndex: 0, columnIndex: 0, rowCount: 1, columnCount: 1, values: [[null]], formulas: [[null]] }), getRange: () => ({ values: [[null]], dataValidation: null }) }); } }), /sheet order\/count/);
   await assert.rejects(() => semanticResult({ mutate: ({ actionFormulas }) => { actionFormulas[3][2] = { formula: null, sharedFormula: { index: 2, ref: null, text: "" } }; actionFormulas[4][2] = { formula: '=HYPERLINK("clips/round-01-clip-001.mp4","播放")', sharedFormula: { index: 2, ref: "C4:C15", text: "" } }; for (let index = 5; index < 15; index += 1) actionFormulas[index][2] = { formula: null, sharedFormula: { index: 2, ref: null, text: "" } }; } }), /shared hyperlink/);
   const sharedBound = { payload: { workbook_compatibility: { trimmed_banner_cells: [], shared_formula_ranges: [{ sheet: "人工动作", range: "C4:C15", block_size: 12, expected_display_value: "播放" }], validation_import_gaps: [], read_only_repairs: [] } } };

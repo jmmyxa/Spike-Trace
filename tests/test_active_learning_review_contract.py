@@ -233,6 +233,45 @@ class ReviewContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "background_scope"):
                 load_review_sources_v2(snapshots, selected)
 
+    def test_preserves_source_scope_when_effective_override_changes_label(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            source = review["source_review_rows"][0]
+            source["raw_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2})
+            source["normalized_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2})
+            source["background_scope"] = "timed_interval"
+            action = review["action_observations"][0]
+            action.update({"raw_values": deepcopy(source["raw_values"]), "normalized_values": deepcopy(source["normalized_values"]), "review_label": "attack", "background_scope": None, "source_reason": "evidence override"})
+
+            def load(value: dict[str, object]):
+                (directory / "review-v2.json").write_bytes(_json_bytes(value))
+                snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+                selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=merged_bytes, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+                return load_review_sources_v2(snapshots, selected)
+
+            validated = load(review)
+            self.assertEqual(validated.source_review_rows[0]["background_scope"], "timed_interval")
+            self.assertEqual(validated.action_observations[0]["review_label"], "attack")
+            self.assertIsNone(validated.action_observations[0]["background_scope"])
+            for mutation, message in (
+                (lambda value: value["action_observations"][0].update({"background_scope": "timed_interval"}), "effective scope"),
+                (lambda value: value["action_observations"][0].update({"relative_start_seconds": 2}), "moved times"),
+                (lambda value: value["action_observations"][0]["raw_values"].update({"review_label": "attack"}), "changed source data"),
+            ):
+                candidate = deepcopy(review)
+                mutation(candidate)
+                with self.assertRaisesRegex(ValueError, "source|background_scope|relative|action"):
+                    load(candidate)
+
     def test_rejects_timed_source_action_with_clip_bounds_scope(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
             directory = Path(temporary)

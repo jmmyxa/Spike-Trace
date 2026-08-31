@@ -150,6 +150,19 @@ def project_training_windows(
                 action.note,
             )
         )
+    for index, window in enumerate(windows):
+        for other in windows[index + 1 :]:
+            if (
+                window.clip_id == other.clip_id
+                and window.team_side == other.team_side
+                and _overlaps(
+                    window.start_seconds,
+                    window.end_seconds,
+                    other.start_seconds,
+                    other.end_seconds,
+                )
+            ):
+                raise ValueError("Eligible human training windows overlap.")
     return tuple(windows)
 
 
