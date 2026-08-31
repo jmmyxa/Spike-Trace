@@ -399,8 +399,14 @@ try {
   const supplementalBound = await loadVariant({ ...overrideValue, supplemental_actions: [supplemental], outcome_observations: [{ outcome_index: 2, related_action_refs: ["clip-001/supplemental-001"], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] });
   await assert.rejects(async () => validateEvidenceOverrideReferences(supplementalBound, { selection: selectionValue, canonicalActionRows: [] }), /outcome_observations\[0\]\.outcome_index/);
   await assert.rejects(() => loadVariant({ ...overrideValue, outcome_observations: [{ outcome_index: 1, related_action_refs: ["clip-001/action-001"], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] }).then((b) => validateEvidenceOverrideReferences(b, { selection: selectionValue, canonicalActionRows: [] })), /does not resolve to an action/);
-  await assert.rejects(() => loadVariant({ ...overrideValue, outcome_observations: [{ outcome_index: 1, related_action_refs: [], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }] }), /outcome_observations\[0\]\.related_action_refs/);
-  await assert.rejects(() => loadVariant({ ...overrideValue, visibility_observations: [{ visibility_index: 1, event_kind: "off_camera", clip_id: "clip-001", team_side: "far", relative_start_seconds: 1, relative_end_seconds: 2, interval_scope: "timed", related_action_refs: [], note: "", reason: "gap" }] }), /visibility_observations\[0\]\.related_action_refs/);
+  const emptyRefsBound = await loadVariant({
+    ...overrideValue,
+    outcome_observations: [{ outcome_index: 1, related_action_refs: [], outcome: "continued", result_type: null, evidence_basis: "direct_video", status: "observed_or_inferred", note: "" }],
+    visibility_observations: [{ visibility_index: 1, event_kind: "off_camera", clip_id: "clip-001", team_side: "far", relative_start_seconds: 1, relative_end_seconds: 2, interval_scope: "timed", related_action_refs: [], note: "", reason: "gap" }],
+  });
+  const emptyRefsValidated = validateEvidenceOverrideReferences(emptyRefsBound, { selection: selectionValue, canonicalActionRows: [] });
+  assert.deepEqual(emptyRefsValidated.outcomes[0].related_action_refs, []);
+  assert.deepEqual(emptyRefsValidated.visibilityObservations[0].related_action_refs, []);
   const participant = { action_ref: "clip-001/action-001", track_id: null, identity_ref: null, player_number: null, participation: "support", touch_status: "unknown", assignment_status: "unresolved", assignment_confidence: null, evidence: [] };
   await assert.rejects(() => loadVariant({ ...overrideValue, action_participants: [{ ...participant, assignment_status: "confirmed" }] }), /action_participants\[0\]/);
   await assert.rejects(() => loadEvidenceOverrideEnvelope(path.join(root, "override.json"), {

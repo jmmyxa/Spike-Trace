@@ -16,9 +16,26 @@ from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
-from ._active_learning_review_contract import ArtifactBinding, ValidatedReviewInput
-from ._active_learning_review_observations import ObservationSet
-from ._active_learning_review_projection import TrainingProjection
+from ._active_learning_review_contract import (
+    ArtifactBinding,
+    FrozenArtifact,
+    ValidatedReviewInput,
+    derive_result_set_id,
+    load_review_selection_bytes,
+)
+from ._active_learning_review_observations import (
+    ActionObservation,
+    ActionParticipant,
+    ObservationSet,
+    OutcomeObservation,
+    VisibilityEvent,
+)
+from ._active_learning_review_projection import (
+    ProtectedInterval,
+    TrainingProjection,
+    build_protected_intervals,
+    select_hard_negatives,
+)
 from .constants import ACTION_LABELS
 
 _AUTHORITY_FILENAME = "round-01-results.json"
@@ -106,6 +123,14 @@ class BundleSettings:
 class RenderedReviewBundle:
     authority: dict[str, object]
     artifacts: tuple[tuple[str, bytes], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _BoundSourceSnapshot:
+    description: str
+    logical_path: Path
+    artifact: FrozenArtifact
+    file_identity: tuple[int, int]
 
 
 def render_result_bundle(
@@ -228,7 +253,10 @@ def render_result_bundle(
     )
 
 
-def validate_result_bundle(bundle_dir: str | Path) -> dict[str, object]:
+def validate_result_bundle(
+    bundle_dir: str | Path,
+    repo_root: str | Path | None = None,
+) -> dict[str, object]:
     directory = Path(bundle_dir).expanduser().resolve()
     if not directory.is_dir():
         raise ValueError(f"Review bundle directory does not exist: {directory}")
@@ -305,10 +333,15 @@ def validate_result_bundle(bundle_dir: str | Path) -> dict[str, object]:
         training_fields,
     )
     summary = _validate_summary(authority, len(csv_rows[_TRAINING_FILENAME]))
+    verification_scope = "structural"
+    if repo_root is not None:
+        _validate_source_bound_replay(authority, sources, repo_root)
+        verification_scope = "source_bound"
     return {
         "result_set_id": result_set_id,
         "content_sha256": content_sha256,
         "summary": summary,
+        "verification_scope": verification_scope,
     }
 
 
@@ -480,14 +513,27 @@ def _load_json_artifact(raw: bytes, description: str) -> dict[str, Any]:
         raise ValueError(f"{description} must not contain a BOM.")
     if b"\r" in raw or not raw.endswith(b"\n") or raw.endswith(b"\n\n"):
         raise ValueError(f"{description} must use LF and exactly one trailing LF.")
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"{description} contains duplicate key {key!r}.")
+            result[key] = value
+        return result
+
     try:
         value = json.loads(
             raw.decode("utf-8"),
+            object_pairs_hook=reject_duplicate_keys,
             parse_constant=lambda constant: (_ for _ in ()).throw(
                 ValueError(f"non-finite JSON number: {constant}")
             ),
         )
     except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        if isinstance(exc, ValueError) and str(exc).startswith(
+            f"{description} contains duplicate key"
+        ):
+            raise
         raise ValueError(f"{description} is not valid UTF-8 JSON.") from exc
     if not isinstance(value, dict):
         raise ValueError(f"{description} must contain an object.")  # noqa: TRY004
@@ -687,6 +733,244 @@ def _validate_cross_views(
     )
 
 
+def _validate_source_bound_replay(
+    authority: dict[str, Any],
+    sources: dict[str, Any],
+    repo_root: str | Path,
+) -> None:
+    root = Path(repo_root).expanduser().resolve()
+    if not root.is_dir():
+        raise ValueError(f"Repository root does not exist: {root}")
+    selection_snapshot = _freeze_bound_source(
+        sources["selection"], root, "selection source"
+    )
+    merged_snapshot = _freeze_bound_source(
+        sources["merged_candidates"], root, "merged candidate source"
+    )
+    try:
+        selection = load_review_selection_bytes(
+            selection_snapshot.artifact.raw,
+            merged_bytes=merged_snapshot.artifact.raw,
+            merged_repo_path=merged_snapshot.artifact.repo_path,
+            repo_root=root,
+            require_video=False,
+        )
+    except Exception as exc:
+        if isinstance(exc, ValueError):
+            raise
+        raise ValueError(str(exc)) from exc
+
+    if (
+        selection.get("batch_id") != authority["batch_id"]
+        or selection.get("round_id") != authority["round_id"]
+    ):
+        raise ValueError("Authority batch or round does not match bound selection.")
+    if selection.get("video") != sources["video"]:
+        raise ValueError("Authority source video does not match bound selection.")
+    expected_result_set_id = derive_result_set_id(
+        authority["batch_id"],
+        authority["round_id"],
+        sources["selection"]["sha256"],
+        sources["workbook"]["sha256"],
+        sources["evidence_overrides"]["sha256"],
+    )
+    if authority["result_set_id"] != expected_result_set_id:
+        raise ValueError("Authority result_set_id does not match bound source hashes.")
+
+    projection = authority["training_projection"]
+    _validate_training_video_binding(projection, sources["video"], root)
+    observations = _observation_set_from_authority(authority)
+    protected = build_protected_intervals(observations, selection)
+    if _plain(protected) != authority["protected_intervals"]:
+        raise ValueError("Authority protected_intervals do not match source-bound replay.")
+    _validate_generated_background_replay(
+        selection,
+        merged_snapshot.artifact,
+        observations,
+        protected,
+        projection,
+    )
+    _assert_bound_sources_stable((selection_snapshot, merged_snapshot))
+
+
+def _validate_generated_background_replay(
+    selection: object,
+    merged: FrozenArtifact,
+    observations: ObservationSet,
+    protected_intervals: tuple[ProtectedInterval, ...],
+    projection: Mapping[str, Any],
+) -> None:
+    generated = select_hard_negatives(
+        selection,
+        merged,
+        observations,
+        protected_intervals,
+        projection["background_guard_seconds"],
+        projection["effective_background_cap"],
+        projection["background_seed"],
+    )
+    if _plain(generated) != projection["generated_background_windows"]:
+        raise ValueError(
+            "Authority generated background windows do not match source-bound replay."
+        )
+
+
+def _freeze_bound_source(
+    binding: dict[str, Any], root: Path, description: str
+) -> _BoundSourceSnapshot:
+    repo_path = _repo_path_text(binding["path"], f"{description} path")
+    logical_path = root.joinpath(*PurePosixPath(repo_path).parts)
+    try:
+        resolved = logical_path.resolve(strict=True)
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            f"{description} resolves outside the repository root through a symlink."
+        ) from exc
+    except (OSError, RuntimeError) as exc:
+        raise ValueError(f"Cannot resolve {description}: {logical_path}") from exc
+    try:
+        with resolved.open("rb") as handle:
+            status = os.fstat(handle.fileno())
+            raw = handle.read()
+    except OSError as exc:
+        raise ValueError(f"Cannot read {description}: {logical_path}") from exc
+    if not resolved.is_file():
+        raise ValueError(f"{description} must be a regular file: {logical_path}")
+    digest = hashlib.sha256(raw).hexdigest()
+    if digest != binding["sha256"]:
+        raise ValueError(f"{description} SHA-256 does not match authority binding.")
+    return _BoundSourceSnapshot(
+        description,
+        logical_path,
+        FrozenArtifact(resolved, repo_path, raw, digest),
+        (status.st_dev, status.st_ino),
+    )
+
+
+def _assert_bound_sources_stable(
+    snapshots: Sequence[_BoundSourceSnapshot],
+) -> None:
+    for snapshot in snapshots:
+        try:
+            resolved = snapshot.logical_path.resolve(strict=True)
+            with resolved.open("rb") as handle:
+                status = os.fstat(handle.fileno())
+                raw = handle.read()
+        except (OSError, RuntimeError) as exc:
+            raise ValueError(
+                f"{snapshot.description} changed during source-bound replay."
+            ) from exc
+        if (
+            resolved != snapshot.artifact.absolute_path
+            or (status.st_dev, status.st_ino) != snapshot.file_identity
+            or raw != snapshot.artifact.raw
+        ):
+            raise ValueError(
+                f"{snapshot.description} changed during source-bound replay."
+            )
+
+
+def _observation_set_from_authority(
+    authority: dict[str, Any],
+) -> ObservationSet:
+    try:
+        actions = tuple(
+            ActionObservation(
+                **{
+                    **item,
+                    "source_repairs": tuple(item["source_repairs"]),
+                }
+            )
+            for item in authority["action_observations"]
+        )
+        outcomes = tuple(
+            OutcomeObservation(
+                **{
+                    **item,
+                    "related_action_refs": tuple(item["related_action_refs"]),
+                }
+            )
+            for item in authority["outcome_observations"]
+        )
+        occlusion_events = tuple(
+            _visibility_event_from_authority(item)
+            for item in authority["occlusion_events"]
+        )
+        off_camera_events = tuple(
+            _visibility_event_from_authority(item)
+            for item in authority["off_camera_events"]
+        )
+        participants = tuple(
+            ActionParticipant(
+                **{
+                    **item,
+                    "evidence": tuple(item["evidence"]),
+                }
+            )
+            for item in authority["action_participants"]
+        )
+    except (KeyError, TypeError) as exc:
+        raise ValueError("Authority observations cannot be replayed.") from exc
+    return ObservationSet(
+        authority["result_set_id"],
+        actions,
+        outcomes,
+        (),
+        occlusion_events,
+        off_camera_events,
+        participants,
+    )
+
+
+def _visibility_event_from_authority(value: dict[str, Any]) -> VisibilityEvent:
+    return VisibilityEvent(
+        **{
+            **value,
+            "related_action_refs": tuple(value["related_action_refs"]),
+            "source_refs": tuple(value["source_refs"]),
+            "source_intervals": tuple(
+                tuple(interval) for interval in value["source_intervals"]
+            ),
+        }
+    )
+
+
+def _validate_training_video_binding(
+    projection: dict[str, Any], video: dict[str, Any], root: Path
+) -> None:
+    audit = _validate_video_root_audit(projection["video_root_audit"])
+    if audit["kind"] == "repo_relative":
+        video_root = (
+            root
+            if audit["path"] == "."
+            else root.joinpath(*PurePosixPath(audit["path"]).parts)
+        ).resolve()
+        try:
+            video_root.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(
+                "video_root_audit resolves outside the repository root."
+            ) from exc
+    else:
+        video_root = Path(audit["path"]).expanduser().resolve()
+
+    training_path = _portable_relative_path(
+        projection["training_video_path"],
+        "training_projection training_video_path",
+    )
+    training_video = video_root.joinpath(*PurePosixPath(training_path).parts).resolve()
+    source_video = root.joinpath(*PurePosixPath(video["path"]).parts).resolve()
+    try:
+        source_video.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("Authority source video resolves outside the repository root.") from exc
+    if training_video != source_video:
+        raise ValueError(
+            "training video path and video_root_audit do not resolve to the authority source video."
+        )
+
+
 def _validate_projection_contract(authority: dict[str, Any]) -> dict[str, str]:
     projection = authority["training_projection"]
     if not isinstance(projection, dict):
@@ -696,11 +980,24 @@ def _validate_projection_contract(authority: dict[str, Any]) -> dict[str, str]:
         (
             "decisions", "human_windows", "generated_background_windows",
             "positive_training_count", "requested_background_cap",
-            "effective_background_cap", "training_video_path", "review_match_id",
-            "base_training_view",
+            "effective_background_cap", "background_guard_seconds",
+            "background_seed", "video_root_audit", "training_video_path",
+            "review_match_id", "base_training_view",
         ),
         "training_projection",
     )
+    guard = _finite_number(
+        projection["background_guard_seconds"],
+        "training_projection background_guard_seconds",
+    )
+    if guard < 0:
+        raise ValueError(
+            "training_projection background_guard_seconds must be nonnegative."
+        )
+    _whole_number(
+        projection["background_seed"], "training_projection background_seed"
+    )
+    _validate_video_root_audit(projection["video_root_audit"])
     actions = authority["action_observations"]
     if not isinstance(actions, list):
         raise ValueError("Authority action_observations must be an array.")  # noqa: TRY004
@@ -1013,6 +1310,7 @@ def _validate_training_view(
     expected_fields = (
         "decisions", "human_windows", "generated_background_windows",
         "positive_training_count", "requested_background_cap", "effective_background_cap",
+        "background_guard_seconds", "background_seed", "video_root_audit",
         "training_video_path", "review_match_id", "base_training_view",
     )
     _exact_fields(projection, expected_fields, "training_projection")
@@ -1359,16 +1657,63 @@ def _repo_path_text(value: object, description: str) -> str:
     text = _nonempty_text(value, description)
     posix = PurePosixPath(text)
     windows = PureWindowsPath(text)
+    canonical = posix.as_posix()
     if (
         windows.drive
         or posix.is_absolute()
         or "\\" in text
         or text.startswith("/")
-        or posix.as_posix() == "."
+        or canonical == "."
+        or canonical != text
         or ".." in posix.parts
     ):
-        raise ValueError(f"{description} must be a repository-relative POSIX path.")
+        raise ValueError(
+            f"{description} must be a canonical repository-relative POSIX path."
+        )
+    return canonical
+
+
+def _portable_relative_path(value: object, description: str) -> str:
+    text = _nonempty_text(value, description)
+    posix = PurePosixPath(text)
+    windows = PureWindowsPath(text)
+    if windows.drive or posix.is_absolute() or "\\" in text or text.startswith("/"):
+        raise ValueError(f"{description} must be a relative POSIX path.")
     return posix.as_posix()
+
+
+def _validate_video_root_audit(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError(  # noqa: TRY004
+            "training_projection video_root_audit must be an object."
+        )
+    _exact_fields(
+        value, ("kind", "path"), "training_projection video_root_audit"
+    )
+    kind = _enum_text(
+        value["kind"],
+        {"repo_relative", "absolute"},
+        "training_projection video_root_audit kind",
+    )
+    path = _nonempty_text(
+        value["path"], "training_projection video_root_audit path"
+    )
+    if kind == "repo_relative":
+        if path != ".":
+            path = _repo_path_text(
+                path, "training_projection video_root_audit path"
+            )
+    elif (
+        "\\" in path
+        or not (
+            PurePosixPath(path).is_absolute()
+            or PureWindowsPath(path).is_absolute()
+        )
+    ):
+        raise ValueError(
+            "training_projection absolute video_root_audit path is invalid."
+        )
+    return {"kind": kind, "path": path}
 
 
 def _finite_number(value: object, description: str) -> float:
@@ -1429,7 +1774,11 @@ def _is_unit_interval(value: object) -> bool:
 
 
 def _nonempty_text(value: object, description: str) -> str:
-    if not isinstance(value, str) or not value.strip():
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or any(ord(character) <= 0x1F for character in value)
+    ):
         raise ValueError(f"{description} must be nonempty text.")
     return value
 
@@ -1656,6 +2005,9 @@ def _training_projection(
         "positive_training_count": projection.positive_training_count,
         "requested_background_cap": projection.requested_background_cap,
         "effective_background_cap": projection.effective_background_cap,
+        "background_guard_seconds": settings.background_guard_seconds,
+        "background_seed": settings.background_seed,
+        "video_root_audit": settings.video_root_audit,
         "training_video_path": settings.training_video_path,
         "review_match_id": settings.review_match_id,
         "base_training_view": base_training_view,

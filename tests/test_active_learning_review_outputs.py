@@ -4,6 +4,7 @@ import csv
 import hashlib
 import io
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -25,6 +26,7 @@ from spiketrace._active_learning_review_observations import (
     ObservationSet,
     OutcomeObservation,
     VisibilityEvent,
+    merge_visibility_events,
 )
 from spiketrace._active_learning_review_outputs import (
     BundleSettings,
@@ -37,7 +39,10 @@ from spiketrace._active_learning_review_projection import (
     TrainingDecision,
     TrainingProjection,
     TrainingWindow,
+    build_protected_intervals,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 CSV_HEADERS = {
     "round-01-observations.csv": (
@@ -128,8 +133,17 @@ class ResultBundleRenderingTests(unittest.TestCase):
         self.assertEqual(authority["format"], "spiketrace.active-review-observations")
         self.assertIs(type(authority["format_version"]), int)
         self.assertEqual(authority["format_version"], 2)
+
         self.assertEqual(authority["training_projection"]["training_video_path"], "video.mp4")
         self.assertEqual(authority["training_projection"]["review_match_id"], "review-match")
+        self.assertEqual(
+            authority["training_projection"]["video_root_audit"],
+            {"kind": "repo_relative", "path": "data"},
+        )
+        self.assertEqual(
+            authority["training_projection"]["background_guard_seconds"], 0.5
+        )
+        self.assertEqual(authority["training_projection"]["background_seed"], 7)
         self.assertEqual(
             authority["training_projection"]["base_training_view"]["data_rows"], 1
         )
@@ -170,6 +184,26 @@ class ResultBundleRenderingTests(unittest.TestCase):
                 self.assertTrue(raw.endswith(b"\n"))
                 self.assertNotIn(b"\r", raw)
 
+    def test_empty_related_action_references_round_trip_as_json_arrays(self):
+        bundle = _rendered_bundle(empty_related_refs=True)
+        artifacts = dict(bundle.artifacts)
+        authority = json.loads(artifacts["round-01-results.json"])
+        observation_rows = _csv_rows(artifacts["round-01-observations.csv"])
+        visibility_rows = _csv_rows(artifacts["round-01-visibility-events.csv"])
+
+        self.assertEqual(authority["outcome_observations"][0]["related_action_refs"], [])
+        self.assertEqual(authority["occlusion_events"][0]["related_action_refs"], [])
+        self.assertEqual(observation_rows[-1]["related_action_refs_json"], "[]")
+        self.assertEqual(visibility_rows[0]["related_action_refs_json"], "[]")
+
+        with tempfile.TemporaryDirectory() as temporary:
+            bundle_dir = Path(temporary)
+            for filename, raw in bundle.artifacts:
+                (bundle_dir / filename).write_bytes(raw)
+            self.assertEqual(
+                validate_result_bundle(bundle_dir)["result_set_id"], "result-test"
+            )
+
     def test_normalizes_embedded_csv_field_newlines_to_crlf(self):
         bundle = _rendered_bundle(note="first\nsecond\rthird\r\nfourth")
 
@@ -197,6 +231,37 @@ class ResultBundleValidationTests(unittest.TestCase):
         self.assertEqual(result["result_set_id"], "result-test")
         self.assertEqual(result["content_sha256"], _authority(self.bundle_dir)["content_sha256"])
         self.assertEqual(result["summary"]["training_rows"], 3)
+        self.assertEqual(result["verification_scope"], "structural")
+
+    def test_nonempty_text_rejects_every_embedded_c0_character(self):
+        for codepoint in range(0x20):
+            with (
+                self.subTest(codepoint=f"U+{codepoint:04X}"),
+                self.assertRaisesRegex(ValueError, "nonempty text"),
+            ):
+                outputs._nonempty_text(
+                    f"prefix{chr(codepoint)}suffix", "bundle NonEmptyText"
+                )
+
+    def test_rejects_duplicate_keys_nested_in_authority_json(self):
+        authority_path = self.bundle_dir / "round-01-results.json"
+        raw = authority_path.read_bytes()
+        marker = b'      "path": "data/selection.json",\n'
+        self.assertIn(marker, raw)
+        authority_path.write_bytes(raw.replace(marker, marker + marker, 1))
+
+        with self.assertRaisesRegex(ValueError, "duplicate key.*path"):
+            validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_duplicate_keys_nested_in_exports_manifest_json(self):
+        manifest_path = self.bundle_dir / "round-01-exports.manifest.json"
+        raw = manifest_path.read_bytes()
+        marker = b'      "path": "round-01-results.json",\n'
+        self.assertIn(marker, raw)
+        manifest_path.write_bytes(raw.replace(marker, marker + marker, 1))
+
+        with self.assertRaisesRegex(ValueError, "duplicate key.*path"):
+            validate_result_bundle(self.bundle_dir)
 
     def test_rejects_extra_or_missing_file(self):
         (self.bundle_dir / "extra.txt").write_text("extra", encoding="utf-8")
@@ -233,6 +298,26 @@ class ResultBundlePublicationTests(unittest.TestCase):
         self.assertEqual(validate_result_bundle(output_dir)["result_set_id"], "result-test")
         self.assertEqual(tuple(sorted(path.name for path in output_dir.iterdir())), tuple(sorted(dict(self.bundle.artifacts))))
         self.assertEqual(_staging_paths(output_dir), [])
+
+    def test_adjacent_clip_visibility_stays_separate_and_bundle_publishes(self):
+        output_dir = self.root / "adjacent-clips" / "bundle"
+        bundle = _rendered_bundle(adjacent_clip_visibility=True)
+
+        publish_result_bundle(output_dir, bundle)
+
+        authority = _authority(output_dir)
+        self.assertEqual(len(authority["occlusion_events"]), 2)
+        self.assertEqual(
+            [event["source_refs"] for event in authority["occlusion_events"]],
+            [
+                ["result-test/occlusion-source-001"],
+                ["result-test/occlusion-source-002"],
+            ],
+        )
+        self.assertEqual(len(authority["protected_intervals"]), 3)
+        self.assertEqual(
+            validate_result_bundle(output_dir)["result_set_id"], "result-test"
+        )
 
     def test_each_injected_io_failure_leaves_no_final_or_staging_directory(self):
         operations = (
@@ -720,6 +805,268 @@ class ResultBundleTamperValidationTests(unittest.TestCase):
                     validate_result_bundle(self.bundle_dir)
 
 
+class SourceBoundResultBundleValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.temporary_root = Path(self.temporary.name)
+        self.repo_root = self.temporary_root / "repo"
+        self.bundle_dir = self.temporary_root / "bundle"
+        self.source_bundle = ROOT / "data/annotations/rangitoto_round_01"
+        source_authority = json.loads(
+            (self.source_bundle / "round-01-results.json").read_bytes()
+        )
+        self.selection_repo_path = source_authority["sources"]["selection"]["path"]
+        self.merged_repo_path = source_authority["sources"]["merged_candidates"]["path"]
+        self.selection_path = self.repo_root / Path(self.selection_repo_path)
+        self.merged_path = self.repo_root / Path(self.merged_repo_path)
+        for repo_path in (self.selection_repo_path, self.merged_repo_path):
+            source = ROOT / Path(repo_path)
+            destination = self.repo_root / Path(repo_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(source.read_bytes())
+        (self.repo_root / "data/annotations").mkdir(parents=True, exist_ok=True)
+        self._reset_bundle()
+
+    def _reset_bundle(self):
+        self.bundle_dir.mkdir(parents=True, exist_ok=True)
+        for source in self.source_bundle.iterdir():
+            if source.is_file():
+                (self.bundle_dir / source.name).write_bytes(source.read_bytes())
+        authority = _authority(self.bundle_dir)
+        authority["training_projection"].update({
+            "background_guard_seconds": 0.5,
+            "background_seed": 42,
+            "video_root_audit": {"kind": "repo_relative", "path": "data/annotations"},
+        })
+        _rewrite_semantic_authority(self.bundle_dir, authority)
+
+    def test_accepts_real_bundle_only_after_source_bound_replay(self):
+        result = validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+        self.assertEqual(result["verification_scope"], "source_bound")
+        self.assertEqual(result["summary"]["generated_background_count"], 60)
+
+    def test_rejects_changed_guard_invalid_seed_and_video_root_audit(self):
+        cases = (
+            (
+                "guard",
+                lambda projection: projection.__setitem__(
+                    "background_guard_seconds", 60.0
+                ),
+                "generated background",
+            ),
+            (
+                "invalid seed",
+                lambda projection: projection.__setitem__("background_seed", "43"),
+                "background_seed.*integer",
+            ),
+            (
+                "video root audit",
+                lambda projection: projection.__setitem__(
+                    "video_root_audit", {"kind": "repo_relative", "path": "data"}
+                ),
+                "video_root_audit|training video",
+            ),
+        )
+        for label, mutate, message in cases:
+            with self.subTest(label=label):
+                self._reset_bundle()
+                authority = _authority(self.bundle_dir)
+                mutate(authority["training_projection"])
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(ValueError, message):
+                    validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_rehashed_protected_interval_tampering(self):
+        authority = _authority(self.bundle_dir)
+        authority["protected_intervals"][0]["start_seconds"] += 0.1
+        _rewrite_semantic_authority(self.bundle_dir, authority)
+
+        with self.assertRaisesRegex(ValueError, "protected_intervals"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_generated_window_outside_selected_clip(self):
+        authority = _authority(self.bundle_dir)
+        selection = json.loads(self.selection_path.read_bytes())
+        generated = authority["training_projection"]["generated_background_windows"][0]
+        clip = next(
+            item for item in selection["clips"] if item["clip_id"] == generated["clip_id"]
+        )
+        self.assertGreater(clip["start_seconds"], 0.1)
+        generated["start_seconds"] = clip["start_seconds"] - 0.1
+        generated["end_seconds"] = clip["start_seconds"] + 0.1
+        _rewrite_projection_and_training(self.bundle_dir, authority)
+
+        with self.assertRaisesRegex(ValueError, "generated background"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_generated_window_not_matching_merged_source(self):
+        authority = _authority(self.bundle_dir)
+        generated = authority["training_projection"]["generated_background_windows"][0]
+        generated["source_top1_confidence"] = (
+            0.0 if generated["source_top1_confidence"] != 0.0 else 1.0
+        )
+        _rewrite_projection_and_training(self.bundle_dir, authority)
+
+        with self.assertRaisesRegex(ValueError, "generated background"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_merged_window_conflicting_with_protection_and_guard(self):
+        authority = _authority(self.bundle_dir)
+        selection = json.loads(self.selection_path.read_bytes())
+        merged = json.loads(self.merged_path.read_bytes())
+        clip_id = "round-01-clip-035"
+        clip = next(item for item in selection["clips"] if item["clip_id"] == clip_id)
+        side = "near"
+        source = next(
+            window
+            for window in merged["input_runs"][side]["windows"]
+            if clip["start_seconds"] <= window["start_seconds"]
+            and window["end_seconds"] <= clip["end_seconds"]
+        )
+        replacement = _generated_window_from_merged(authority, clip_id, side, source)
+        protected = [
+            interval
+            for interval in authority["protected_intervals"]
+            if interval["clip_id"] == clip_id and interval["team_side"] == side
+        ]
+        self.assertTrue(
+            any(
+                replacement["start_seconds"] < interval["end_seconds"] + 0.5
+                and interval["start_seconds"] - 0.5 < replacement["end_seconds"]
+                for interval in protected
+            )
+        )
+        authority["training_projection"]["generated_background_windows"][0] = replacement
+        _rewrite_projection_and_training(self.bundle_dir, authority)
+
+        with self.assertRaisesRegex(ValueError, "generated background"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_same_side_chosen_window_overlap(self):
+        authority = _authority(self.bundle_dir)
+        selection = json.loads(self.selection_path.read_bytes())
+        merged = json.loads(self.merged_path.read_bytes())
+        generated = authority["training_projection"]["generated_background_windows"]
+        first = generated[0]
+        clip = next(
+            item for item in selection["clips"] if item["clip_id"] == first["clip_id"]
+        )
+        source = next(
+            window
+            for window in merged["input_runs"][first["team_side"]]["windows"]
+            if window["window_index"] != first["window_index"]
+            and clip["start_seconds"] <= window["start_seconds"]
+            and window["end_seconds"] <= clip["end_seconds"]
+            and window["start_seconds"] < first["end_seconds"]
+            and first["start_seconds"] < window["end_seconds"]
+        )
+        replacement = _generated_window_from_merged(
+            authority, first["clip_id"], first["team_side"], source
+        )
+        self.assertLess(replacement["start_seconds"], first["end_seconds"])
+        self.assertLess(first["start_seconds"], replacement["end_seconds"])
+        generated[1] = replacement
+        _rewrite_projection_and_training(self.bundle_dir, authority)
+
+        with self.assertRaisesRegex(ValueError, "generated background"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+    def test_rejects_stale_selection_and_merged_source_bytes(self):
+        for label, path in (
+            ("selection", self.selection_path),
+            ("merged", self.merged_path),
+        ):
+            with self.subTest(label=label):
+                original = path.read_bytes()
+                path.write_bytes(b"{}\n")
+                try:
+                    with self.assertRaisesRegex(ValueError, "SHA-256"):
+                        validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+                finally:
+                    path.write_bytes(original)
+
+    def test_rejects_identical_byte_source_replacement_during_replay(self):
+        original_selector = outputs.select_hard_negatives
+        for label, path in (
+            ("selection", self.selection_path),
+            ("merged", self.merged_path),
+        ):
+            with self.subTest(label=label):
+                original = path.read_bytes()
+                original_stat = path.stat()
+                original_identity = (original_stat.st_dev, original_stat.st_ino)
+
+                def replace_during_replay(
+                    *args,
+                    target_path=path,
+                    original_bytes=original,
+                    expected_identity=original_identity,
+                    **kwargs,
+                ):
+                    result = original_selector(*args, **kwargs)
+                    replacement_path = target_path.with_name(
+                        f"{target_path.name}.replacement"
+                    )
+                    replacement_path.write_bytes(original_bytes)
+                    replacement_stat = replacement_path.stat()
+                    replacement_identity = (
+                        replacement_stat.st_dev,
+                        replacement_stat.st_ino,
+                    )
+                    self.assertNotEqual(expected_identity, replacement_identity)
+                    os.replace(replacement_path, target_path)
+                    return result
+
+                try:
+                    with (
+                        mock.patch.object(
+                            outputs,
+                            "select_hard_negatives",
+                            side_effect=replace_during_replay,
+                        ),
+                        self.assertRaisesRegex(ValueError, "changed during"),
+                    ):
+                        validate_result_bundle(
+                            self.bundle_dir, repo_root=self.repo_root
+                        )
+                finally:
+                    path.write_bytes(original)
+
+    def test_rejects_noncanonical_source_binding_paths(self):
+        parent, filename = self.selection_repo_path.rsplit("/", 1)
+        for alias in (
+            f"{parent}/./{filename}",
+            self.selection_repo_path.replace("/", "//", 1),
+        ):
+            with self.subTest(alias=alias):
+                self._reset_bundle()
+                authority = _authority(self.bundle_dir)
+                authority["sources"]["selection"]["path"] = alias
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(
+                    ValueError, "canonical|repository-relative"
+                ):
+                    validate_result_bundle(
+                        self.bundle_dir, repo_root=self.repo_root
+                    )
+
+    def test_rejects_selection_symlink_escape(self):
+        outside = self.temporary_root / "outside-selection.json"
+        outside.write_bytes(self.selection_path.read_bytes())
+        self.selection_path.unlink()
+        try:
+            os.symlink(outside, self.selection_path)
+        except OSError as exc:
+            self.skipTest(f"symlink creation is unavailable: {exc}")
+
+        with self.assertRaisesRegex(ValueError, "symlink|outside the repository"):
+            validate_result_bundle(self.bundle_dir, repo_root=self.repo_root)
+
+
 def _csv_rows(raw: bytes) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline="")))
 
@@ -791,6 +1138,57 @@ def _rewrite_semantic_authority(bundle_dir: Path, authority: dict[str, object]) 
     manifest["artifacts"][0]["sha256"] = hashlib.sha256(authority_raw).hexdigest()
     manifest["artifacts"][0]["bytes"] = len(authority_raw)
     manifest_path.write_bytes(_json_presentation(manifest))
+
+
+def _rewrite_projection_and_training(
+    bundle_dir: Path, authority: dict[str, object]
+) -> None:
+    _rewrite_semantic_authority(bundle_dir, authority)
+    projection = authority["training_projection"]
+    training_path = bundle_dir / "action_training_round_01.csv"
+    rows = _csv_rows(training_path.read_bytes())
+    fieldnames = tuple(rows[0])
+    base_rows = projection["base_training_view"]["data_rows"]
+    projected_rows = [
+        outputs._authority_training_row(
+            window,
+            fieldnames,
+            projection["training_video_path"],
+            projection["review_match_id"],
+        )
+        for window in (
+            projection["human_windows"]
+            + projection["generated_background_windows"]
+        )
+    ]
+    training_path.write_bytes(
+        _test_csv_bytes(fieldnames, rows[:base_rows] + projected_rows)
+    )
+    _refresh_export_hashes(bundle_dir, training_path.name)
+
+
+def _generated_window_from_merged(
+    authority: dict[str, object],
+    clip_id: str,
+    side: str,
+    source: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "source_ref": f"{clip_id}/hard-negative-{side}-{source['window_index']}",
+        "clip_id": clip_id,
+        "start_seconds": source["start_seconds"],
+        "end_seconds": source["end_seconds"],
+        "training_label": "background",
+        "review_label": "background",
+        "team_side": side,
+        "crop": authority["sources"]["video"]["crops"][side],
+        "player_number": None,
+        "generated": True,
+        "window_index": source["window_index"],
+        "source_top1_action": source["action"],
+        "source_top1_confidence": source["confidence"],
+        "note": "",
+    }
 
 
 def _staging_paths(output_dir: Path) -> list[Path]:
@@ -889,6 +1287,8 @@ def _rendered_bundle(
     no_windows: bool = False,
     no_base_rows: bool = False,
     with_participant: bool = False,
+    empty_related_refs: bool = False,
+    adjacent_clip_visibility: bool = False,
 ):
     action = ActionObservation(
         "clip-001/action-001", "clip-001", 1, 4,
@@ -904,12 +1304,17 @@ def _rendered_bundle(
         "direct_video", None, "clip_sentinel", False, "", None, (),
     )
     outcome = OutcomeObservation(
-        "result-test/outcome-001", (action.action_ref,), "continued", None,
+        "result-test/outcome-001",
+        () if empty_related_refs else (action.action_ref,),
+        "continued",
+        None,
         "referee_signal", "observed_or_inferred", "",
     )
     occlusion = VisibilityEvent(
         "result-test/occlusion-001", "occlusion", "far", 103.0, 104.0, 1.0,
-        "timed", (action.action_ref,), ("result-test/source-001",),
+        "timed",
+        () if empty_related_refs else (action.action_ref,),
+        ("result-test/source-001",),
         ((103.0, 104.0),), "screened",
     )
     participant = ActionParticipant(
@@ -924,8 +1329,40 @@ def _rendered_bundle(
         (),
     )
     participants = (participant,) if with_participant else ()
+    occlusions = (occlusion,)
+    if adjacent_clip_visibility:
+        occlusions = merge_visibility_events(
+            (
+                {
+                    "visibility_ref": "result-test/occlusion-source-001",
+                    "event_kind": "occlusion",
+                    "clip_id": "clip-001",
+                    "team_side": "far",
+                    "start_seconds": 103.0,
+                    "end_seconds": 104.0,
+                    "interval_scope": "timed",
+                    "related_action_refs": [],
+                    "note": "first clip",
+                    "source_reason": "reviewed",
+                },
+                {
+                    "visibility_ref": "result-test/occlusion-source-002",
+                    "event_kind": "occlusion",
+                    "clip_id": "clip-002",
+                    "team_side": "far",
+                    "start_seconds": 104.5,
+                    "end_seconds": 105.5,
+                    "interval_scope": "timed",
+                    "related_action_refs": [],
+                    "note": "second clip",
+                    "source_reason": "reviewed",
+                },
+            ),
+            "result-test",
+            "occlusion",
+        )
     observations = ObservationSet(
-        "result-test", (action, sentinel), (outcome,), (), (occlusion,), (), participants,
+        "result-test", (action, sentinel), (outcome,), (), occlusions, (), participants,
     )
     human_window = TrainingWindow(
         action.action_ref, action.clip_id, 101.0, 102.0, "serve", "serve",
@@ -937,6 +1374,28 @@ def _rendered_bundle(
         "background", "background", "far", (0, 0, 100, 50), None, True,
         9, "attack", 0.9, "",
     )
+    protected_intervals = (
+        build_protected_intervals(
+            observations,
+            {
+                "clips": [
+                    {"clip_id": "clip-001", "start_seconds": 100.0, "end_seconds": 104.0},
+                    {"clip_id": "clip-002", "start_seconds": 104.0, "end_seconds": 106.0},
+                ]
+            },
+        )
+        if adjacent_clip_visibility
+        else (
+            ProtectedInterval(
+                action.action_ref,
+                action.clip_id,
+                "far",
+                101.0,
+                102.0,
+                "human_observation",
+            ),
+        )
+    )
     projection = TrainingProjection(
         (
             (action.action_ref, TrainingDecision(
@@ -947,7 +1406,7 @@ def _rendered_bundle(
             )),
         ),
         (human_window,),
-        (ProtectedInterval(action.action_ref, action.clip_id, "far", 101.0, 102.0, "human_observation"),),
+        tuple(protected_intervals),
         (generated_window,), 1, 1, 1,
     )
     if no_windows:

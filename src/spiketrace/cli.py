@@ -247,6 +247,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify a synchronized evidence-aware active-review bundle.",
     )
     verify_review_bundle_parser.add_argument("output_dir", type=Path)
+    verify_review_bundle_parser.add_argument(
+        "--repo-root", type=Path, default=Path(".")
+    )
     return parser
 
 
@@ -420,7 +423,7 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
     if args.command == "verify-active-review-bundle":
         from ._active_learning_review_outputs import validate_result_bundle
 
-        return validate_result_bundle(args.output_dir)
+        return validate_result_bundle(args.output_dir, repo_root=args.repo_root)
 
     raise ValueError(f"Unknown command: {args.command}")
 

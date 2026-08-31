@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from spiketrace import _active_learning_review_outputs as outputs
 from spiketrace._active_learning_review_contract import FrozenArtifact
 from spiketrace._active_learning_review_observations import (
     ActionObservation,
@@ -91,6 +92,75 @@ class TrainingProtectionTests(unittest.TestCase):
 
 
 class TrainingProjectionTests(unittest.TestCase):
+    def test_source_bound_replay_rejects_valid_seed_with_mismatched_tie_output(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        selection = _selection("clip-001", start=0.0, end=10.0)
+        merged = _merged({
+            "far": ((
+                _window(0, 1.0, 2.0, "attack", 0.5),
+                _window(1, 3.0, 4.0, "attack", 0.5),
+            ),),
+        })
+        selection = _bound_selection(selection, merged)
+        projection = {
+            "background_guard_seconds": 0.0,
+            "effective_background_cap": 1,
+            "background_seed": 42,
+            "generated_background_windows": [
+                {
+                    "source_ref": "clip-001/hard-negative-far-1",
+                    "clip_id": "clip-001",
+                    "start_seconds": 3.0,
+                    "end_seconds": 4.0,
+                    "training_label": "background",
+                    "review_label": "background",
+                    "team_side": "far",
+                    "crop": [0, 0, 100, 50],
+                    "player_number": None,
+                    "generated": True,
+                    "window_index": 1,
+                    "source_top1_action": "attack",
+                    "source_top1_confidence": 0.5,
+                    "note": "",
+                }
+            ],
+        }
+        outputs._validate_generated_background_replay(
+            selection, merged, observations, (), projection
+        )
+        projection["background_seed"] = 43
+
+        with self.assertRaisesRegex(ValueError, "generated background"):
+            outputs._validate_generated_background_replay(
+                selection, merged, observations, (), projection
+            )
+
+    def test_valid_integer_seed_changes_equal_confidence_tie_break(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        selection = _selection("clip-001", start=0.0, end=10.0)
+        merged = _merged({
+            "far": ((
+                _window(0, 1.0, 2.0, "attack", 0.5),
+                _window(1, 3.0, 4.0, "attack", 0.5),
+            ),),
+        })
+        selection = _bound_selection(selection, merged)
+
+        selected_by_seed = tuple(
+            select_hard_negatives(
+                selection, merged, observations, (), 0.0, 1, seed
+            )
+            for seed in (42, 43)
+        )
+
+        self.assertEqual(
+            tuple(
+                tuple(window.window_index for window in selected)
+                for selected in selected_by_seed
+            ),
+            ((1,), (0,)),
+        )
+
     def test_background_candidates_sort_by_confidence_before_sha_tie_break(self):
         observations = _observations(actions=(_sentinel("clip-001", "far"),))
         selection = _selection("clip-001", start=0.0, end=10.0)

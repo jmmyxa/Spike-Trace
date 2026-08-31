@@ -316,10 +316,10 @@ def load_review_sources_v2(
     expected_result = derive_result_set_id(batch_id, round_id, selection_binding.sha256, workbook_binding.sha256, override_binding.sha256)
     if review["result_set_id"] != expected_result:
         raise ValueError("result_set_id does not match frozen source hashes.")
+    review_set_key = _text(review["review_set_key"], "review_set_key")
     if (
-        not isinstance(review["review_set_key"], str)
-        or not re.fullmatch(r"[^/]+/round-[0-9]{2}", review["review_set_key"])
-        or not review["review_set_key"].endswith(f"/{round_id}")
+        not re.fullmatch(r"[^/]+/round-[0-9]{2}", review_set_key)
+        or not review_set_key.endswith(f"/{round_id}")
     ):
         raise ValueError("review_set_key must be nonempty text.")
     video_binding = _video_binding(review["video"])
@@ -333,7 +333,7 @@ def load_review_sources_v2(
     participants = _validate_participants(review["action_participants"], actions)
     audit = _validate_audit(review["normalization_audit"], actions, source_repairs)
     return ValidatedReviewInput(
-        expected_result, review["review_set_key"], batch_id, round_id, 1,
+        expected_result, review_set_key, batch_id, round_id, 1,
         ReviewSourceHashes(selection_binding.sha256, workbook_binding.sha256, override_binding.sha256, snapshots.review_input.sha256, merged_binding.sha256),
         selection_binding, ArtifactBinding(snapshots.review_input.repo_path, snapshots.review_input.sha256), workbook_binding, override_binding, merged_binding, video_binding,
         _selection_artifact._load_json_bytes(snapshots.merged_candidates.raw, description="merged review source"),
@@ -785,8 +785,10 @@ def _source_identity(value: dict[str, object]) -> None:
 
 
 def _refs(value: object, actions: dict[str, dict[str, object]], description: str) -> list[str]:
-    if not isinstance(value, list) or not value:
-        raise ValueError(f"{description} related_action_refs must be nonempty.")
+    if not isinstance(value, list):
+        raise ValueError(  # noqa: TRY004
+            f"{description} related_action_refs must be an array."
+        )
     if any(not isinstance(ref, str) or ref not in actions for ref in value) or len(value) != len(set(value)):
         raise ValueError(f"{description} contains dangling or duplicate action refs.")
     return value
@@ -845,7 +847,13 @@ def _sha256_file(path: Path) -> str:
 
 
 def _text(value: object, description: str, *, allow_empty: bool = False) -> str:
-    if not isinstance(value, str) or (not allow_empty and not value.strip()):
+    if not isinstance(value, str) or (
+        not allow_empty
+        and (
+            not value.strip()
+            or any(ord(character) <= 0x1F for character in value)
+        )
+    ):
         raise ValueError(f"{description} must be nonempty text.")
     return value
 

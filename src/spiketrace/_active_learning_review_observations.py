@@ -140,19 +140,21 @@ def merge_visibility_events(
     result_set_id: str,
     event_kind: str,
 ) -> tuple[VisibilityEvent, ...]:
-    """Merge same-side intervals for one visibility event kind."""
+    """Merge same-clip, same-side intervals for one visibility event kind."""
     matching = [
         _visibility_observation(value)
         for value in observations
         if _field(value, "event_kind") == event_kind
     ]
-    by_side: dict[str, list[VisibilityObservation]] = {}
+    by_clip_side: dict[tuple[str, str], list[VisibilityObservation]] = {}
     for observation in matching:
-        by_side.setdefault(observation.team_side, []).append(observation)
+        by_clip_side.setdefault(
+            (observation.clip_id, observation.team_side), []
+        ).append(observation)
 
     grouped = [
         sorted(values, key=lambda value: (value.start_seconds, value.end_seconds, value.visibility_ref))
-        for values in by_side.values()
+        for values in by_clip_side.values()
     ]
     grouped.sort(
         key=lambda values: (

@@ -1358,6 +1358,19 @@ class ApplyActiveReviewV2Tests(unittest.TestCase):
         )
         self.assertEqual(records[0].split, "train")
 
+    def test_publication_validates_staging_bundle_against_repository_sources(self):
+        from spiketrace import _active_learning_review_outputs as output_module
+
+        with mock.patch.object(
+            output_module,
+            "validate_result_bundle",
+            wraps=output_module.validate_result_bundle,
+        ) as validate:
+            self.apply()
+
+        validate.assert_called_once()
+        self.assertEqual(validate.call_args.kwargs, {"repo_root": self.repository})
+
     def test_missing_video_is_allowed_only_without_file_requirement(self):
         original_exists = Path.exists
         video_key = os.path.normcase(os.path.abspath(self.video))
@@ -1495,7 +1508,7 @@ class ActiveReviewV2CliTests(unittest.TestCase):
         ) as validate:
             result = run_command(args)
 
-        validate.assert_called_once_with(Path("bundle"))
+        validate.assert_called_once_with(Path("bundle"), repo_root=Path("."))
         self.assertEqual(result, {"summary": {"training_rows": 3}})
 
 

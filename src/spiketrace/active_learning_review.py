@@ -961,6 +961,7 @@ def apply_active_review_v2(
         BundleSettings,
         publish_result_bundle,
         render_result_bundle,
+        validate_result_bundle,
     )
     from ._active_learning_review_projection import build_training_projection
 
@@ -1077,6 +1078,7 @@ def apply_active_review_v2(
     publish_result_bundle(
         destination,
         bundle,
+        validate=lambda staging: validate_result_bundle(staging, repo_root=root),
         before_publish=publication_callback,
     )
     return bundle.authority
