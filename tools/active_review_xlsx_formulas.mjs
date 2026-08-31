@@ -98,6 +98,7 @@ function admitZip(workbookBytes) {
     if (offset + 46 > eocd || view.getUint32(offset, true) !== 0x02014b50) fail("XLSX package central directory entry is invalid.");
     const flags = view.getUint16(offset + 8, true);
     const method = view.getUint16(offset + 10, true);
+    const crc = view.getUint32(offset + 16, true);
     const compressedSize = view.getUint32(offset + 20, true);
     const uncompressedSize = view.getUint32(offset + 24, true);
     const nameLength = view.getUint16(offset + 28, true);
@@ -124,13 +125,14 @@ function admitZip(workbookBytes) {
     if (localOffset + 30 > centralOffset || view.getUint32(localOffset, true) !== 0x04034b50) fail("XLSX package local entry is invalid.");
     const localFlags = view.getUint16(localOffset + 6, true);
     const localMethod = view.getUint16(localOffset + 8, true);
+    const localCrc = view.getUint32(localOffset + 14, true);
     const localCompressedSize = view.getUint32(localOffset + 18, true);
     const localUncompressedSize = view.getUint32(localOffset + 22, true);
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
     const localDataEnd = localOffset + 30 + localNameLength + localExtraLength + compressedSize;
     if (inspectZipExtras(workbookBytes, localOffset + 30 + localNameLength, localExtraLength)) fail("XLSX package uses unsupported ZIP64 data.");
-    if (localDataEnd > centralOffset || localFlags !== flags || localMethod !== method || localCompressedSize !== compressedSize || localUncompressedSize !== uncompressedSize || zipName(workbookBytes, localOffset + 30, localNameLength) !== name) fail("XLSX package local entry does not match its central directory entry.");
+    if (localDataEnd > centralOffset || localFlags !== flags || localMethod !== method || localCrc !== crc || localCompressedSize !== compressedSize || localUncompressedSize !== uncompressedSize || zipName(workbookBytes, localOffset + 30, localNameLength) !== name) fail("XLSX package local entry does not match its central directory entry.");
     offset = entryEnd;
   }
   if (offset !== eocd) fail("XLSX package central directory size is invalid.");

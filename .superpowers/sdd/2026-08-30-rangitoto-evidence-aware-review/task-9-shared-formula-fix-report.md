@@ -278,3 +278,36 @@ Frozen real public path:
 ```
 
 The selection, workbook, and override remain frozen. `round-01-review-v2.json` remains absent. The only remaining real-public-path concern is still the separate `round-01-clip-023` overlapping timed rows rule.
+
+## Formal Review Round 2/5: Local ZIP CRC
+
+Starting HEAD for this round:
+
+```text
+9fa6ae72ba9188c90d878c3c2f5c81451f01ab53 fix: harden shared formula package verification
+```
+
+The single scoped Important finding was that admission compared local and central signatures, names, flags, methods, and sizes, but did not compare the local-header CRC at offset `+14` with the central-directory CRC at offset `+16`.
+
+The public mutation flips one bit only in the local header CRC for `xl/workbook.xml`. The central record, compressed data, workbook semantics, and compatibility envelope remain unchanged. Before the production fix, the focused suite produced the intended RED:
+
+```text
+AssertionError: Missing expected rejection: local CRC must match the central directory CRC
+exit=1
+```
+
+The minimal GREEN reads both CRC fields and adds their equality to the existing central/local consistency gate. Data descriptors remain rejected, and the existing ZIP64, size/ratio, unsafe-name, Unicode Path, duplicate-entry, encryption, compression-method, and extra-field checks are unchanged. The focused public suite then exited `0`.
+
+Fresh round-2 verification:
+
+```text
+tools/test_active_review_shared_formulas.mjs             exit=0
+tools/test_active_review_evidence.mjs                    exit=0
+tools/test_active_review_batch.mjs                       exit=0
+real frozen public raw stage                             exit=0
+node --check changed JavaScript files                    exit=0
+.venv/Scripts/ruff.exe check .                           All checks passed!
+git diff --check                                         exit=0
+```
+
+The real public stage again found 40 shared blocks, 39 standard blocks, the exact C28:C39 mixed block, and advanced to `Clip round-01-clip-023 has overlapping timed rows`. The selection and workbook hashes remain `c7c9d4...` and `3b3baa...`; `round-01-review-v2.json` remains absent. The untracked Task 9 override was concurrently updated by its owning task during verification and was neither modified nor staged by this formula-fix round. Scoped independent re-review reported no Critical or Important finding.

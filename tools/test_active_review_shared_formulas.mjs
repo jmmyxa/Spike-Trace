@@ -98,6 +98,38 @@ function duplicateCentralDirectoryEntry(workbookBytes, entryName) {
   return Buffer.concat([bytes.subarray(0, eocdOffset), duplicate, eocd]);
 }
 
+function changeLocalCrc(workbookBytes, entryName) {
+  const bytes = Buffer.from(workbookBytes);
+  let eocdOffset = -1;
+  for (let offset = bytes.length - 22; offset >= Math.max(0, bytes.length - 65_557); offset -= 1) {
+    if (bytes.readUInt32LE(offset) === 0x06054b50 && offset + 22 + bytes.readUInt16LE(offset + 20) === bytes.length) {
+      eocdOffset = offset;
+      break;
+    }
+  }
+  assert.notEqual(eocdOffset, -1, "Fixture ZIP end record must exist.");
+  const centralOffset = bytes.readUInt32LE(eocdOffset + 16);
+  const centralSize = bytes.readUInt32LE(eocdOffset + 12);
+  let entryOffset = centralOffset;
+  let localOffset = null;
+  while (entryOffset < centralOffset + centralSize) {
+    assert.equal(bytes.readUInt32LE(entryOffset), 0x02014b50, "Fixture central directory entry must be valid.");
+    const nameLength = bytes.readUInt16LE(entryOffset + 28);
+    const extraLength = bytes.readUInt16LE(entryOffset + 30);
+    const commentLength = bytes.readUInt16LE(entryOffset + 32);
+    const name = bytes.subarray(entryOffset + 46, entryOffset + 46 + nameLength).toString("utf8");
+    if (name === entryName) {
+      localOffset = bytes.readUInt32LE(entryOffset + 42);
+      break;
+    }
+    entryOffset += 46 + nameLength + extraLength + commentLength;
+  }
+  assert.notEqual(localOffset, null, `Fixture central directory entry ${entryName} must exist.`);
+  assert.equal(bytes.readUInt32LE(localOffset), 0x04034b50, "Fixture local entry must be valid.");
+  bytes.writeUInt32LE((bytes.readUInt32LE(localOffset + 14) ^ 1) >>> 0, localOffset + 14);
+  return bytes;
+}
+
 function crc32(bytes) {
   let value = 0xffffffff;
   for (const byte of bytes) {
@@ -446,6 +478,9 @@ try {
     const duplicateEntryBytes = duplicateCentralDirectoryEntry(fixture.producerBytes, entryName);
     await assert.rejects(() => verify(fixture, duplicateEntryBytes, PRODUCER_PERMISSIONS), /raw formula/, `duplicate ZIP entry ${entryName} must be rejected`);
   }
+
+  const localCrcMismatchBytes = changeLocalCrc(fixture.producerBytes, "xl/workbook.xml");
+  await assert.rejects(() => verify(fixture, localCrcMismatchBytes, PRODUCER_PERMISSIONS), /local entry does not match its central directory entry/, "local CRC must match the central directory CRC");
 
   const unicodeCollisionBytes = addUnicodePathOverride(fixture.producerBytes, "[Content_Types].xml", "xl/workbook.xml");
   await assert.rejects(() => verify(fixture, unicodeCollisionBytes, PRODUCER_PERMISSIONS), /unsupported Unicode Path extra field/, "central Unicode Path extra fields must be rejected before JSZip");
