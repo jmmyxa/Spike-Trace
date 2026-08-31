@@ -320,3 +320,67 @@ git diff --check: exit 0
 ```
 
 The unexcluded repository Ruff command still reports only the same two protected, untracked `make_video.py` import-order findings. Neither protected evidence root is changed or staged by this round.
+
+## Formal Review Fix Round 2/5
+
+Fix base: `5c10748`. This round addresses only the remaining Important whitespace-text finding. The report-command continuation Minor and unused-`BundleSettings` Minor remain in the aggregate-review ledger and are not changed here.
+
+Task 8's `_nonempty_text` rejected only `""`, unlike Task 5's required-text rule, so whitespace-only identifiers and repository paths survived semantic validation. Each regression rewrites semantic authority, recomputes `content_sha256`, synchronizes manifest sources/root hash/authority bytes, and updates participant or training CSV hashes where the identifier is cross-view data.
+
+Actual executable RED command (one line):
+
+```powershell
+$env:PYTHONPATH=(Resolve-Path 'src').Path; .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_required_source_identifiers tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_projection_video_and_match_identity tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_projected_participant_identifiers -v
+```
+
+Raw RED result:
+
+```text
+sources.video.video_id whitespace ... FAIL accepted
+sources.video.path whitespace ... FAIL accepted
+selection/review_input/workbook/evidence_overrides/merged_candidates/base_manifest
+  binding path whitespace ... six FAIL accepted
+training_video_path/review_match_id whitespace with synchronized projected CSV
+  ... two FAIL accepted
+confirmed participant track_id/identity_ref/player_number whitespace with
+  synchronized participant/training CSV ... three FAIL accepted
+Ran 3 tests in 0.065s
+FAILED (failures=13)
+```
+
+The minimal fix changes required text validation to require `isinstance(value, str)` and `value.strip()` nonempty, while returning the original value unchanged. No silent trimming occurs. Nullable fields and fields explicitly allowing empty text continue to use their existing validation. Repository paths retain absolute/Windows/backslash/parent-escape rejection and now explicitly reject `.`.
+
+Actual executable targeted GREEN command (one line):
+
+```powershell
+$env:PYTHONPATH=(Resolve-Path 'src').Path; .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_required_source_identifiers tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_projection_video_and_match_identity tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_whitespace_projected_participant_identifiers -v
+```
+
+Raw GREEN result:
+
+```text
+Ran 3 tests in 0.060s
+OK
+```
+
+Actual executable full focused regression command (one line):
+
+```powershell
+$env:PYTHONPATH=(Resolve-Path 'src').Path; .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_contract tests.test_active_learning_review_observations tests.test_active_learning_review_projection tests.test_active_learning_review_outputs tests.test_active_learning_review
+```
+
+Raw result:
+
+```text
+Ran 112 tests in 67.155s
+OK
+```
+
+Outputs plus active-review focused regression:
+
+```text
+Ran 74 tests in 4.539s
+OK
+```
+
+Final round checks: scoped Ruff and repository Ruff with the two protected evidence roots excluded both report `All checks passed!`; `compileall` and `git diff --check` exit `0`. Unexcluded Ruff still reports only the same two protected untracked `make_video.py` import-order findings.

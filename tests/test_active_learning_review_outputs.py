@@ -21,6 +21,7 @@ from spiketrace._active_learning_review_contract import (
 )
 from spiketrace._active_learning_review_observations import (
     ActionObservation,
+    ActionParticipant,
     ObservationSet,
     OutcomeObservation,
     VisibilityEvent,
@@ -640,6 +641,84 @@ class ResultBundleTamperValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "player|training_projection"):
             validate_result_bundle(self.bundle_dir)
 
+    def test_rejects_rehashed_whitespace_required_source_identifiers(self):
+        cases = [
+            ("video_id", lambda sources: sources["video"].__setitem__("video_id", "   ")),
+            ("video path", lambda sources: sources["video"].__setitem__("path", "   ")),
+        ]
+        cases.extend(
+            (
+                f"{name} path",
+                lambda sources, binding=name: sources[binding].__setitem__("path", "   "),
+            )
+            for name in (
+                "selection", "review_input", "workbook", "evidence_overrides",
+                "merged_candidates", "base_manifest",
+            )
+        )
+        for label, mutate in cases:
+            with self.subTest(label=label):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                mutate(authority["sources"])
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(ValueError, "nonempty|POSIX|sources"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_whitespace_projection_video_and_match_identity(self):
+        cases = (
+            ("training_video_path", "video_path"),
+            ("review_match_id", "match_id"),
+        )
+        for authority_field, csv_field in cases:
+            with self.subTest(field=authority_field):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                authority["training_projection"][authority_field] = "   "
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+                training_path = self.bundle_dir / "action_training_round_01.csv"
+                rows = _csv_rows(training_path.read_bytes())
+                for row in rows[-2:]:
+                    row[csv_field] = "   "
+                training_path.write_bytes(_test_csv_bytes(tuple(rows[0]), rows))
+                _refresh_export_hashes(self.bundle_dir, training_path.name)
+
+                with self.assertRaisesRegex(ValueError, "nonempty|training_projection"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_whitespace_projected_participant_identifiers(self):
+        for field in ("track_id", "identity_ref", "player_number"):
+            with self.subTest(field=field):
+                for filename, raw in _rendered_bundle(with_participant=True).artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                authority["action_participants"][0][field] = "   "
+                if field == "player_number":
+                    authority["training_projection"]["human_windows"][0][field] = "   "
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                participants_path = self.bundle_dir / "round-01-action-participants.csv"
+                participant_rows = _csv_rows(participants_path.read_bytes())
+                participant_rows[0][field] = "   "
+                participants_path.write_bytes(
+                    _test_csv_bytes(tuple(participant_rows[0]), participant_rows)
+                )
+                _refresh_export_hashes(self.bundle_dir, participants_path.name)
+                if field == "player_number":
+                    training_path = self.bundle_dir / "action_training_round_01.csv"
+                    training_rows = _csv_rows(training_path.read_bytes())
+                    training_rows[-2][field] = "   "
+                    training_path.write_bytes(
+                        _test_csv_bytes(tuple(training_rows[0]), training_rows)
+                    )
+                    _refresh_export_hashes(self.bundle_dir, training_path.name)
+
+                with self.assertRaisesRegex(ValueError, "nonempty|participant"):
+                    validate_result_bundle(self.bundle_dir)
+
 
 def _csv_rows(raw: bytes) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"), newline="")))
@@ -805,7 +884,11 @@ class _FailingIO:
 
 
 def _rendered_bundle(
-    note: str = "自由球", *, no_windows: bool = False, no_base_rows: bool = False
+    note: str = "自由球",
+    *,
+    no_windows: bool = False,
+    no_base_rows: bool = False,
+    with_participant: bool = False,
 ):
     action = ActionObservation(
         "clip-001/action-001", "clip-001", 1, 4,
@@ -829,12 +912,25 @@ def _rendered_bundle(
         "timed", (action.action_ref,), ("result-test/source-001",),
         ((103.0, 104.0),), "screened",
     )
+    participant = ActionParticipant(
+        action.action_ref,
+        "track-001",
+        "player-008",
+        "8",
+        "primary_actor",
+        "touched",
+        "confirmed",
+        0.9,
+        (),
+    )
+    participants = (participant,) if with_participant else ()
     observations = ObservationSet(
-        "result-test", (action, sentinel), (outcome,), (), (occlusion,), (), (),
+        "result-test", (action, sentinel), (outcome,), (), (occlusion,), (), participants,
     )
     human_window = TrainingWindow(
         action.action_ref, action.clip_id, 101.0, 102.0, "serve", "serve",
-        "far", (0, 0, 100, 50), None, False, None, None, None, note,
+        "far", (0, 0, 100, 50), "8" if with_participant else None,
+        False, None, None, None, note,
     )
     generated_window = TrainingWindow(
         "clip-002/hard-negative-far-9", "clip-002", 201.0, 202.0,

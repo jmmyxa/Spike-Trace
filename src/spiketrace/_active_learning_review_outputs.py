@@ -1364,6 +1364,7 @@ def _repo_path_text(value: object, description: str) -> str:
         or posix.is_absolute()
         or "\\" in text
         or text.startswith("/")
+        or posix.as_posix() == "."
         or ".." in posix.parts
     ):
         raise ValueError(f"{description} must be a repository-relative POSIX path.")
@@ -1428,7 +1429,7 @@ def _is_unit_interval(value: object) -> bool:
 
 
 def _nonempty_text(value: object, description: str) -> str:
-    if not isinstance(value, str) or not value:
+    if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{description} must be nonempty text.")
     return value
 
