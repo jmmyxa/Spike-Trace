@@ -37,6 +37,10 @@ class ReviewContractTests(unittest.TestCase):
         expected = "batch-1/result-549fd199e806acab"
         self.assertEqual(actual, expected)
 
+    def test_derives_result_identifier_from_unicode_batch_id(self):
+        result = derive_result_set_id("批次", "round-01", "a" * 64, "b" * 64, "c" * 64)
+        self.assertRegex(result, r"^批次/result-[0-9a-f]{16}$")
+
     def test_frozen_sources_validate_v2_bindings_and_detect_live_mutation(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
             directory = Path(temporary)
@@ -145,6 +149,34 @@ class ReviewContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "review_set_key"):
                 load_review_sources_v2(snapshots, selected)
 
+    def test_accepts_node_supplemental_timing_and_result_wide_visibility_refs(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            clip = selection["clips"][0]
+            result = review["result_set_id"]
+            timed = _supplemental(clip, 1, "timed")
+            bounds = _supplemental(clip, 2, "clip_bounds")
+            review["action_observations"].extend((timed, bounds))
+            review["visibility_observations"] = [
+                _visibility(result, 1, "occlusion", clip, timed["action_ref"]),
+                _visibility(result, 2, "off_camera", clip, bounds["action_ref"]),
+            ]
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+            validated = load_review_sources_v2(snapshots, selected)
+            self.assertEqual(validated.action_observations[2]["interval_scope"], "clip_bounds")
+            self.assertEqual(validated.visibility_observations[1]["visibility_ref"], f"{result}/off_camera-source-002")
+
 
 def _repo(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
@@ -186,7 +218,7 @@ def _valid_review(
         "format": "spiketrace.active-review-evidence-input", "format_version": 2,
         "result_set_id": result_set_id, "review_set_key": "rangitoto/round-01",
         "batch_id": selection["batch_id"], "round_id": selection["round_id"],
-        "selection": {"path": _repo(Path("tests") / "unused") if False else selection["source"]["merged_json"].replace("merged.json", "selection.json"), "sha256": _sha256(selection_bytes)},
+        "selection": {"path": selection["source"]["merged_json"].replace("merged.json", "selection.json"), "sha256": _sha256(selection_bytes)},
         "workbook": {"path": selection["source"]["merged_json"].replace("merged.json", "review.xlsx"), "sha256": _sha256(workbook_bytes)},
         "evidence_overrides": {"path": selection["source"]["merged_json"].replace("merged.json", "overrides.json"), "sha256": _sha256(overrides_bytes)},
         "video": selection["video"], "time_precision_seconds": 1,
@@ -195,6 +227,20 @@ def _valid_review(
         "outcome_observations": [{"outcome_ref": f"{result_set_id}/outcome-001", "related_action_refs": [action_ref], "outcome": "continued", "result_type": None, "evidence_basis": "referee_signal", "status": "observed_or_inferred", "note": ""}],
         "visibility_observations": [], "action_participants": [], "normalization_audit": [],
     }
+
+
+def _supplemental(clip: dict[str, object], index: int, scope: str) -> dict[str, object]:
+    ref = f"{clip['clip_id']}/supplemental-{index:03d}"
+    if scope == "timed":
+        relative_start, relative_end = 3, 4
+        start, end = clip["start_seconds"] + 3, clip["start_seconds"] + 4
+    else:
+        relative_start = relative_end = start = end = None
+    return {"action_ref": ref, "clip_id": clip["clip_id"], "source_action_slot": None, "source_row": None, "raw_values": {}, "normalized_values": {}, "review_label": "free_ball", "relative_start_seconds": relative_start, "relative_end_seconds": relative_end, "start_seconds": start, "end_seconds": end, "team_side": "far", "visibility": "direct_clear", "evidence_basis": "mixed", "interval_scope": scope, "background_scope": None, "side_inherited": False, "note": "", "source_reason": "supplemental", "source_repairs": []}
+
+
+def _visibility(result: str, index: int, kind: str, clip: dict[str, object], action_ref: str) -> dict[str, object]:
+    return {"visibility_ref": f"{result}/{kind}-source-{index:03d}", "event_kind": kind, "clip_id": clip["clip_id"], "team_side": "far", "start_seconds": clip["start_seconds"], "end_seconds": clip["end_seconds"], "interval_scope": "clip_bounds", "related_action_refs": [action_ref], "note": "", "source_reason": "observed"}
 
 
 if __name__ == "__main__":

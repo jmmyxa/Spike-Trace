@@ -137,7 +137,7 @@ def derive_result_set_id(
     round_name = _text(round_id, "round_id")
     digest = hashlib.sha256(
         b"\0".join(
-            value.encode("ascii")
+            value.encode("utf-8")
             for value in (
                 "spiketrace.active-review-observations", "2", batch, round_name, _hash(selection_sha256, "selection SHA-256"),
                 _hash(workbook_sha256, "workbook SHA-256"),
@@ -279,6 +279,11 @@ def load_review_sources_v2(
     snapshots: ReviewInputSnapshots, selection: dict[str, object]
 ) -> ValidatedReviewInput:
     review = _selection_artifact._load_json_bytes(snapshots.review_input.raw, description="review input")
+    frozen_selection = _selection_artifact._load_json_bytes(
+        snapshots.selection.raw, description="selection JSON"
+    )
+    if selection != frozen_selection:
+        raise ValueError("Caller selection does not match frozen selection bytes.")
     _exact(review, _REVIEW_ROOT_FIELDS, "review input")
     if review["format"] != "spiketrace.active-review-evidence-input" or type(review["format_version"]) is not int or review["format_version"] != 2:
         raise ValueError("Review input must use evidence input format version 2.")
@@ -307,7 +312,7 @@ def load_review_sources_v2(
     source_repairs = _list_of_objects(review["source_repairs"], "source_repairs")
     actions = _validate_actions(review["action_observations"], selection, source_rows)
     outcomes = _validate_outcomes(review["outcome_observations"], actions, expected_result)
-    visibility = _validate_visibility(review["visibility_observations"], actions, expected_result)
+    visibility = _validate_visibility(review["visibility_observations"], actions, selection, expected_result)
     participants = _validate_participants(review["action_participants"], actions)
     audit = _validate_audit(review["normalization_audit"], actions)
     return ValidatedReviewInput(
@@ -375,6 +380,7 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
             raise TypeError("action values and repairs must be objects/arrays.")
         slot = action["source_action_slot"]
         row = action["source_row"]
+        is_supplemental = slot is None and row is None
         if slot is None or row is None:
             if slot is not None or row is not None or not ref.startswith(f"{clip_id}/supplemental-"):
                 raise ValueError("supplemental actions need null source slot and row.")
@@ -382,6 +388,8 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
             supplemental.setdefault(clip_id, []).append(number)
         else:
             _source_identity(action)
+            if slot > 12 or ref != f"{clip_id}/action-{slot:03d}":
+                raise ValueError("source action ref must match its clip and slot.")
             source = source_by_ref.get(ref)
             if source is None:
                 raise ValueError("action observation source ref is dangling.")
@@ -389,13 +397,16 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
                 raise ValueError("action observation does not preserve its source row.")
         relative_start = action["relative_start_seconds"]
         relative_end = action["relative_end_seconds"]
-        if label == "background" and action["background_scope"] == "clip_sentinel":
+        if is_supplemental and action["interval_scope"] == "clip_bounds":
+            if any(item is not None for item in (relative_start, relative_end, action["start_seconds"], action["end_seconds"])):
+                raise ValueError("clip_bounds supplemental action must omit timed bounds.")
+        elif label == "background" and action["background_scope"] == "clip_sentinel":
             if any(item is not None for item in (relative_start, relative_end, action["start_seconds"], action["end_seconds"], action["interval_scope"])):
                 raise ValueError("clip-sentinel background must be untimed.")
         else:
             _whole(relative_start, "relative_start_seconds")
             _whole(relative_end, "relative_end_seconds")
-            if relative_end <= relative_start:
+            if relative_start < 0 or relative_end <= relative_start or relative_end > clips[clip_id]["duration_seconds"]:
                 raise ValueError("action interval must be positive.")
             _finite(action["start_seconds"], "start_seconds")
             _finite(action["end_seconds"], "end_seconds")
@@ -424,26 +435,31 @@ def _validate_outcomes(value: object, actions: list[dict[str, object]], result_i
         _enum(outcome["status"], _OUTCOME_STATUS, "outcome status")
         if outcome["result_type"] is not None and (not isinstance(outcome["result_type"], str) or not _RESULT_TYPE.fullmatch(outcome["result_type"])):
             raise ValueError("result_type is invalid.")
+        if outcome["status"] == "unresolved" and (outcome["outcome"] != "unknown" or outcome["result_type"] is not None):
+            raise ValueError("unresolved outcome must be unknown without result_type.")
         if outcome["result_type"] == "free_ball_error" and not (outcome["outcome"] == "point_lost" and any(action_map[ref]["review_label"] == "free_ball" for ref in refs)):
             raise ValueError("free_ball_error requires point_lost related to a free_ball.")
         _text(outcome["note"], "outcome note", allow_empty=True)
     return outcomes
 
 
-def _validate_visibility(value: object, actions: list[dict[str, object]], result_id: str) -> list[dict[str, object]]:
+def _validate_visibility(value: object, actions: list[dict[str, object]], selection: dict[str, object], result_id: str) -> list[dict[str, object]]:
     observations = _list_of_objects(value, "visibility_observations")
     action_map = {action["action_ref"]: action for action in actions}
-    counts = {"occlusion": 0, "off_camera": 0}
-    for observation in observations:
+    clips = {clip["clip_id"]: clip for clip in selection["clips"]}
+    for index, observation in enumerate(observations, 1):
         _exact(observation, _VISIBILITY_FIELDS, "visibility observation")
         kind = _enum(observation["event_kind"], _EVENT_KINDS, "event_kind")
-        counts[kind] += 1
-        if observation["visibility_ref"] != f"{result_id}/{kind}-source-{counts[kind]:03d}":
+        if observation["visibility_ref"] != f"{result_id}/{kind}-source-{index:03d}":
             raise ValueError("visibility refs must be stable and contiguous.")
         _finite(observation["start_seconds"], "visibility start_seconds")
         _finite(observation["end_seconds"], "visibility end_seconds")
         if observation["end_seconds"] <= observation["start_seconds"] or observation["interval_scope"] not in _INTERVAL_SCOPES:
             raise ValueError("visibility interval is invalid.")
+        if observation["clip_id"] not in clips:
+            raise ValueError("visibility observation references an unknown clip.")
+        if observation["interval_scope"] == "clip_bounds" and (observation["start_seconds"] != clips[observation["clip_id"]]["start_seconds"] or observation["end_seconds"] != clips[observation["clip_id"]]["end_seconds"]):
+            raise ValueError("clip_bounds visibility must equal selected clip bounds.")
         refs = _refs(observation["related_action_refs"], action_map, "visibility")
         for ref in refs:
             action = action_map[ref]
@@ -469,6 +485,9 @@ def _validate_visibility(value: object, actions: list[dict[str, object]], result
 def _validate_participants(value: object, actions: list[dict[str, object]]) -> list[dict[str, object]]:
     participants = _list_of_objects(value, "action_participants")
     refs = {action["action_ref"] for action in actions}
+    relations: set[tuple[object, ...]] = set()
+    tracks: set[tuple[object, object]] = set()
+    identities: set[tuple[object, object]] = set()
     for participant in participants:
         _exact(participant, _PARTICIPANT_FIELDS, "action participant")
         if participant["action_ref"] not in refs:
@@ -476,14 +495,46 @@ def _validate_participants(value: object, actions: list[dict[str, object]]) -> l
         _enum(participant["participation"], _PARTICIPATION, "participation")
         _enum(participant["touch_status"], _TOUCH_STATUS, "touch_status")
         status = _enum(participant["assignment_status"], _ASSIGNMENT_STATUS, "assignment_status")
+        for field in ("track_id", "identity_ref", "player_number"):
+            if participant[field] is not None:
+                _text(participant[field], field)
         if not isinstance(participant["evidence"], list):
             raise TypeError("participant evidence must be an array.")
+        evidence_keys: set[tuple[str, str, str]] = set()
+        for evidence in participant["evidence"]:
+            evidence_object = _mapping(evidence, "participant evidence")
+            _exact(evidence_object, ("kind", "source_ref", "value", "confidence"), "participant evidence")
+            _enum(evidence_object["kind"], {"manual_review", "track", "jersey_ocr", "roster"}, "participant evidence kind")
+            key = (evidence_object["kind"], _text(evidence_object["source_ref"], "participant evidence source_ref"), _text(evidence_object["value"], "participant evidence value"))
+            if key in evidence_keys:
+                raise ValueError("participant evidence duplicates a source tuple.")
+            evidence_keys.add(key)
+            if evidence_object["confidence"] is not None and not 0 <= _finite(evidence_object["confidence"], "participant evidence confidence") <= 1:
+                raise ValueError("participant evidence confidence must be in [0,1].")
+        confidence = participant["assignment_confidence"]
+        if confidence is not None and not 0 <= _finite(confidence, "assignment confidence") <= 1:
+            raise ValueError("assignment confidence must be in [0,1].")
         if status == "confirmed":
-            _finite(participant["assignment_confidence"], "confirmed assignment confidence")
-            if not 0 <= participant["assignment_confidence"] <= 1:
-                raise ValueError("confirmed assignment confidence must be in [0,1].")
-        elif status == "unresolved" and (participant["identity_ref"] is not None or participant["player_number"] is not None):
-            raise ValueError("unresolved assignment must not claim identity or player number.")
+            if participant["identity_ref"] is None or participant["player_number"] is None or confidence is None:
+                raise ValueError("confirmed assignment requires identity, player number, and confidence.")
+        elif status == "candidate" and (confidence is None or all(participant[field] is None for field in ("track_id", "identity_ref", "player_number"))):
+            raise ValueError("candidate assignment requires confidence and an identity handle.")
+        elif status == "unresolved" and (participant["identity_ref"] is not None or participant["player_number"] is not None or confidence is not None):
+            raise ValueError("unresolved assignment must not claim identity, player number, or confidence.")
+        relation = tuple(participant[field] for field in _PARTICIPANT_FIELDS[:-1])
+        if relation in relations:
+            raise ValueError("action participants contains duplicate relation.")
+        relations.add(relation)
+        if participant["track_id"] is not None:
+            key = (participant["action_ref"], participant["track_id"])
+            if key in tracks:
+                raise ValueError("action participants duplicates a track ID.")
+            tracks.add(key)
+        if participant["identity_ref"] is not None:
+            key = (participant["action_ref"], participant["identity_ref"])
+            if key in identities:
+                raise ValueError("action participants duplicates an identity reference.")
+            identities.add(key)
     return participants
 
 
