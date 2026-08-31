@@ -79,7 +79,7 @@ function actionObservation(row, clip, override) {
   const reviewLabel = override?.replacement_review_label ?? values.review_label;
   const visibility = override?.visibility ?? "direct_clear";
   const evidenceBasis = override?.evidence_basis ?? "direct_video";
-  const note = override?.replacement_note ?? values.note;
+  const note = override?.replacement_note ?? values.note ?? "";
   return {
     action_ref: row.action_ref,
     clip_id: row.clip_id,

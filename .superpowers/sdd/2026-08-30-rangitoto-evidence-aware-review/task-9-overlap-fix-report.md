@@ -74,6 +74,14 @@ The real evidence test now asserts clip 035 has zero `fully_occluded` action obs
 - Python: `tests.test_active_learning_review_projection` — `15` passed.
 - `git diff --check` — no whitespace errors; Git emitted only existing LF-to-CRLF warnings.
 
+## Review Follow-Up
+
+The scoped review identified one Important gap: source validation did not bind `raw_values.team_side` to `side_inherited`. A RED contract mutation showed non-inherited `raw team_side: null` with normalized `far` was accepted; the complementary inherited `raw team_side: far` shape was also covered.
+
+GREEN now requires inherited source rows to retain a null raw side and non-inherited rows to retain an equal raw and normalized side. Legal inherited and non-inherited fixtures remain accepted. The focused contract suite passes `20` tests, the projection suite passes `15`, and the Node evidence suite exits `0` after this follow-up.
+
+A second review found that real source notes are nullable while `ActionObservation.note` is a string consumed by downstream Python code. RED asserted the producer's null-note shape and observed `null !== ""`. GREEN keeps null in source `raw_values`/`normalized_values` and maps only the effective Node action note to `""`; the Python dataclass and contract remain string-valued. The focused Node evidence and nullable-source contract regressions pass.
+
 ## Frozen Source Hashes
 
 ```text
@@ -91,3 +99,5 @@ The evidence override remains an untracked Task 9 owner artifact and was intenti
 - Excluded timed sequence-context observations contribute protection and cannot create background training rows.
 - Sentinel isolation, clip bounds, paired whole-second times, side inheritance/conflict, hard-negative protection, and shared-formula verification remain unchanged.
 - No new columns/entities, selection/workbook edits, v2 bundle publication, or override staging are part of this commit.
+- Review follow-up does not alter effective scopes or training overlap policy; it only closes the source raw/normalized side identity gap.
+- Nullable source notes remain lossless; only effective action notes normalize null to the downstream-safe empty string.

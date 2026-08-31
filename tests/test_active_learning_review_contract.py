@@ -246,8 +246,8 @@ class ReviewContractTests(unittest.TestCase):
             (directory / "selection.json").write_bytes(selection_bytes)
             review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
             source = review["source_review_rows"][0]
-            source["raw_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2})
-            source["normalized_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2})
+            source["raw_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2, "note": None})
+            source["normalized_values"].update({"review_label": "background", "relative_start_seconds": 1, "relative_end_seconds": 2, "note": None})
             source["background_scope"] = "timed_interval"
             action = review["action_observations"][0]
             action.update({"raw_values": deepcopy(source["raw_values"]), "normalized_values": deepcopy(source["normalized_values"]), "review_label": "attack", "background_scope": None, "source_reason": "evidence override"})
@@ -260,8 +260,34 @@ class ReviewContractTests(unittest.TestCase):
 
             validated = load(review)
             self.assertEqual(validated.source_review_rows[0]["background_scope"], "timed_interval")
+            self.assertIsNone(validated.source_review_rows[0]["normalized_values"]["note"])
             self.assertEqual(validated.action_observations[0]["review_label"], "attack")
+            self.assertEqual(validated.action_observations[0]["note"], "")
             self.assertIsNone(validated.action_observations[0]["background_scope"])
+            for inherited, raw_side in (
+                (False, None),
+                (True, "far"),
+            ):
+                candidate = deepcopy(review)
+                candidate["source_review_rows"][0]["side_inherited"] = inherited
+                candidate["action_observations"][0]["side_inherited"] = inherited
+                candidate["source_review_rows"][0]["raw_values"]["team_side"] = raw_side
+                candidate["action_observations"][0]["raw_values"]["team_side"] = raw_side
+                with self.assertRaisesRegex(ValueError, "side|source"):
+                    load(candidate)
+            inherited_candidate = deepcopy(review)
+            inherited_candidate["source_review_rows"][0]["side_inherited"] = True
+            inherited_candidate["action_observations"][0]["side_inherited"] = True
+            inherited_candidate["source_review_rows"][0]["raw_values"]["team_side"] = None
+            inherited_candidate["action_observations"][0]["raw_values"]["team_side"] = None
+            inherited_candidate["normalization_audit"] = [{
+                "kind": "side_inheritance", "clip_id": selection["clips"][0]["clip_id"],
+                "action_ref": review["action_observations"][0]["action_ref"], "source_row": 4,
+                "raw_value": None, "normalized_value": "far", "reason": "inherit side",
+            }]
+            inherited_validated = load(inherited_candidate)
+            self.assertTrue(inherited_validated.source_review_rows[0]["side_inherited"])
+            self.assertIsNone(inherited_validated.source_review_rows[0]["raw_values"]["team_side"])
             for mutation, message in (
                 (lambda value: value["action_observations"][0].update({"background_scope": "timed_interval"}), "effective scope"),
                 (lambda value: value["action_observations"][0].update({"relative_start_seconds": 2}), "moved times"),

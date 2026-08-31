@@ -518,6 +518,11 @@ def _validate_source_values(row: dict[str, object]) -> None:
         raise ValueError("source values do not preserve the source clip.")
     if normalized["review_label"] not in _LABELS or normalized["team_side"] not in {"far", "near"}:
         raise ValueError("source values contain an invalid label or side.")
+    if row["side_inherited"]:
+        if raw["team_side"] is not None:
+            raise ValueError("inherited source side must preserve a null raw value.")
+    elif raw["team_side"] != normalized["team_side"]:
+        raise ValueError("non-inherited source side must preserve raw and normalized values.")
     start, end = normalized["relative_start_seconds"], normalized["relative_end_seconds"]
     if (start is None) != (end is None):
         raise ValueError("source values must use paired times.")

@@ -55,7 +55,7 @@ const compositionSelection = {
   clips: [{ clip_id: "clip-001", start_seconds: 100, end_seconds: 110, duration_seconds: 10 }],
 };
 const compositionRows = [
-  { action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: "raw" }, background_scope: null, side_inherited: false, source_repairs: [] },
+  { action_ref: "clip-001/action-001", clip_id: "clip-001", source_action_slot: 1, source_row: 4, raw_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, normalized_values: { clip_id: "clip-001", review_label: "receive", relative_start_seconds: 1, relative_end_seconds: 2, team_side: "far", note: null }, background_scope: null, side_inherited: false, source_repairs: [] },
   { action_ref: "clip-001/action-002", clip_id: "clip-001", source_action_slot: 2, source_row: 5, raw_values: { clip_id: "clip-001", review_label: "dig", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: "被拦回的保护" }, normalized_values: { clip_id: "clip-001", review_label: "dig", relative_start_seconds: 3, relative_end_seconds: 4, team_side: "near", note: "被拦回的保护" }, background_scope: null, side_inherited: true, source_repairs: [] },
   { action_ref: "clip-001/action-003", clip_id: "clip-001", source_action_slot: 3, source_row: 6, raw_values: { clip_id: "clip-001", review_label: "background", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", note: "source background" }, normalized_values: { clip_id: "clip-001", review_label: "background", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", note: "source background" }, background_scope: "timed_interval", side_inherited: false, source_repairs: [] },
 ];
@@ -78,6 +78,8 @@ assert.equal(compositionPayload.format_version, 2);
 assert.equal(compositionPayload.time_precision_seconds, 1);
 assert.equal(compositionPayload.action_observations[0].visibility, "direct_clear");
 assert.equal(compositionPayload.action_observations[0].evidence_basis, "direct_video");
+assert.equal(compositionPayload.action_observations[0].note, "");
+assert.equal(compositionPayload.source_review_rows[0].normalized_values.note, null);
 assert.deepEqual(compositionPayload.action_observations[0].raw_values, compositionRows[0].raw_values);
 assert.equal(compositionPayload.action_observations[1].review_label, "background");
 assert.equal(compositionPayload.action_observations[1].background_scope, "timed_interval");
