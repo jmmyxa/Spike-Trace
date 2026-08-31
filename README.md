@@ -135,6 +135,7 @@ Spike-Trace/
 │  ├─ test_active_learning_review_contract.py # 冻结证据输入与严格观察契约测试
 │  ├─ test_active_learning_review_observations.py # v2 观察组合、可见性合并与参与关系测试
 │  ├─ test_active_learning_review_projection.py # 训练投影、保护区间与硬负样本边界测试
+│  ├─ test_active_learning_review_outputs.py # v2 六文件发布、跨文件校验与无覆盖测试
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
 │  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试
@@ -294,7 +295,7 @@ spiketrace evaluate-pretrained `
 
 `compatibility_metrics` 只衡量旧六类模型发现宽泛防守触球候选的能力，不能覆盖人工 `dig` 真值，也不能作为七类部署成绩。
 
-当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。Rangitoto 主动学习选择器已经从整场候选池确定首轮 40 个短回合；现在只需在现成工作簿中穷举这些短回合内的我方动作。
+当前 `evaluate-pretrained` 只评估清单里已经给出的时间窗，不会从整场比赛自动发现新动作。`infer` 虽能执行整场滑窗推理，但只接受 Spike-Trace 自训练 checkpoint，不能直接使用这份外部 YOLO 权重。Rangitoto 主动学习选择器曾从整场候选池确定首轮 40 个短回合，工作簿中的我方动作穷举已完成并发布为不可变的 v2 结果。
 
 这一层参考 [volleyball_analytics](https://github.com/masouduut94/volleyball_analytics) 公布的动作类别，但直接通过 Ultralytics 加载权重，没有复制其 GPLv2 主仓库代码。其 ML 子仓库标注为 MIT，而下载权重和训练数据的授权范围仍需在重新分发前单独确认；Ultralytics 本身也有 AGPL-3.0/商业授权要求。外部项目公布的指标只能用于筛选候选模型，不能当作本项目在美国队视频上的准确率。
 
