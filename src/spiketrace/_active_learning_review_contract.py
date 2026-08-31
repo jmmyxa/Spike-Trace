@@ -568,6 +568,11 @@ def _validate_visibility(value: object, actions: list[dict[str, object]], select
             raise ValueError("visibility observation references an unknown clip.")
         if observation["interval_scope"] == "clip_bounds" and (observation["start_seconds"] != clips[observation["clip_id"]]["start_seconds"] or observation["end_seconds"] != clips[observation["clip_id"]]["end_seconds"]):
             raise ValueError("clip_bounds visibility must equal selected clip bounds.")
+        if observation["interval_scope"] == "timed" and (
+            observation["start_seconds"] < clips[observation["clip_id"]]["start_seconds"]
+            or observation["end_seconds"] > clips[observation["clip_id"]]["end_seconds"]
+        ):
+            raise ValueError("timed visibility must stay within selected clip bounds.")
         refs = _refs(observation["related_action_refs"], action_map, "visibility")
         for ref in refs:
             action = action_map[ref]

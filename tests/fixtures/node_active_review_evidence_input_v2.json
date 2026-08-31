@@ -1,0 +1,27 @@
+{
+  "format": "spiketrace.active-review-evidence-input",
+  "format_version": 2,
+  "result_set_id": "batch-1/result-549fd199e806acab",
+  "review_set_key": "review/round-01",
+  "batch_id": "batch-1",
+  "round_id": "round-01",
+  "selection": {"path": "selection.json", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "workbook": {"path": "review.xlsx", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "evidence_overrides": {"path": "overrides.json", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+  "video": {"video_id": "video-1", "path": "video.mp4", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "fps": 30, "frame_count": 300, "width": 100, "height": 50, "duration_seconds": 10, "crops": {"far": [0, 0, 100, 25], "near": [0, 25, 100, 50]}},
+  "time_precision_seconds": 1,
+  "source_review_rows": [
+    {"action_ref": "clip-001/action-001", "clip_id": "clip-001", "source_action_slot": 1, "source_row": 4, "raw_values": {"clip_id": "clip-001", "review_label": "receive", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""}, "normalized_values": {"clip_id": "clip-001", "review_label": "receive", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""}, "background_scope": null, "side_inherited": false, "source_repairs": []},
+    {"action_ref": "clip-001/action-002", "clip_id": "clip-001", "source_action_slot": 2, "source_row": 5, "raw_values": {"clip_id": "clip-001", "review_label": "attack", "relative_start_seconds": 3, "relative_end_seconds": 4, "team_side": null, "note": ""}, "normalized_values": {"clip_id": "clip-001", "review_label": "attack", "relative_start_seconds": 3, "relative_end_seconds": 4, "team_side": "near", "note": ""}, "background_scope": null, "side_inherited": true, "source_repairs": []}
+  ],
+  "source_repairs": [],
+  "action_observations": [
+    {"action_ref": "clip-001/action-001", "clip_id": "clip-001", "source_action_slot": 1, "source_row": 4, "raw_values": {"clip_id": "clip-001", "review_label": "receive", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""}, "normalized_values": {"clip_id": "clip-001", "review_label": "receive", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""}, "review_label": "receive", "relative_start_seconds": 1, "relative_end_seconds": 2, "start_seconds": 101, "end_seconds": 102, "team_side": "far", "visibility": "direct_clear", "evidence_basis": "direct_video", "interval_scope": "timed", "background_scope": null, "side_inherited": false, "note": "", "source_reason": null, "source_repairs": []},
+    {"action_ref": "clip-001/action-002", "clip_id": "clip-001", "source_action_slot": 2, "source_row": 5, "raw_values": {"clip_id": "clip-001", "review_label": "attack", "relative_start_seconds": 3, "relative_end_seconds": 4, "team_side": null, "note": ""}, "normalized_values": {"clip_id": "clip-001", "review_label": "attack", "relative_start_seconds": 3, "relative_end_seconds": 4, "team_side": "near", "note": ""}, "review_label": "attack", "relative_start_seconds": 3, "relative_end_seconds": 4, "start_seconds": 103, "end_seconds": 104, "team_side": "near", "visibility": "direct_clear", "evidence_basis": "direct_video", "interval_scope": "timed", "background_scope": null, "side_inherited": true, "note": "", "source_reason": null, "source_repairs": []},
+    {"action_ref": "clip-001/supplemental-001", "clip_id": "clip-001", "source_action_slot": null, "source_row": null, "raw_values": null, "normalized_values": null, "review_label": "free_ball", "relative_start_seconds": 5, "relative_end_seconds": 6, "start_seconds": 105, "end_seconds": 106, "team_side": "near", "visibility": "direct_clear", "evidence_basis": "direct_video", "interval_scope": "timed", "background_scope": null, "side_inherited": false, "note": "added", "source_reason": "missed action", "source_repairs": []}
+  ],
+  "outcome_observations": [],
+  "visibility_observations": [],
+  "action_participants": [],
+  "normalization_audit": [{"kind": "side_inheritance", "clip_id": "clip-001", "action_ref": "clip-001/action-002", "source_row": 5, "raw_value": null, "normalized_value": "near", "reason": "inherit side"}]
+}

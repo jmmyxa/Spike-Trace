@@ -104,3 +104,108 @@ bundled Node runtime, artifact loader, and synthetic-pipeline Python; it
 reaches fixture construction but stops because `spiketrace build-review-clips`
 is not implemented in this branch (Task 6 scope), so this round leaves that
 unrelated command untouched.
+
+## Fix Round 5 RED/GREEN
+
+### RED
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_contract.ReviewContractTests.test_timed_visibility_must_stay_within_selected_clip -v
+```
+
+Observed exit `1`:
+
+```text
+label='below start' ... FAIL
+label='past end' ... FAIL
+AssertionError: ValueError not raised
+```
+
+The validator checked finite/positive timed visibility intervals but did not
+compare them against the selected clip bounds.
+
+### GREEN
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_contract.ReviewContractTests.test_timed_visibility_must_stay_within_selected_clip -v
+```
+
+Observed exit `0`:
+
+```text
+Ran 1 test in 8.393s
+OK
+```
+
+The regression covers an interval exactly at both clip boundaries plus lower
+and upper out-of-bounds mutations. The contract now rejects timed visibility
+outside its selected clip.
+
+The producer fixture at
+`tests/fixtures/node_active_review_evidence_input_v2.json` was rendered with
+the bundled Node runtime by calling the real
+`composeEvidenceSynthesisInput` export. The positive contract test loads that
+serialized producer payload (including supplemental null values and a
+side-inheritance normalization audit) and replaces only test-local artifact
+bindings and selected-clip absolute times. Participant coverage now exercises
+valid confirmed/candidate/unresolved records and rejects missing confirmed
+identity, candidate without a handle, unresolved identity claims, and a
+duplicate action track.
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_active_learning_review_contract -v
+```
+
+Observed exit `0`. The runner’s 30-second stream window truncated the final
+summary, so the same 19 methods were also completed in bounded invocations:
+
+```text
+Ran 10 tests in 22.614s
+OK
+Ran 2 tests in 23.208s
+OK
+Ran 4 tests in 8.576s
+OK
+Ran 3 tests in 8.371s
+OK
+```
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& .venv\Scripts\python.exe -m unittest tests.test_dual_crop_review tests.test_active_learning_selection -v
+```
+
+Observed exit `0`:
+
+```text
+Ran 76 tests in 11.866s
+OK
+```
+
+```powershell
+.venv\Scripts\ruff.exe check src\spiketrace\_active_learning_review_contract.py tests\test_active_learning_review_contract.py
+```
+
+Observed exit `0`:
+
+```text
+All checks passed!
+```
+
+```powershell
+$env:NODE_OPTIONS = '--experimental-loader=file:///E%3A/Spike-Trace/.worktrees/rangitoto-active-learning-round-01/outputs/.rangitoto-review-build/artifact-loader.mjs'
+$env:NODE_PATH = 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules'
+$env:SPIKETRACE_PYTHON = (Resolve-Path '.venv\Scripts\python.exe').Path
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tools/test_active_review_evidence.mjs
+& 'C:\Users\Fakelove\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' tools/test_active_review_batch.mjs
+```
+
+Both commands were rerun through an external wait wrapper after the stream
+window elapsed. Observed explicit exit code for each command: `0`. Their only
+stderr line was Node’s experimental-loader warning; the evidence output ended
+with an inspection record under `.active-review-evidence-root-*`, and the
+batch output ended with the rollback inspection record.

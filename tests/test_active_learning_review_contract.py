@@ -181,22 +181,14 @@ class ReviewContractTests(unittest.TestCase):
             selection = _valid_selection(directory, merged_bytes)
             selection_bytes = _json_bytes(selection)
             (directory / "selection.json").write_bytes(selection_bytes)
-            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
-            clip = selection["clips"][0]
-            result = review["result_set_id"]
-            timed = _supplemental(clip, 1, "timed")
-            bounds = _supplemental(clip, 2, "clip_bounds")
-            review["action_observations"].extend((timed, bounds))
-            review["visibility_observations"] = [
-                _visibility(result, 1, "occlusion", clip, timed["action_ref"]),
-                _visibility(result, 2, "occlusion", clip, bounds["action_ref"]),
-            ]
+            review = _node_producer_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
             (directory / "review-v2.json").write_bytes(_json_bytes(review))
             snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
             selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
             validated = load_review_sources_v2(snapshots, selected)
-            self.assertEqual(validated.action_observations[2]["interval_scope"], "clip_bounds")
-            self.assertEqual(validated.visibility_observations[1]["visibility_ref"], f"{result}/occlusion-source-002")
+            self.assertIsNone(validated.action_observations[2]["raw_values"])
+            self.assertEqual(validated.action_observations[2]["source_reason"], "missed action")
+            self.assertEqual(validated.normalization_audit[0]["kind"], "side_inheritance")
 
     def test_rejects_supplemental_action_with_source_only_state(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
@@ -260,6 +252,69 @@ class ReviewContractTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "interval_scope"):
                 load_review_sources_v2(snapshots, selected)
+
+    def test_timed_visibility_must_stay_within_selected_clip(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            clip = selection["clips"][0]
+            for label, start, end, valid in (
+                ("at bounds", clip["start_seconds"], clip["end_seconds"], True),
+                ("below start", clip["start_seconds"] - 1, clip["start_seconds"] + 1, False),
+                ("past end", clip["end_seconds"] - 1, clip["end_seconds"] + 1, False),
+            ):
+                with self.subTest(label=label):
+                    review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+                    observation = _visibility(review["result_set_id"], 1, "occlusion", clip, review["action_observations"][0]["action_ref"])
+                    observation.update({"interval_scope": "timed", "start_seconds": start, "end_seconds": end})
+                    review["visibility_observations"] = [observation]
+                    (directory / "review-v2.json").write_bytes(_json_bytes(review))
+                    snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+                    selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+                    if valid:
+                        load_review_sources_v2(snapshots, selected)
+                    else:
+                        with self.assertRaisesRegex(ValueError, "timed visibility"):
+                            load_review_sources_v2(snapshots, selected)
+
+    def test_validates_participant_assignment_matrix(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            valid = _participant_matrix(selection["clips"][0]["clip_id"])
+            for label, participants, valid_case in (
+                ("valid assignments", valid, True),
+                ("confirmed lacks identity", [{**valid[0], "identity_ref": None}], False),
+                ("candidate lacks handle", [{**valid[1], "track_id": None}], False),
+                ("unresolved claims identity", [{**valid[2], "identity_ref": "player-3"}], False),
+                ("duplicate track", [valid[0], {**valid[0], "participation": "support"}], False),
+            ):
+                with self.subTest(label=label):
+                    review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+                    review["action_participants"] = participants
+                    (directory / "review-v2.json").write_bytes(_json_bytes(review))
+                    snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+                    selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+                    if valid_case:
+                        validated = load_review_sources_v2(snapshots, selected)
+                        self.assertEqual(len(validated.action_participants), 3)
+                    else:
+                        with self.assertRaisesRegex(ValueError, "assignment|track"):
+                            load_review_sources_v2(snapshots, selected)
 
     def test_rejects_unlinked_or_malformed_source_repairs(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
@@ -491,6 +546,35 @@ def _valid_review(
     }
 
 
+def _node_producer_review(
+    selection: dict[str, object], selection_bytes: bytes, workbook_bytes: bytes, overrides_bytes: bytes
+) -> dict[str, object]:
+    fixture = json.loads(
+        (ROOT / "tests/fixtures/node_active_review_evidence_input_v2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    clip = selection["clips"][0]
+    review = json.loads(json.dumps(fixture).replace("clip-001", clip["clip_id"]))
+    review.update({
+        "result_set_id": derive_result_set_id(
+            selection["batch_id"], selection["round_id"], _sha256(selection_bytes),
+            _sha256(workbook_bytes), _sha256(overrides_bytes),
+        ),
+        "review_set_key": f"rangitoto/{selection['round_id']}",
+        "batch_id": selection["batch_id"], "round_id": selection["round_id"],
+        "selection": {"path": selection["source"]["merged_json"].replace("merged.json", "selection.json"), "sha256": _sha256(selection_bytes)},
+        "workbook": {"path": selection["source"]["merged_json"].replace("merged.json", "review.xlsx"), "sha256": _sha256(workbook_bytes)},
+        "evidence_overrides": {"path": selection["source"]["merged_json"].replace("merged.json", "overrides.json"), "sha256": _sha256(overrides_bytes)},
+        "video": selection["video"],
+    })
+    for action in review["action_observations"]:
+        if action["relative_start_seconds"] is not None:
+            action["start_seconds"] = clip["start_seconds"] + action["relative_start_seconds"]
+            action["end_seconds"] = clip["start_seconds"] + action["relative_end_seconds"]
+    return review
+
+
 def _supplemental(clip: dict[str, object], index: int, scope: str) -> dict[str, object]:
     ref = f"{clip['clip_id']}/supplemental-{index:03d}"
     if scope == "timed":
@@ -509,6 +593,15 @@ def _repair(clip: dict[str, object], slot: int) -> dict[str, object]:
 
 def _repair_audit(repair: dict[str, object], action: dict[str, object]) -> dict[str, object]:
     return {"kind": "read_only_repair", "clip_id": repair["clip_id"], "action_ref": action["action_ref"], "source_row": action["source_row"], "raw_value": None, "normalized_value": repair["normalized_value"], "reason": repair["reason"]}
+
+
+def _participant_matrix(clip_id: str) -> list[dict[str, object]]:
+    action_ref = f"{clip_id}/action-001"
+    return [
+        {"action_ref": action_ref, "track_id": "track-1", "identity_ref": "player-1", "player_number": "1", "participation": "primary_actor", "touch_status": "touched", "assignment_status": "confirmed", "assignment_confidence": 0.95, "evidence": [{"kind": "manual_review", "source_ref": "reviewer", "value": "1", "confidence": 1.0}]},
+        {"action_ref": action_ref, "track_id": "track-2", "identity_ref": None, "player_number": None, "participation": "support", "touch_status": "unknown", "assignment_status": "candidate", "assignment_confidence": 0.5, "evidence": [{"kind": "track", "source_ref": "track-2", "value": "candidate", "confidence": 0.5}]},
+        {"action_ref": action_ref, "track_id": None, "identity_ref": None, "player_number": None, "participation": "block_attempt", "touch_status": "no_touch", "assignment_status": "unresolved", "assignment_confidence": None, "evidence": []},
+    ]
 
 
 def _visibility(result: str, index: int, kind: str, clip: dict[str, object], action_ref: str) -> dict[str, object]:
