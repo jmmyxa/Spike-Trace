@@ -1,0 +1,5692 @@
+{
+  "format": "spiketrace.active-review-evidence-input",
+  "format_version": 2,
+  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23",
+  "review_set_key": "rangitoto/round-01",
+  "batch_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01",
+  "round_id": "round-01",
+  "selection": {
+    "path": "data/active-learning/rangitoto/round-01-selection.json",
+    "sha256": "c7c9d4c21ae8fb041eece192b9c4f2c66648c863fdf79c278f08ca11e6cfe06c"
+  },
+  "workbook": {
+    "path": "outputs/active-learning/rangitoto/round-01/review.xlsx",
+    "sha256": "3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b"
+  },
+  "evidence_overrides": {
+    "path": "data/active-learning/rangitoto/round-01-evidence-overrides.json",
+    "sha256": "8683fca82384a1ec0f68b974cc83b964a318051401527c5473e2a67d312a7044"
+  },
+  "video": {
+    "video_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p",
+    "path": "data/YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4",
+    "sha256": "0102bf5de66a86677581155d1d2e723621a2a45d5c74b0757a8a256387204fbf",
+    "fps": 30,
+    "frame_count": 197384,
+    "width": 1920,
+    "height": 1080,
+    "duration_seconds": 6579.466666666666,
+    "crops": {
+      "far": [
+        0,
+        0,
+        1920,
+        645
+      ],
+      "near": [
+        0,
+        255,
+        1920,
+        1080
+      ]
+    }
+  },
+  "time_precision_seconds": 1,
+  "source_review_rows": [
+    {
+      "action_ref": "round-01-clip-001/action-001",
+      "clip_id": "round-01-clip-001",
+      "source_action_slot": 1,
+      "source_row": 4,
+      "raw_values": {
+        "clip_id": "round-01-clip-001",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-001",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-002/action-001",
+      "clip_id": "round-01-clip-002",
+      "source_action_slot": 1,
+      "source_row": 16,
+      "raw_values": {
+        "clip_id": null,
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-002",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": [
+        {
+          "clip_id": "round-01-clip-002",
+          "source_action_slot": 1,
+          "sheet": "人工动作",
+          "cell": "A16",
+          "field": "clip_id",
+          "original_value": null,
+          "normalized_value": "round-01-clip-002",
+          "reason": "原工作簿 A16 的只读短片 ID 为空，按固定槽位恢复对应短片 ID。"
+        }
+      ]
+    },
+    {
+      "action_ref": "round-01-clip-003/action-001",
+      "clip_id": "round-01-clip-003",
+      "source_action_slot": 1,
+      "source_row": 28,
+      "raw_values": {
+        "clip_id": "round-01-clip-003",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-003",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-004/action-001",
+      "clip_id": "round-01-clip-004",
+      "source_action_slot": 1,
+      "source_row": 40,
+      "raw_values": {
+        "clip_id": "round-01-clip-004",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-004",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-005/action-001",
+      "clip_id": "round-01-clip-005",
+      "source_action_slot": 1,
+      "source_row": 52,
+      "raw_values": {
+        "clip_id": "round-01-clip-005",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-005",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-001",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 1,
+      "source_row": 64,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "background",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "background",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "timed_interval",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-002",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 2,
+      "source_row": 65,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-003",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 3,
+      "source_row": 66,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-004",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 4,
+      "source_row": 67,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-007/action-001",
+      "clip_id": "round-01-clip-007",
+      "source_action_slot": 1,
+      "source_row": 76,
+      "raw_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "serve",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "serve",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-007/action-002",
+      "clip_id": "round-01-clip-007",
+      "source_action_slot": 2,
+      "source_row": 77,
+      "raw_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "block",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": null,
+        "note": "3-4 防守没接到球，不算dig吗（失分）"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "block",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "3-4 防守没接到球，不算dig吗（失分）"
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-008/action-001",
+      "clip_id": "round-01-clip-008",
+      "source_action_slot": 1,
+      "source_row": 88,
+      "raw_values": {
+        "clip_id": "round-01-clip-008",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-008",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-001",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 1,
+      "source_row": 100,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "serve",
+        "relative_start_seconds": 3,
+        "relative_end_seconds": 4,
+        "team_side": "near",
+        "note": "人物没有出现在镜头内，不知道怎么划分"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "serve",
+        "relative_start_seconds": 3,
+        "relative_end_seconds": 4,
+        "team_side": "near",
+        "note": "人物没有出现在镜头内，不知道怎么划分"
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-002",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 2,
+      "source_row": 101,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "block",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "block",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-003",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 3,
+      "source_row": 102,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "dig",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "dig",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-010/action-001",
+      "clip_id": "round-01-clip-010",
+      "source_action_slot": 1,
+      "source_row": 112,
+      "raw_values": {
+        "clip_id": "round-01-clip-010",
+        "review_label": "serve",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-010",
+        "review_label": "serve",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。"
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-001",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 1,
+      "source_row": 124,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "receive",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "receive",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-002",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 2,
+      "source_row": 125,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "set",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "set",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-003",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 3,
+      "source_row": 126,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "attack",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": null,
+        "note": "后面副攻被晃起来的无效拦网，不知道算不算block"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "attack",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": "near",
+        "note": "后面副攻被晃起来的无效拦网，不知道算不算block"
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-012/action-001",
+      "clip_id": "round-01-clip-012",
+      "source_action_slot": 1,
+      "source_row": 136,
+      "raw_values": {
+        "clip_id": "round-01-clip-012",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-012",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-013/action-001",
+      "clip_id": "round-01-clip-013",
+      "source_action_slot": 1,
+      "source_row": 148,
+      "raw_values": {
+        "clip_id": "round-01-clip-013",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-013",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-014/action-001",
+      "clip_id": "round-01-clip-014",
+      "source_action_slot": 1,
+      "source_row": 160,
+      "raw_values": {
+        "clip_id": "round-01-clip-014",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "对方发球失误，不算任何动作。球飞出屏幕无法判断动作，则看裁判手势进行预测？"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-014",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "对方发球失误，不算任何动作。球飞出屏幕无法判断动作，则看裁判手势进行预测？"
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-001",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 1,
+      "source_row": 172,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "receive",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "receive",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-002",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 2,
+      "source_row": 173,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-003",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 3,
+      "source_row": 174,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-016/action-001",
+      "clip_id": "round-01-clip-016",
+      "source_action_slot": 1,
+      "source_row": 184,
+      "raw_values": {
+        "clip_id": "round-01-clip-016",
+        "review_label": "block",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-016",
+        "review_label": "block",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-017/action-001",
+      "clip_id": "round-01-clip-017",
+      "source_action_slot": 1,
+      "source_row": 196,
+      "raw_values": {
+        "clip_id": "round-01-clip-017",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": "接球失误，队友救球的垫的第二下和第三下推攻不知道算不算动作"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-017",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": "接球失误，队友救球的垫的第二下和第三下推攻不知道算不算动作"
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-001",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 1,
+      "source_row": 208,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "serve",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "serve",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-002",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 2,
+      "source_row": 209,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "block",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "block",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-003",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 3,
+      "source_row": 210,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": "8-9尝试推攻失败，没过网。"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": "8-9尝试推攻失败，没过网。"
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-001",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 1,
+      "source_row": 220,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-002",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 2,
+      "source_row": 221,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "set",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "set",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-003",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 3,
+      "source_row": 222,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-020/action-001",
+      "clip_id": "round-01-clip-020",
+      "source_action_slot": 1,
+      "source_row": 232,
+      "raw_values": {
+        "clip_id": "round-01-clip-020",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-020",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-001",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 1,
+      "source_row": 244,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-002",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 2,
+      "source_row": 245,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-003",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 3,
+      "source_row": 246,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-004",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 4,
+      "source_row": 247,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-005",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 5,
+      "source_row": 248,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-006",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 6,
+      "source_row": 249,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-007",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 7,
+      "source_row": 250,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "block",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "block",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-008",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 8,
+      "source_row": 251,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-009",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 9,
+      "source_row": 252,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-010",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 10,
+      "source_row": 253,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 21,
+        "relative_end_seconds": 22,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 21,
+        "relative_end_seconds": 22,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-001",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 1,
+      "source_row": 256,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-002",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 2,
+      "source_row": 257,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "set",
+        "relative_start_seconds": 13,
+        "relative_end_seconds": 14,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "set",
+        "relative_start_seconds": 13,
+        "relative_end_seconds": 14,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-003",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 3,
+      "source_row": 258,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "attack",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "attack",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-001",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 1,
+      "source_row": 268,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "receive",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "receive",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-002",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 2,
+      "source_row": 269,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-003",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 3,
+      "source_row": 270,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-004",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 4,
+      "source_row": 271,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": "被拦回的保护"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": "被拦回的保护"
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-005",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 5,
+      "source_row": 272,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-006",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 6,
+      "source_row": 273,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-001",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 1,
+      "source_row": 280,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-002",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 2,
+      "source_row": 281,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-003",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 3,
+      "source_row": 282,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-004",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 4,
+      "source_row": 283,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-005",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 5,
+      "source_row": 284,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": "垫过去的自由球算不算进攻"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": "垫过去的自由球算不算进攻"
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-006",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 6,
+      "source_row": 285,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 15,
+        "relative_end_seconds": 16,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 15,
+        "relative_end_seconds": 16,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-007",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 7,
+      "source_row": 286,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-008",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 8,
+      "source_row": 287,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 18,
+        "relative_end_seconds": 19,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 18,
+        "relative_end_seconds": 19,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-009",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 9,
+      "source_row": 288,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-025/action-001",
+      "clip_id": "round-01-clip-025",
+      "source_action_slot": 1,
+      "source_row": 292,
+      "raw_values": {
+        "clip_id": "round-01-clip-025",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-025",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-026/action-001",
+      "clip_id": "round-01-clip-026",
+      "source_action_slot": 1,
+      "source_row": 304,
+      "raw_values": {
+        "clip_id": "round-01-clip-026",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "这场比赛采用每局都换边的记录方式，所以没有near far之分，都是near"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-026",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "这场比赛采用每局都换边的记录方式，所以没有near far之分，都是near"
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-027/action-001",
+      "clip_id": "round-01-clip-027",
+      "source_action_slot": 1,
+      "source_row": 316,
+      "raw_values": {
+        "clip_id": "round-01-clip-027",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-027",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-001",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 1,
+      "source_row": 328,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "dig",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "dig",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-002",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 2,
+      "source_row": 329,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "set",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "set",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-003",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 3,
+      "source_row": 330,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "attack",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "attack",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-029/action-001",
+      "clip_id": "round-01-clip-029",
+      "source_action_slot": 1,
+      "source_row": 340,
+      "raw_values": {
+        "clip_id": "round-01-clip-029",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-029",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-030/action-001",
+      "clip_id": "round-01-clip-030",
+      "source_action_slot": 1,
+      "source_row": 352,
+      "raw_values": {
+        "clip_id": "round-01-clip-030",
+        "review_label": "serve",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-030",
+        "review_label": "serve",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-031/action-001",
+      "clip_id": "round-01-clip-031",
+      "source_action_slot": 1,
+      "source_row": 364,
+      "raw_values": {
+        "clip_id": "round-01-clip-031",
+        "review_label": "serve",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-031",
+        "review_label": "serve",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-032/action-001",
+      "clip_id": "round-01-clip-032",
+      "source_action_slot": 1,
+      "source_row": 376,
+      "raw_values": {
+        "clip_id": "round-01-clip-032",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-032",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-033/action-001",
+      "clip_id": "round-01-clip-033",
+      "source_action_slot": 1,
+      "source_row": 388,
+      "raw_values": {
+        "clip_id": "round-01-clip-033",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-033",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-034/action-001",
+      "clip_id": "round-01-clip-034",
+      "source_action_slot": 1,
+      "source_row": 400,
+      "raw_values": {
+        "clip_id": "round-01-clip-034",
+        "review_label": "serve",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "根据裁判手势判断得分了"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-034",
+        "review_label": "serve",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "根据裁判手势判断得分了"
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-035/action-001",
+      "clip_id": "round-01-clip-035",
+      "source_action_slot": 1,
+      "source_row": 412,
+      "raw_values": {
+        "clip_id": "round-01-clip-035",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "镜头被完全遮挡，虽然人工能够推断动作，但是还是直接不算进数据了。要计入镜头遮挡画面次数，并且与数据同步输出"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-035",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "镜头被完全遮挡，虽然人工能够推断动作，但是还是直接不算进数据了。要计入镜头遮挡画面次数，并且与数据同步输出"
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-036/action-001",
+      "clip_id": "round-01-clip-036",
+      "source_action_slot": 1,
+      "source_row": 424,
+      "raw_values": {
+        "clip_id": "round-01-clip-036",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-036",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-037/action-001",
+      "clip_id": "round-01-clip-037",
+      "source_action_slot": 1,
+      "source_row": 436,
+      "raw_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-037/action-002",
+      "clip_id": "round-01-clip-037",
+      "source_action_slot": 2,
+      "source_row": 437,
+      "raw_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "set",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "set",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-038/action-001",
+      "clip_id": "round-01-clip-038",
+      "source_action_slot": 1,
+      "source_row": 448,
+      "raw_values": {
+        "clip_id": "round-01-clip-038",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-038",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-039/action-001",
+      "clip_id": "round-01-clip-039",
+      "source_action_slot": 1,
+      "source_row": 460,
+      "raw_values": {
+        "clip_id": "round-01-clip-039",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-039",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-001",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 1,
+      "source_row": 472,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": false,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-002",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 2,
+      "source_row": 473,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "set",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "set",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-003",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 3,
+      "source_row": 474,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "background_scope": null,
+      "side_inherited": true,
+      "source_repairs": []
+    }
+  ],
+  "source_repairs": [
+    {
+      "clip_id": "round-01-clip-002",
+      "source_action_slot": 1,
+      "sheet": "人工动作",
+      "cell": "A16",
+      "field": "clip_id",
+      "original_value": null,
+      "normalized_value": "round-01-clip-002",
+      "reason": "原工作簿 A16 的只读短片 ID 为空，按固定槽位恢复对应短片 ID。"
+    }
+  ],
+  "action_observations": [
+    {
+      "action_ref": "round-01-clip-001/action-001",
+      "clip_id": "round-01-clip-001",
+      "source_action_slot": 1,
+      "source_row": 4,
+      "raw_values": {
+        "clip_id": "round-01-clip-001",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-001",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-002/action-001",
+      "clip_id": "round-01-clip-002",
+      "source_action_slot": 1,
+      "source_row": 16,
+      "raw_values": {
+        "clip_id": null,
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-002",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": [
+        {
+          "clip_id": "round-01-clip-002",
+          "source_action_slot": 1,
+          "sheet": "人工动作",
+          "cell": "A16",
+          "field": "clip_id",
+          "original_value": null,
+          "normalized_value": "round-01-clip-002",
+          "reason": "原工作簿 A16 的只读短片 ID 为空，按固定槽位恢复对应短片 ID。"
+        }
+      ]
+    },
+    {
+      "action_ref": "round-01-clip-003/action-001",
+      "clip_id": "round-01-clip-003",
+      "source_action_slot": 1,
+      "source_row": 28,
+      "raw_values": {
+        "clip_id": "round-01-clip-003",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-003",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-004/action-001",
+      "clip_id": "round-01-clip-004",
+      "source_action_slot": 1,
+      "source_row": 40,
+      "raw_values": {
+        "clip_id": "round-01-clip-004",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-004",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-005/action-001",
+      "clip_id": "round-01-clip-005",
+      "source_action_slot": 1,
+      "source_row": 52,
+      "raw_values": {
+        "clip_id": "round-01-clip-005",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-005",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-001",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 1,
+      "source_row": 64,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "background",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "background",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": 0,
+      "relative_end_seconds": 9,
+      "start_seconds": 161.2,
+      "end_seconds": 170.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": "timed_interval",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-002",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 2,
+      "source_row": 65,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 170.2,
+      "end_seconds": 171.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-003",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 3,
+      "source_row": 66,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 172.2,
+      "end_seconds": 173.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-006/action-004",
+      "clip_id": "round-01-clip-006",
+      "source_action_slot": 4,
+      "source_row": 67,
+      "raw_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-006",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 12,
+      "relative_end_seconds": 13,
+      "start_seconds": 173.2,
+      "end_seconds": 174.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-007/action-001",
+      "clip_id": "round-01-clip-007",
+      "source_action_slot": 1,
+      "source_row": 76,
+      "raw_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "serve",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "serve",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 0,
+      "relative_end_seconds": 1,
+      "start_seconds": 191.8,
+      "end_seconds": 192.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-007/action-002",
+      "clip_id": "round-01-clip-007",
+      "source_action_slot": 2,
+      "source_row": 77,
+      "raw_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "block",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": null,
+        "note": "3-4 防守没接到球，不算dig吗（失分）"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-007",
+        "review_label": "block",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "3-4 防守没接到球，不算dig吗（失分）"
+      },
+      "review_label": "block",
+      "relative_start_seconds": 2,
+      "relative_end_seconds": 3,
+      "start_seconds": 193.8,
+      "end_seconds": 194.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": "3-4 防守没接到球，不算dig吗（失分）",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-008/action-001",
+      "clip_id": "round-01-clip-008",
+      "source_action_slot": 1,
+      "source_row": 88,
+      "raw_values": {
+        "clip_id": "round-01-clip-008",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-008",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-001",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 1,
+      "source_row": 100,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "serve",
+        "relative_start_seconds": 3,
+        "relative_end_seconds": 4,
+        "team_side": "near",
+        "note": "人物没有出现在镜头内，不知道怎么划分"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "serve",
+        "relative_start_seconds": 3,
+        "relative_end_seconds": 4,
+        "team_side": "near",
+        "note": "人物没有出现在镜头内，不知道怎么划分"
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 3,
+      "relative_end_seconds": 4,
+      "start_seconds": 450.2,
+      "end_seconds": 451.2,
+      "team_side": "near",
+      "visibility": "off_camera",
+      "evidence_basis": "sequence_context",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "人物没有出现在镜头内，不知道怎么划分",
+      "source_reason": "原备注说明发球人未出现在镜头内；保留发球事实但排除视觉训练。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-002",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 2,
+      "source_row": 101,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "block",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "block",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 7,
+      "relative_end_seconds": 8,
+      "start_seconds": 454.2,
+      "end_seconds": 455.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-009/action-003",
+      "clip_id": "round-01-clip-009",
+      "source_action_slot": 3,
+      "source_row": 102,
+      "raw_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "dig",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-009",
+        "review_label": "dig",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 455.2,
+      "end_seconds": 456.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-010/action-001",
+      "clip_id": "round-01-clip-010",
+      "source_action_slot": 1,
+      "source_row": 112,
+      "raw_values": {
+        "clip_id": "round-01-clip-010",
+        "review_label": "serve",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-010",
+        "review_label": "serve",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。"
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 16,
+      "relative_end_seconds": 17,
+      "start_seconds": 507,
+      "end_seconds": 508,
+      "team_side": "near",
+      "visibility": "off_camera",
+      "evidence_basis": "sequence_context",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。",
+      "source_reason": "原备注说明发球动作发生在镜头外；只保留上下文事实，不加入视觉训练。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-001",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 1,
+      "source_row": 124,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "receive",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "receive",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 14,
+      "relative_end_seconds": 15,
+      "start_seconds": 604.8,
+      "end_seconds": 605.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-002",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 2,
+      "source_row": 125,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "set",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "set",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 16,
+      "relative_end_seconds": 17,
+      "start_seconds": 606.8,
+      "end_seconds": 607.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/action-003",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": 3,
+      "source_row": 126,
+      "raw_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "attack",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": null,
+        "note": "后面副攻被晃起来的无效拦网，不知道算不算block"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-011",
+        "review_label": "attack",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": "near",
+        "note": "后面副攻被晃起来的无效拦网，不知道算不算block"
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 17,
+      "relative_end_seconds": 18,
+      "start_seconds": 607.8,
+      "end_seconds": 608.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": "后面副攻被晃起来的无效拦网，不知道算不算block",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-012/action-001",
+      "clip_id": "round-01-clip-012",
+      "source_action_slot": 1,
+      "source_row": 136,
+      "raw_values": {
+        "clip_id": "round-01-clip-012",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-012",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-013/action-001",
+      "clip_id": "round-01-clip-013",
+      "source_action_slot": 1,
+      "source_row": 148,
+      "raw_values": {
+        "clip_id": "round-01-clip-013",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-013",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-014/action-001",
+      "clip_id": "round-01-clip-014",
+      "source_action_slot": 1,
+      "source_row": 160,
+      "raw_values": {
+        "clip_id": "round-01-clip-014",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "对方发球失误，不算任何动作。球飞出屏幕无法判断动作，则看裁判手势进行预测？"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-014",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "对方发球失误，不算任何动作。球飞出屏幕无法判断动作，则看裁判手势进行预测？"
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": "对方发球失误，不算任何动作。球飞出屏幕无法判断动作，则看裁判手势进行预测？",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-001",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 1,
+      "source_row": 172,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "receive",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "receive",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 7,
+      "relative_end_seconds": 8,
+      "start_seconds": 1168.8,
+      "end_seconds": 1169.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-002",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 2,
+      "source_row": 173,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 1169.8,
+      "end_seconds": 1170.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-015/action-003",
+      "clip_id": "round-01-clip-015",
+      "source_action_slot": 3,
+      "source_row": 174,
+      "raw_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-015",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 1170.8,
+      "end_seconds": 1171.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-016/action-001",
+      "clip_id": "round-01-clip-016",
+      "source_action_slot": 1,
+      "source_row": 184,
+      "raw_values": {
+        "clip_id": "round-01-clip-016",
+        "review_label": "block",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-016",
+        "review_label": "block",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 0,
+      "relative_end_seconds": 1,
+      "start_seconds": 1380.6,
+      "end_seconds": 1381.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-017/action-001",
+      "clip_id": "round-01-clip-017",
+      "source_action_slot": 1,
+      "source_row": 196,
+      "raw_values": {
+        "clip_id": "round-01-clip-017",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": "接球失误，队友救球的垫的第二下和第三下推攻不知道算不算动作"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-017",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": "接球失误，队友救球的垫的第二下和第三下推攻不知道算不算动作"
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 1717.2,
+      "end_seconds": 1718.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "接球失误，队友救球的垫的第二下和第三下推攻不知道算不算动作",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-001",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 1,
+      "source_row": 208,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "serve",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "serve",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 1,
+      "relative_end_seconds": 2,
+      "start_seconds": 1789.6,
+      "end_seconds": 1790.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-002",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 2,
+      "source_row": 209,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "block",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "block",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 5,
+      "relative_end_seconds": 6,
+      "start_seconds": 1793.6,
+      "end_seconds": 1794.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/action-003",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": 3,
+      "source_row": 210,
+      "raw_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": "8-9尝试推攻失败，没过网。"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-018",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": "8-9尝试推攻失败，没过网。"
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 6,
+      "relative_end_seconds": 7,
+      "start_seconds": 1794.6,
+      "end_seconds": 1795.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": "8-9尝试推攻失败，没过网。",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-001",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 1,
+      "source_row": 220,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 1817.4,
+      "end_seconds": 1818.4,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-002",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 2,
+      "source_row": 221,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "set",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "set",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 10,
+      "relative_end_seconds": 11,
+      "start_seconds": 1819.4,
+      "end_seconds": 1820.4,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-019/action-003",
+      "clip_id": "round-01-clip-019",
+      "source_action_slot": 3,
+      "source_row": 222,
+      "raw_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-019",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 1820.4,
+      "end_seconds": 1821.4,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-020/action-001",
+      "clip_id": "round-01-clip-020",
+      "source_action_slot": 1,
+      "source_row": 232,
+      "raw_values": {
+        "clip_id": "round-01-clip-020",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-020",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-001",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 1,
+      "source_row": 244,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 2,
+      "relative_end_seconds": 3,
+      "start_seconds": 2181.2,
+      "end_seconds": 2182.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-002",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 2,
+      "source_row": 245,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 4,
+      "relative_end_seconds": 5,
+      "start_seconds": 2183.2,
+      "end_seconds": 2184.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-003",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 3,
+      "source_row": 246,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 5,
+      "relative_end_seconds": 6,
+      "start_seconds": 2184.2,
+      "end_seconds": 2185.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-004",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 4,
+      "source_row": 247,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 2188.2,
+      "end_seconds": 2189.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-005",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 5,
+      "source_row": 248,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 2190.2,
+      "end_seconds": 2191.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-006",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 6,
+      "source_row": 249,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 12,
+      "relative_end_seconds": 13,
+      "start_seconds": 2191.2,
+      "end_seconds": 2192.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-007",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 7,
+      "source_row": 250,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "block",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "block",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 16,
+      "relative_end_seconds": 17,
+      "start_seconds": 2195.2,
+      "end_seconds": 2196.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-008",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 8,
+      "source_row": 251,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "dig",
+        "relative_start_seconds": 17,
+        "relative_end_seconds": 18,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 17,
+      "relative_end_seconds": 18,
+      "start_seconds": 2196.2,
+      "end_seconds": 2197.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-009",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 9,
+      "source_row": 252,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "set",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 19,
+      "relative_end_seconds": 20,
+      "start_seconds": 2198.2,
+      "end_seconds": 2199.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-021/action-010",
+      "clip_id": "round-01-clip-021",
+      "source_action_slot": 10,
+      "source_row": 253,
+      "raw_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 21,
+        "relative_end_seconds": 22,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-021",
+        "review_label": "attack",
+        "relative_start_seconds": 21,
+        "relative_end_seconds": 22,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 21,
+      "relative_end_seconds": 22,
+      "start_seconds": 2200.2,
+      "end_seconds": 2201.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-001",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 1,
+      "source_row": 256,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 2274,
+      "end_seconds": 2275,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-002",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 2,
+      "source_row": 257,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "set",
+        "relative_start_seconds": 13,
+        "relative_end_seconds": 14,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "set",
+        "relative_start_seconds": 13,
+        "relative_end_seconds": 14,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 13,
+      "relative_end_seconds": 14,
+      "start_seconds": 2276,
+      "end_seconds": 2277,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-022/action-003",
+      "clip_id": "round-01-clip-022",
+      "source_action_slot": 3,
+      "source_row": 258,
+      "raw_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "attack",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-022",
+        "review_label": "attack",
+        "relative_start_seconds": 14,
+        "relative_end_seconds": 15,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 14,
+      "relative_end_seconds": 15,
+      "start_seconds": 2277,
+      "end_seconds": 2278,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-001",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 1,
+      "source_row": 268,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "receive",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "receive",
+        "relative_start_seconds": 4,
+        "relative_end_seconds": 5,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 4,
+      "relative_end_seconds": 5,
+      "start_seconds": 2347.2,
+      "end_seconds": 2348.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-002",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 2,
+      "source_row": 269,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 5,
+        "relative_end_seconds": 6,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 5,
+      "relative_end_seconds": 6,
+      "start_seconds": 2348.2,
+      "end_seconds": 2349.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-003",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 3,
+      "source_row": 270,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 6,
+      "relative_end_seconds": 7,
+      "start_seconds": 2349.2,
+      "end_seconds": 2350.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-004",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 4,
+      "source_row": 271,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": "被拦回的保护"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": "被拦回的保护"
+      },
+      "review_label": "background",
+      "relative_start_seconds": 6,
+      "relative_end_seconds": 7,
+      "start_seconds": 2349.2,
+      "end_seconds": 2350.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": "timed_interval",
+      "side_inherited": true,
+      "note": "被拦回的保护",
+      "source_reason": "原备注明确是被拦回后的保护，不属于 dig；按可见非目标区间保留。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-005",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 5,
+      "source_row": 272,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 2351.2,
+      "end_seconds": 2352.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-023/action-006",
+      "clip_id": "round-01-clip-023",
+      "source_action_slot": 6,
+      "source_row": 273,
+      "raw_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-023",
+        "review_label": "attack",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 2352.2,
+      "end_seconds": 2353.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-001",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 1,
+      "source_row": 280,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "receive",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 2,
+      "relative_end_seconds": 3,
+      "start_seconds": 2369.6,
+      "end_seconds": 2370.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-002",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 2,
+      "source_row": 281,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 6,
+      "relative_end_seconds": 7,
+      "start_seconds": 2373.6,
+      "end_seconds": 2374.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-003",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 3,
+      "source_row": 282,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 7,
+        "relative_end_seconds": 8,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 7,
+      "relative_end_seconds": 8,
+      "start_seconds": 2374.6,
+      "end_seconds": 2375.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-004",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 4,
+      "source_row": 283,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 2375.6,
+      "end_seconds": 2376.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-005",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 5,
+      "source_row": 284,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": "垫过去的自由球算不算进攻"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": "垫过去的自由球算不算进攻"
+      },
+      "review_label": "free_ball",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 2378.6,
+      "end_seconds": 2379.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": "垫过去的自由球算不算进攻",
+      "source_reason": "原备注所指为被动垫过网的自由球，保留 11-12 秒并仅修正动作标签。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-006",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 6,
+      "source_row": 285,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 15,
+        "relative_end_seconds": 16,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "block",
+        "relative_start_seconds": 15,
+        "relative_end_seconds": 16,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "block",
+      "relative_start_seconds": 15,
+      "relative_end_seconds": 16,
+      "start_seconds": 2382.6,
+      "end_seconds": 2383.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-007",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 7,
+      "source_row": 286,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "dig",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 16,
+      "relative_end_seconds": 17,
+      "start_seconds": 2383.6,
+      "end_seconds": 2384.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-008",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 8,
+      "source_row": 287,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 18,
+        "relative_end_seconds": 19,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "set",
+        "relative_start_seconds": 18,
+        "relative_end_seconds": 19,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 18,
+      "relative_end_seconds": 19,
+      "start_seconds": 2385.6,
+      "end_seconds": 2386.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-024/action-009",
+      "clip_id": "round-01-clip-024",
+      "source_action_slot": 9,
+      "source_row": 288,
+      "raw_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-024",
+        "review_label": "attack",
+        "relative_start_seconds": 19,
+        "relative_end_seconds": 20,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 19,
+      "relative_end_seconds": 20,
+      "start_seconds": 2386.6,
+      "end_seconds": 2387.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-025/action-001",
+      "clip_id": "round-01-clip-025",
+      "source_action_slot": 1,
+      "source_row": 292,
+      "raw_values": {
+        "clip_id": "round-01-clip-025",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-025",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-026/action-001",
+      "clip_id": "round-01-clip-026",
+      "source_action_slot": 1,
+      "source_row": 304,
+      "raw_values": {
+        "clip_id": "round-01-clip-026",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "这场比赛采用每局都换边的记录方式，所以没有near far之分，都是near"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-026",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "这场比赛采用每局都换边的记录方式，所以没有near far之分，都是near"
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": "这场比赛采用每局都换边的记录方式，所以没有near far之分，都是near",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-027/action-001",
+      "clip_id": "round-01-clip-027",
+      "source_action_slot": 1,
+      "source_row": 316,
+      "raw_values": {
+        "clip_id": "round-01-clip-027",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-027",
+        "review_label": "receive",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 3929.2,
+      "end_seconds": 3930.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-001",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 1,
+      "source_row": 328,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "dig",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "dig",
+        "relative_start_seconds": 0,
+        "relative_end_seconds": 1,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "dig",
+      "relative_start_seconds": 0,
+      "relative_end_seconds": 1,
+      "start_seconds": 3961.6,
+      "end_seconds": 3962.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-002",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 2,
+      "source_row": 329,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "set",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "set",
+        "relative_start_seconds": 1,
+        "relative_end_seconds": 2,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 1,
+      "relative_end_seconds": 2,
+      "start_seconds": 3962.6,
+      "end_seconds": 3963.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-028/action-003",
+      "clip_id": "round-01-clip-028",
+      "source_action_slot": 3,
+      "source_row": 330,
+      "raw_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "attack",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-028",
+        "review_label": "attack",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 2,
+      "relative_end_seconds": 3,
+      "start_seconds": 3963.6,
+      "end_seconds": 3964.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-029/action-001",
+      "clip_id": "round-01-clip-029",
+      "source_action_slot": 1,
+      "source_row": 340,
+      "raw_values": {
+        "clip_id": "round-01-clip-029",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-029",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-030/action-001",
+      "clip_id": "round-01-clip-030",
+      "source_action_slot": 1,
+      "source_row": 352,
+      "raw_values": {
+        "clip_id": "round-01-clip-030",
+        "review_label": "serve",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-030",
+        "review_label": "serve",
+        "relative_start_seconds": 10,
+        "relative_end_seconds": 11,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 10,
+      "relative_end_seconds": 11,
+      "start_seconds": 4210,
+      "end_seconds": 4211,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-031/action-001",
+      "clip_id": "round-01-clip-031",
+      "source_action_slot": 1,
+      "source_row": 364,
+      "raw_values": {
+        "clip_id": "round-01-clip-031",
+        "review_label": "serve",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-031",
+        "review_label": "serve",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 12,
+      "relative_end_seconds": 13,
+      "start_seconds": 4374.2,
+      "end_seconds": 4375.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-032/action-001",
+      "clip_id": "round-01-clip-032",
+      "source_action_slot": 1,
+      "source_row": 376,
+      "raw_values": {
+        "clip_id": "round-01-clip-032",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-032",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-033/action-001",
+      "clip_id": "round-01-clip-033",
+      "source_action_slot": 1,
+      "source_row": 388,
+      "raw_values": {
+        "clip_id": "round-01-clip-033",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-033",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-034/action-001",
+      "clip_id": "round-01-clip-034",
+      "source_action_slot": 1,
+      "source_row": 400,
+      "raw_values": {
+        "clip_id": "round-01-clip-034",
+        "review_label": "serve",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "根据裁判手势判断得分了"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-034",
+        "review_label": "serve",
+        "relative_start_seconds": 2,
+        "relative_end_seconds": 3,
+        "team_side": "near",
+        "note": "根据裁判手势判断得分了"
+      },
+      "review_label": "serve",
+      "relative_start_seconds": 2,
+      "relative_end_seconds": 3,
+      "start_seconds": 4443,
+      "end_seconds": 4444,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "根据裁判手势判断得分了",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-035/action-001",
+      "clip_id": "round-01-clip-035",
+      "source_action_slot": 1,
+      "source_row": 412,
+      "raw_values": {
+        "clip_id": "round-01-clip-035",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "镜头被完全遮挡，虽然人工能够推断动作，但是还是直接不算进数据了。要计入镜头遮挡画面次数，并且与数据同步输出"
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-035",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": "镜头被完全遮挡，虽然人工能够推断动作，但是还是直接不算进数据了。要计入镜头遮挡画面次数，并且与数据同步输出"
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": "镜头被完全遮挡，虽然人工能够推断动作，但是还是直接不算进数据了。要计入镜头遮挡画面次数，并且与数据同步输出",
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-036/action-001",
+      "clip_id": "round-01-clip-036",
+      "source_action_slot": 1,
+      "source_row": 424,
+      "raw_values": {
+        "clip_id": "round-01-clip-036",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-036",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-037/action-001",
+      "clip_id": "round-01-clip-037",
+      "source_action_slot": 1,
+      "source_row": 436,
+      "raw_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "receive",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 5366,
+      "end_seconds": 5367,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-037/action-002",
+      "clip_id": "round-01-clip-037",
+      "source_action_slot": 2,
+      "source_row": 437,
+      "raw_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "set",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-037",
+        "review_label": "set",
+        "relative_start_seconds": 12,
+        "relative_end_seconds": 13,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 12,
+      "relative_end_seconds": 13,
+      "start_seconds": 5367,
+      "end_seconds": 5368,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-038/action-001",
+      "clip_id": "round-01-clip-038",
+      "source_action_slot": 1,
+      "source_row": 448,
+      "raw_values": {
+        "clip_id": "round-01-clip-038",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-038",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-039/action-001",
+      "clip_id": "round-01-clip-039",
+      "source_action_slot": 1,
+      "source_row": 460,
+      "raw_values": {
+        "clip_id": "round-01-clip-039",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-039",
+        "review_label": "background",
+        "relative_start_seconds": null,
+        "relative_end_seconds": null,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "background",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "start_seconds": null,
+      "end_seconds": null,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": null,
+      "background_scope": "clip_sentinel",
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-001",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 1,
+      "source_row": 472,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "receive",
+        "relative_start_seconds": 8,
+        "relative_end_seconds": 9,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "receive",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 6494,
+      "end_seconds": 6495,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-002",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 2,
+      "source_row": 473,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "set",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "set",
+        "relative_start_seconds": 9,
+        "relative_end_seconds": 10,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "set",
+      "relative_start_seconds": 9,
+      "relative_end_seconds": 10,
+      "start_seconds": 6495,
+      "end_seconds": 6496,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-040/action-003",
+      "clip_id": "round-01-clip-040",
+      "source_action_slot": 3,
+      "source_row": 474,
+      "raw_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": null
+      },
+      "normalized_values": {
+        "clip_id": "round-01-clip-040",
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": "near",
+        "note": null
+      },
+      "review_label": "attack",
+      "relative_start_seconds": 11,
+      "relative_end_seconds": 12,
+      "start_seconds": 6497,
+      "end_seconds": 6498,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": true,
+      "note": null,
+      "source_reason": null,
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-011/supplemental-001",
+      "clip_id": "round-01-clip-011",
+      "source_action_slot": null,
+      "source_row": null,
+      "raw_values": null,
+      "normalized_values": null,
+      "review_label": "block",
+      "relative_start_seconds": 21,
+      "relative_end_seconds": 22,
+      "start_seconds": 611.8,
+      "end_seconds": 612.8,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "后续可直接看见副攻被晃起的无效拦网起跳。",
+      "source_reason": "原备注提示漏记的无效拦网；视频在 21-22 秒直接支持该起跳。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-017/supplemental-001",
+      "clip_id": "round-01-clip-017",
+      "source_action_slot": null,
+      "source_row": null,
+      "raw_values": null,
+      "normalized_values": null,
+      "review_label": "free_ball",
+      "relative_start_seconds": 13,
+      "relative_end_seconds": 14,
+      "start_seconds": 1721.2,
+      "end_seconds": 1722.2,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "接球失误后的第三次触球为可见的被动回球。",
+      "source_reason": "原备注指出第三下推攻；视频在 13-14 秒直接显示被动回球过网。",
+      "source_repairs": []
+    },
+    {
+      "action_ref": "round-01-clip-018/supplemental-001",
+      "clip_id": "round-01-clip-018",
+      "source_action_slot": null,
+      "source_row": null,
+      "raw_values": null,
+      "normalized_values": null,
+      "review_label": "free_ball",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "start_seconds": 1796.6,
+      "end_seconds": 1797.6,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "background_scope": null,
+      "side_inherited": false,
+      "note": "8-9 秒可直接看见尝试推球回网但未过网。",
+      "source_reason": "原备注明确 8-9 秒推攻失败；动作本身可见，按自由球保存。",
+      "source_repairs": []
+    }
+  ],
+  "outcome_observations": [
+    {
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/outcome-001",
+      "related_action_refs": [
+        "round-01-clip-007/action-002"
+      ],
+      "outcome": "point_lost",
+      "result_type": null,
+      "evidence_basis": "direct_video",
+      "status": "observed_or_inferred",
+      "note": "原备注确认随后失分，但未补写不存在的 dig 动作。"
+    },
+    {
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/outcome-002",
+      "related_action_refs": [
+        "round-01-clip-014/action-001"
+      ],
+      "outcome": "point_won",
+      "result_type": "opponent_serve_error",
+      "evidence_basis": "referee_signal",
+      "status": "observed_or_inferred",
+      "note": "原备注记录对方发球失误；只保存裁判手势支持的得分结果，不补我方动作。"
+    },
+    {
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/outcome-003",
+      "related_action_refs": [
+        "round-01-clip-018/supplemental-001"
+      ],
+      "outcome": "point_lost",
+      "result_type": "free_ball_error",
+      "evidence_basis": "direct_video",
+      "status": "observed_or_inferred",
+      "note": "原备注说明 8-9 秒自由球未过网并直接失分。"
+    },
+    {
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/outcome-004",
+      "related_action_refs": [
+        "round-01-clip-034/action-001"
+      ],
+      "outcome": "point_won",
+      "result_type": "service_winner",
+      "evidence_basis": "referee_signal",
+      "status": "observed_or_inferred",
+      "note": "发球动作直接可见；原备注仅依据裁判手势确认得分。"
+    }
+  ],
+  "visibility_observations": [
+    {
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/off_camera-source-001",
+      "event_kind": "off_camera",
+      "clip_id": "round-01-clip-009",
+      "team_side": "near",
+      "start_seconds": 450.2,
+      "end_seconds": 451.2,
+      "interval_scope": "timed",
+      "related_action_refs": [
+        "round-01-clip-009/action-001"
+      ],
+      "note": "发球人在动作区间内未进入镜头。",
+      "source_reason": "原备注确认发球人未出现在镜头内，按同一 3-4 秒记录镜头外事件。"
+    },
+    {
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/off_camera-source-002",
+      "event_kind": "off_camera",
+      "clip_id": "round-01-clip-010",
+      "team_side": "near",
+      "start_seconds": 507,
+      "end_seconds": 508,
+      "interval_scope": "timed",
+      "related_action_refs": [
+        "round-01-clip-010/action-001"
+      ],
+      "note": "发球动作发生在画面外，发球后球员才从底线进入画面。",
+      "source_reason": "原备注确认发球时未入镜，按同一 16-17 秒记录镜头外事件。"
+    },
+    {
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-49fe683296a84f23/occlusion-source-003",
+      "event_kind": "occlusion",
+      "clip_id": "round-01-clip-035",
+      "team_side": "near",
+      "start_seconds": 4491,
+      "end_seconds": 4506,
+      "interval_scope": "clip_bounds",
+      "related_action_refs": [
+        "round-01-clip-035/action-001"
+      ],
+      "note": "目标侧在整段短片中被近景人员遮挡，不能作为动作或自动负样本。",
+      "source_reason": "原备注明确镜头被完全遮挡；按完整短片边界记录一次连续遮挡。"
+    }
+  ],
+  "action_participants": [],
+  "normalization_audit": [
+    {
+      "kind": "read_only_repair",
+      "clip_id": "round-01-clip-002",
+      "action_ref": "round-01-clip-002/action-001",
+      "source_row": 16,
+      "raw_value": null,
+      "normalized_value": "round-01-clip-002",
+      "reason": "原工作簿 A16 的只读短片 ID 为空，按固定槽位恢复对应短片 ID。"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-006",
+      "action_ref": "round-01-clip-006/action-002",
+      "source_row": 65,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-006",
+      "action_ref": "round-01-clip-006/action-003",
+      "source_row": 66,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-006",
+      "action_ref": "round-01-clip-006/action-004",
+      "source_row": 67,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-007",
+      "action_ref": "round-01-clip-007/action-002",
+      "source_row": 77,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-009",
+      "action_ref": "round-01-clip-009/action-002",
+      "source_row": 101,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-009",
+      "action_ref": "round-01-clip-009/action-003",
+      "source_row": 102,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-011",
+      "action_ref": "round-01-clip-011/action-002",
+      "source_row": 125,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-011",
+      "action_ref": "round-01-clip-011/action-003",
+      "source_row": 126,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-015",
+      "action_ref": "round-01-clip-015/action-002",
+      "source_row": 173,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-015",
+      "action_ref": "round-01-clip-015/action-003",
+      "source_row": 174,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-018",
+      "action_ref": "round-01-clip-018/action-003",
+      "source_row": 210,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-019",
+      "action_ref": "round-01-clip-019/action-002",
+      "source_row": 221,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-019",
+      "action_ref": "round-01-clip-019/action-003",
+      "source_row": 222,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-002",
+      "source_row": 245,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-003",
+      "source_row": 246,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-004",
+      "source_row": 247,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-005",
+      "source_row": 248,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-006",
+      "source_row": 249,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-007",
+      "source_row": 250,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-008",
+      "source_row": 251,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-009",
+      "source_row": 252,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-021",
+      "action_ref": "round-01-clip-021/action-010",
+      "source_row": 253,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-022",
+      "action_ref": "round-01-clip-022/action-002",
+      "source_row": 257,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-022",
+      "action_ref": "round-01-clip-022/action-003",
+      "source_row": 258,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-023",
+      "action_ref": "round-01-clip-023/action-002",
+      "source_row": 269,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-023",
+      "action_ref": "round-01-clip-023/action-003",
+      "source_row": 270,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-023",
+      "action_ref": "round-01-clip-023/action-004",
+      "source_row": 271,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-023",
+      "action_ref": "round-01-clip-023/action-005",
+      "source_row": 272,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-023",
+      "action_ref": "round-01-clip-023/action-006",
+      "source_row": 273,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-002",
+      "source_row": 281,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-003",
+      "source_row": 282,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-004",
+      "source_row": 283,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-005",
+      "source_row": 284,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-006",
+      "source_row": 285,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-007",
+      "source_row": 286,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-008",
+      "source_row": 287,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-024",
+      "action_ref": "round-01-clip-024/action-009",
+      "source_row": 288,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-028",
+      "action_ref": "round-01-clip-028/action-002",
+      "source_row": 329,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-028",
+      "action_ref": "round-01-clip-028/action-003",
+      "source_row": 330,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-037",
+      "action_ref": "round-01-clip-037/action-002",
+      "source_row": 437,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-040",
+      "action_ref": "round-01-clip-040/action-002",
+      "source_row": 473,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    },
+    {
+      "kind": "side_inheritance",
+      "clip_id": "round-01-clip-040",
+      "action_ref": "round-01-clip-040/action-003",
+      "source_row": 474,
+      "raw_value": null,
+      "normalized_value": "near",
+      "reason": "inherit side"
+    }
+  ]
+}

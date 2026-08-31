@@ -1,0 +1,302 @@
+{
+  "format": "spiketrace.active-review-evidence-overrides",
+  "format_version": 1,
+  "review_set_key": "rangitoto/round-01",
+  "batch_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01",
+  "round_id": "round-01",
+  "selection": {
+    "path": "data/active-learning/rangitoto/round-01-selection.json",
+    "sha256": "c7c9d4c21ae8fb041eece192b9c4f2c66648c863fdf79c278f08ca11e6cfe06c"
+  },
+  "workbook": {
+    "path": "outputs/active-learning/rangitoto/round-01/review.xlsx",
+    "sha256": "3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b"
+  },
+  "video": {
+    "path": "data/YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4",
+    "sha256": "0102bf5de66a86677581155d1d2e723621a2a45d5c74b0757a8a256387204fbf"
+  },
+  "workbook_compatibility": {
+    "trimmed_banner_cells": [
+      {
+        "sheet": "短片清单",
+        "cell": "A2",
+        "expected_value": "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。 ",
+        "actual_value": "只读投影；请用相对链接播放同目录 clips 文件夹中的代理短片。选择理由会自动换行。"
+      },
+      {
+        "sheet": "人工动作",
+        "cell": "A2",
+        "expected_value": "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。 ",
+        "actual_value": "只填写浅黄色的五列。每条记录使用当前短片的相对整秒；没有状态列或勾选框。"
+      },
+      {
+        "sheet": "候选提示",
+        "cell": "A2",
+        "expected_value": "只读模型提示；它们是参考，不是人工审核结果。 ",
+        "actual_value": "只读模型提示；它们是参考，不是人工审核结果。"
+      },
+      {
+        "sheet": "标签说明",
+        "cell": "A2",
+        "expected_value": "请先阅读再填写“人工动作”页。 ",
+        "actual_value": "请先阅读再填写“人工动作”页。"
+      }
+    ],
+    "shared_formula_ranges": [
+      {
+        "sheet": "人工动作",
+        "range": "C4:C483",
+        "block_size": 12,
+        "expected_display_value": "播放"
+      }
+    ],
+    "validation_import_gaps": [
+      {
+        "sheet": "人工动作",
+        "range": "E4:E483",
+        "validation_kind": "list",
+        "expected_rule": {
+          "type": "list",
+          "values": [
+            "background",
+            "serve",
+            "receive",
+            "set",
+            "attack",
+            "block",
+            "dig"
+          ]
+        }
+      },
+      {
+        "sheet": "人工动作",
+        "range": "F4:G483",
+        "validation_kind": "whole",
+        "expected_rule": {
+          "type": "whole",
+          "operator": "greaterThanOrEqual",
+          "formula1": 0
+        }
+      },
+      {
+        "sheet": "人工动作",
+        "range": "H4:H483",
+        "validation_kind": "list",
+        "expected_rule": {
+          "type": "list",
+          "values": [
+            "far",
+            "near"
+          ]
+        }
+      }
+    ],
+    "read_only_repairs": [
+      {
+        "clip_id": "round-01-clip-002",
+        "source_action_slot": 1,
+        "sheet": "人工动作",
+        "cell": "A16",
+        "field": "clip_id",
+        "original_value": null,
+        "normalized_value": "round-01-clip-002",
+        "reason": "原工作簿 A16 的只读短片 ID 为空，按固定槽位恢复对应短片 ID。"
+      }
+    ]
+  },
+  "action_overrides": [
+    {
+      "action_ref": "round-01-clip-009/action-001",
+      "expected_source": {
+        "review_label": "serve",
+        "relative_start_seconds": 3,
+        "relative_end_seconds": 4,
+        "team_side": "near",
+        "note": "人物没有出现在镜头内，不知道怎么划分"
+      },
+      "replacement_review_label": null,
+      "visibility": "off_camera",
+      "evidence_basis": "sequence_context",
+      "replacement_note": null,
+      "reason": "原备注说明发球人未出现在镜头内；保留发球事实但排除视觉训练。"
+    },
+    {
+      "action_ref": "round-01-clip-010/action-001",
+      "expected_source": {
+        "review_label": "serve",
+        "relative_start_seconds": 16,
+        "relative_end_seconds": 17,
+        "team_side": "near",
+        "note": "人物发球时没出现在镜头内，但是发完球从底线跑上去了，所以号码识别应该算他。"
+      },
+      "replacement_review_label": null,
+      "visibility": "off_camera",
+      "evidence_basis": "sequence_context",
+      "replacement_note": null,
+      "reason": "原备注说明发球动作发生在镜头外；只保留上下文事实，不加入视觉训练。"
+    },
+    {
+      "action_ref": "round-01-clip-023/action-004",
+      "expected_source": {
+        "review_label": "dig",
+        "relative_start_seconds": 6,
+        "relative_end_seconds": 7,
+        "team_side": null,
+        "note": "被拦回的保护"
+      },
+      "replacement_review_label": "background",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "replacement_note": null,
+      "reason": "原备注明确是被拦回后的保护，不属于 dig；按可见非目标区间保留。"
+    },
+    {
+      "action_ref": "round-01-clip-024/action-005",
+      "expected_source": {
+        "review_label": "attack",
+        "relative_start_seconds": 11,
+        "relative_end_seconds": 12,
+        "team_side": null,
+        "note": "垫过去的自由球算不算进攻"
+      },
+      "replacement_review_label": "free_ball",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "replacement_note": null,
+      "reason": "原备注所指为被动垫过网的自由球，保留 11-12 秒并仅修正动作标签。"
+    }
+  ],
+  "supplemental_actions": [
+    {
+      "supplemental_index": 1,
+      "clip_id": "round-01-clip-011",
+      "review_label": "block",
+      "relative_start_seconds": 21,
+      "relative_end_seconds": 22,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "note": "后续可直接看见副攻被晃起的无效拦网起跳。",
+      "reason": "原备注提示漏记的无效拦网；视频在 21-22 秒直接支持该起跳。"
+    },
+    {
+      "supplemental_index": 1,
+      "clip_id": "round-01-clip-017",
+      "review_label": "free_ball",
+      "relative_start_seconds": 13,
+      "relative_end_seconds": 14,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "note": "接球失误后的第三次触球为可见的被动回球。",
+      "reason": "原备注指出第三下推攻；视频在 13-14 秒直接显示被动回球过网。"
+    },
+    {
+      "supplemental_index": 1,
+      "clip_id": "round-01-clip-018",
+      "review_label": "free_ball",
+      "relative_start_seconds": 8,
+      "relative_end_seconds": 9,
+      "team_side": "near",
+      "visibility": "direct_clear",
+      "evidence_basis": "direct_video",
+      "interval_scope": "timed",
+      "note": "8-9 秒可直接看见尝试推球回网但未过网。",
+      "reason": "原备注明确 8-9 秒推攻失败；动作本身可见，按自由球保存。"
+    }
+  ],
+  "outcome_observations": [
+    {
+      "outcome_index": 1,
+      "related_action_refs": [
+        "round-01-clip-007/action-002"
+      ],
+      "outcome": "point_lost",
+      "result_type": null,
+      "evidence_basis": "direct_video",
+      "status": "observed_or_inferred",
+      "note": "原备注确认随后失分，但未补写不存在的 dig 动作。"
+    },
+    {
+      "outcome_index": 2,
+      "related_action_refs": [
+        "round-01-clip-014/action-001"
+      ],
+      "outcome": "point_won",
+      "result_type": "opponent_serve_error",
+      "evidence_basis": "referee_signal",
+      "status": "observed_or_inferred",
+      "note": "原备注记录对方发球失误；只保存裁判手势支持的得分结果，不补我方动作。"
+    },
+    {
+      "outcome_index": 3,
+      "related_action_refs": [
+        "round-01-clip-018/supplemental-001"
+      ],
+      "outcome": "point_lost",
+      "result_type": "free_ball_error",
+      "evidence_basis": "direct_video",
+      "status": "observed_or_inferred",
+      "note": "原备注说明 8-9 秒自由球未过网并直接失分。"
+    },
+    {
+      "outcome_index": 4,
+      "related_action_refs": [
+        "round-01-clip-034/action-001"
+      ],
+      "outcome": "point_won",
+      "result_type": "service_winner",
+      "evidence_basis": "referee_signal",
+      "status": "observed_or_inferred",
+      "note": "发球动作直接可见；原备注仅依据裁判手势确认得分。"
+    }
+  ],
+  "visibility_observations": [
+    {
+      "visibility_index": 1,
+      "event_kind": "off_camera",
+      "clip_id": "round-01-clip-009",
+      "team_side": "near",
+      "relative_start_seconds": 3,
+      "relative_end_seconds": 4,
+      "interval_scope": "timed",
+      "related_action_refs": [
+        "round-01-clip-009/action-001"
+      ],
+      "note": "发球人在动作区间内未进入镜头。",
+      "reason": "原备注确认发球人未出现在镜头内，按同一 3-4 秒记录镜头外事件。"
+    },
+    {
+      "visibility_index": 2,
+      "event_kind": "off_camera",
+      "clip_id": "round-01-clip-010",
+      "team_side": "near",
+      "relative_start_seconds": 16,
+      "relative_end_seconds": 17,
+      "interval_scope": "timed",
+      "related_action_refs": [
+        "round-01-clip-010/action-001"
+      ],
+      "note": "发球动作发生在画面外，发球后球员才从底线进入画面。",
+      "reason": "原备注确认发球时未入镜，按同一 16-17 秒记录镜头外事件。"
+    },
+    {
+      "visibility_index": 3,
+      "event_kind": "occlusion",
+      "clip_id": "round-01-clip-035",
+      "team_side": "near",
+      "relative_start_seconds": null,
+      "relative_end_seconds": null,
+      "interval_scope": "clip_bounds",
+      "related_action_refs": [
+        "round-01-clip-035/action-001"
+      ],
+      "note": "目标侧在整段短片中被近景人员遮挡，不能作为动作或自动负样本。",
+      "reason": "原备注明确镜头被完全遮挡；按完整短片边界记录一次连续遮挡。"
+    }
+  ],
+  "action_participants": []
+}
