@@ -9,8 +9,15 @@ __pycache__/
 # Local data and generated artifacts
 data/*
 !data/annotations/
-!data/annotations/*.csv
-!data/annotations/*.json
+data/annotations/*
+!data/annotations/rangitoto_round_01/
+data/annotations/rangitoto_round_01/*
+!data/annotations/rangitoto_round_01/round-01-results.json
+!data/annotations/rangitoto_round_01/action_training_round_01.csv
+!data/annotations/rangitoto_round_01/round-01-observations.csv
+!data/annotations/rangitoto_round_01/round-01-visibility-events.csv
+!data/annotations/rangitoto_round_01/round-01-action-participants.csv
+!data/annotations/rangitoto_round_01/round-01-exports.manifest.json
 !data/active-learning/
 !data/active-learning/**/
 !data/active-learning/**/*.json

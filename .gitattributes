@@ -1,4 +1,5 @@
 data/annotations/*.csv text eol=crlf
+data/annotations/rangitoto_round_01/*.csv text eol=crlf
 outputs/**/merged_candidates.csv text eol=lf
 *.json text eol=lf
 tests/fixtures/active_review_v1_expected_manifest.csv text eol=lf

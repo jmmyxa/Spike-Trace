@@ -1,0 +1,119 @@
+{
+  "format": "spiketrace.active-review-exports-manifest",
+  "format_version": 1,
+  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad",
+  "content_sha256": "281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5",
+  "generator_version": "spike-trace/0.1.0",
+  "sources": {
+    "selection": {
+      "path": "data/active-learning/rangitoto/round-01-selection.json",
+      "sha256": "c7c9d4c21ae8fb041eece192b9c4f2c66648c863fdf79c278f08ca11e6cfe06c"
+    },
+    "review_input": {
+      "path": "data/active-learning/rangitoto/round-01-review-v2.json",
+      "sha256": "85c3aee3d5c1dcbf916a57f182c5173470800f6a5547dff4c26f85a19b28786f"
+    },
+    "workbook": {
+      "path": "outputs/active-learning/rangitoto/round-01/review.xlsx",
+      "sha256": "3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b"
+    },
+    "evidence_overrides": {
+      "path": "data/active-learning/rangitoto/round-01-evidence-overrides.json",
+      "sha256": "ca1433a5caae776b8c81f025ec86900a577385017fdc31fe3bc96cf8f34b4283"
+    },
+    "merged_candidates": {
+      "path": "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json",
+      "sha256": "e79aba6e5eb3a1075819a290144198b7e393fceed94313cdf9fc171378a76e7e"
+    },
+    "base_manifest": {
+      "path": "data/annotations/usa_germany_2024_annotations_expanded_batch_02.csv",
+      "sha256": "17fab8ffa9bf6d77c896491aa7da7e15920679ff9bda8cbb207259e89815ef2d"
+    },
+    "video": {
+      "video_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p",
+      "path": "data/YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4",
+      "sha256": "0102bf5de66a86677581155d1d2e723621a2a45d5c74b0757a8a256387204fbf",
+      "fps": 30.0,
+      "frame_count": 197384,
+      "width": 1920,
+      "height": 1080,
+      "duration_seconds": 6579.466666666666,
+      "crops": {
+        "far": [
+          0,
+          0,
+          1920,
+          645
+        ],
+        "near": [
+          0,
+          255,
+          1920,
+          1080
+        ]
+      }
+    },
+    "verification": {
+      "source_video_file_checked": true
+    }
+  },
+  "artifacts": [
+    {
+      "path": "round-01-results.json",
+      "media_type": "application/json",
+      "sha256": "399e0094fb29a85f645a1c11f077a181ad33a2b041a3560deaf125c9ad5c6b5f",
+      "bytes": 264866,
+      "encoding": "utf-8",
+      "line_ending": "lf",
+      "data_rows": null,
+      "entity_counts": {
+        "action_observations": 86,
+        "outcome_observations": 4,
+        "occlusion_events": 1,
+        "off_camera_events": 2,
+        "action_participants": 0,
+        "training_rows": 214
+      }
+    },
+    {
+      "path": "action_training_round_01.csv",
+      "media_type": "text/csv",
+      "sha256": "2c0ff1900c74622cf99f07527b66fc48b6e18f0462f393234624cd9719012ac6",
+      "bytes": 60335,
+      "encoding": "utf-8-sig",
+      "line_ending": "crlf",
+      "data_rows": 214,
+      "entity_counts": null
+    },
+    {
+      "path": "round-01-observations.csv",
+      "media_type": "text/csv",
+      "sha256": "0faf79cedcf4f5df7371d7058a66eef68ec60347d27070391917f12fe7bf0e87",
+      "bytes": 40297,
+      "encoding": "utf-8-sig",
+      "line_ending": "crlf",
+      "data_rows": 90,
+      "entity_counts": null
+    },
+    {
+      "path": "round-01-visibility-events.csv",
+      "media_type": "text/csv",
+      "sha256": "9c3904a9b00d7332554e09ae619b2ff1274a65ca4288dac825b88852034f2012",
+      "bytes": 2308,
+      "encoding": "utf-8-sig",
+      "line_ending": "crlf",
+      "data_rows": 3,
+      "entity_counts": null
+    },
+    {
+      "path": "round-01-action-participants.csv",
+      "media_type": "text/csv",
+      "sha256": "97e1b6dd737e1bcdacf6b985503e7933ff7d389f310d470c1706d463be7086bc",
+      "bytes": 197,
+      "encoding": "utf-8-sig",
+      "line_ending": "crlf",
+      "data_rows": 0,
+      "entity_counts": null
+    }
+  ]
+}
