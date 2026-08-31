@@ -54,3 +54,15 @@ visibility array indexes, checking clip-bound visibility equality, and making
 the result-ID formula UTF-8 compatible, the focused command and the full
 contract suite exit `0` (`Ran 6 tests ... OK`). The dual-crop/selection suite
 also exits `0` (`Ran 75 tests ... OK`), and Ruff exits `0`.
+
+## Fix Round 2 RED/GREEN
+
+The source-repair regression first accepted a valid-looking top-level repair
+that was not linked from its canonical source action. It now fails unless every
+repair uses the exact workbook schema, canonical clip/slot/cell identity, and
+the same ordered lineage in the source/action records. The default legacy
+merged-source loader reads its artifact once and delegates to the byte core;
+custom verifier injection remains on the compatibility path.
+
+Fresh contract verification exits `0` (`Ran 7 tests ... OK`) and Ruff exits
+`0`.

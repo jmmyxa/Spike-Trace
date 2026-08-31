@@ -177,6 +177,26 @@ class ReviewContractTests(unittest.TestCase):
             self.assertEqual(validated.action_observations[2]["interval_scope"], "clip_bounds")
             self.assertEqual(validated.visibility_observations[1]["visibility_ref"], f"{result}/off_camera-source-002")
 
+    def test_rejects_unlinked_or_malformed_source_repairs(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            repair = {"clip_id": selection["clips"][0]["clip_id"], "source_action_slot": 1, "sheet": "人工动作", "cell": "A4", "field": "clip_id", "original_value": None, "normalized_value": selection["clips"][0]["clip_id"], "reason": "restore read-only ID"}
+            review["source_repairs"] = [repair]
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+            with self.assertRaisesRegex(ValueError, "source repair"):
+                load_review_sources_v2(snapshots, selected)
+
 
 def _repo(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()

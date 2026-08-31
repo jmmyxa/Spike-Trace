@@ -180,9 +180,19 @@ def validate_merged_review_source(
     root = Path(repo_root).expanduser().resolve()
     merged_path = _resolved_path(merged_json_path, root, "merged JSON")
     try:
-        merged = _load_json_bytes(
-            merged_path.read_bytes(), description="merged review source"
-        )
+        merged_bytes = merged_path.read_bytes()
+        if _verifier is verify_dual_crop_review:
+            from ._active_learning_review_contract import (
+                validate_merged_review_source_bytes,
+            )
+
+            return validate_merged_review_source_bytes(
+                merged_bytes,
+                merged_repo_path=_normalized_path(merged_path, root, "merged JSON"),
+                repo_root=root,
+                require_video=require_video,
+            )
+        merged = _load_json_bytes(merged_bytes, description="merged review source")
         _verifier(merged_path)
         input_runs = _mapping(merged["input_runs"], "input_runs")
         far_settings = _mapping(

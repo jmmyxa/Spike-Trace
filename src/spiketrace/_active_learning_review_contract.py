@@ -284,6 +284,14 @@ def load_review_sources_v2(
     )
     if selection != frozen_selection:
         raise ValueError("Caller selection does not match frozen selection bytes.")
+    frozen_source = _mapping(frozen_selection.get("source"), "selection source")
+    if (
+        _repo_path(frozen_source.get("merged_json"), "source merged JSON")
+        != snapshots.merged_candidates.repo_path
+        or _hash(frozen_source.get("merged_json_sha256"), "merged JSON SHA-256")
+        != snapshots.merged_candidates.sha256
+    ):
+        raise ValueError("Frozen selection does not match frozen merged bytes.")
     _exact(review, _REVIEW_ROOT_FIELDS, "review input")
     if review["format"] != "spiketrace.active-review-evidence-input" or type(review["format_version"]) is not int or review["format_version"] != 2:
         raise ValueError("Review input must use evidence input format version 2.")
@@ -309,8 +317,8 @@ def load_review_sources_v2(
     if review["video"] != selection["video"]:
         raise ValueError("Review input video does not match selection.")
     source_rows = _validate_source_rows(review["source_review_rows"])
-    source_repairs = _list_of_objects(review["source_repairs"], "source_repairs")
-    actions = _validate_actions(review["action_observations"], selection, source_rows)
+    source_repairs = _validate_source_repairs(review["source_repairs"], selection)
+    actions = _validate_actions(review["action_observations"], selection, source_rows, source_repairs)
     outcomes = _validate_outcomes(review["outcome_observations"], actions, expected_result)
     visibility = _validate_visibility(review["visibility_observations"], actions, selection, expected_result)
     participants = _validate_participants(review["action_participants"], actions)
@@ -352,12 +360,13 @@ def _validate_source_rows(value: object) -> list[dict[str, object]]:
     return rows
 
 
-def _validate_actions(value: object, selection: dict[str, object], source_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def _validate_actions(value: object, selection: dict[str, object], source_rows: list[dict[str, object]], source_repairs: list[dict[str, object]]) -> list[dict[str, object]]:
     actions = _list_of_objects(value, "action_observations")
     clips = {clip["clip_id"]: clip for clip in selection["clips"]}
     source_by_ref = {row["action_ref"]: row for row in source_rows}
     seen: set[str] = set()
     supplemental: dict[str, list[int]] = {}
+    linked_repairs: list[dict[str, object]] = []
     for action in actions:
         _exact(action, _ACTION_FIELDS, "action observation")
         ref = _text(action["action_ref"], "action_ref")
@@ -378,6 +387,7 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
         _optional_text(action["source_reason"], "action source_reason")
         if not isinstance(action["raw_values"], dict) or not isinstance(action["normalized_values"], dict) or not isinstance(action["source_repairs"], list):
             raise TypeError("action values and repairs must be objects/arrays.")
+        linked_repairs.extend(_validate_source_repairs(action["source_repairs"], selection))
         slot = action["source_action_slot"]
         row = action["source_row"]
         is_supplemental = slot is None and row is None
@@ -419,7 +429,31 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
     for numbers in supplemental.values():
         if sorted(numbers) != list(range(1, len(numbers) + 1)):
             raise ValueError("supplemental action indexes must be contiguous per clip.")
+    if linked_repairs != source_repairs:
+        raise ValueError("source repairs must be linked from their action observations.")
     return actions
+
+
+def _validate_source_repairs(value: object, selection: dict[str, object]) -> list[dict[str, object]]:
+    repairs = _list_of_objects(value, "source repairs")
+    clips = {clip["clip_id"]: clip for clip in selection["clips"]}
+    seen: set[tuple[str, int, str]] = set()
+    fields = ("clip_id", "source_action_slot", "sheet", "cell", "field", "original_value", "normalized_value", "reason")
+    for repair in repairs:
+        _exact(repair, fields, "source repair")
+        clip_id = _text(repair["clip_id"], "source repair clip_id")
+        slot = _whole(repair["source_action_slot"], "source repair slot")
+        if clip_id not in clips or not 1 <= slot <= 12 or repair["sheet"] != "人工动作" or repair["field"] != "clip_id" or repair["original_value"] is not None or repair["normalized_value"] != clip_id:
+            raise ValueError("source repair is invalid.")
+        expected_cell = f"A{4 + (clips[clip_id]['ordinal'] - 1) * 12 + slot - 1}"
+        if repair["cell"] != expected_cell:
+            raise ValueError("source repair cell is not canonical.")
+        _text(repair["reason"], "source repair reason")
+        key = (clip_id, slot, repair["field"])
+        if key in seen:
+            raise ValueError("source repairs contains duplicate repair.")
+        seen.add(key)
+    return repairs
 
 
 def _validate_outcomes(value: object, actions: list[dict[str, object]], result_id: str) -> list[dict[str, object]]:
