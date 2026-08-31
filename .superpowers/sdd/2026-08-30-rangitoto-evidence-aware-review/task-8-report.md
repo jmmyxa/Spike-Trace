@@ -180,3 +180,143 @@ No Critical, Important, or Minor findings
 
 - This task deliberately does not create or claim the final real Rangitoto six-file bundle; later work must run the new orchestration against the durable inputs.
 - The two pre-existing protected evidence directories remain untracked and cause the only repository-wide Ruff findings; they are outside Task 8 scope and must not be staged.
+
+## Formal Review Fix Round 1/5
+
+Fix base: `61ff4ad`. This round addresses only the three formal-review Important findings. The separately recorded Minor about unused `BundleSettings` fields remains outside this fix loop for final aggregate review.
+
+### 1. Base training prefix semantic binding
+
+The original validator rebuilt only projected suffix rows. A test changed the first base row's `label`, `split`, `video_path`, or `match_id`, then refreshed the training export hash and manifest artifact metadata. All four variants were accepted.
+
+RED command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+.venv\Scripts\python.exe -m unittest tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_base_training_prefix_tampering -v
+```
+
+Raw RED result:
+
+```text
+field='label' ... FAIL — ValueError not raised
+field='split' ... FAIL — ValueError not raised
+field='video_path' ... FAIL — ValueError not raised
+field='match_id' ... FAIL — ValueError not raised
+Ran 1 test in 0.020s
+FAILED (failures=4)
+```
+
+The semantic authority now contains exact `training_projection.base_training_view` fields `{fieldnames, data_rows, content_sha256}`. Rendering normalizes every frozen base row into its complete output field set after legacy match-ID fill, then hashes canonical JSON containing the ordered fieldnames and complete normalized prefix. Standalone validation uses the CSV header and prefix rows to independently recompute that semantic hash, requires strict field/count/hash types, and requires total training rows to equal base rows plus human/generated rows. It never opens the live base manifest.
+
+A second RED showed that an empty base and empty projection could self-bootstrap authority fieldnames because no row exposed the real CSV header:
+
+```text
+test_rejects_rehashed_empty_base_training_header_tampering ... FAIL
+AssertionError: ValueError not raised
+```
+
+CSV parsing now returns the actual header separately, so zero-row bundles also compare the header to authority. Both prefix and zero-row-header tamper tests are GREEN.
+
+### 2. Strict VideoBinding and projection invariants
+
+All tamper cases recomputed semantic `content_sha256`, synchronized manifest root sources/content hash, and refreshed authority artifact bytes/hash. Expected values were hand-derived from Task 5/7 contracts rather than generated with Task 7 production helpers.
+
+RED command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+.venv\Scripts\python.exe -m unittest \
+  tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_invalid_video_binding_contract \
+  tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_invalid_projection_decision_relation \
+  tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_invalid_projection_windows_and_caps \
+  tests.test_active_learning_review_outputs.ResultBundleTamperValidationTests.test_rejects_rehashed_player_projection_without_confirmed_participant -v
+```
+
+Raw RED result:
+
+```text
+VideoBinding: fps bool, zero duration, frame_count bool, zero width,
+              bool crop coordinate, out-of-frame crop — all FAIL accepted
+Decisions: duplicate, orphan, illegal vocabulary, missing — all FAIL
+Windows/caps: human window_index, human top1, empty generated clip,
+              negative generated index, negative requested cap,
+              boolean effective cap — all FAIL accepted
+Player projection without confirmed participant — FAIL accepted
+Ran 4 tests in 0.069s
+FAILED (failures=17)
+```
+
+The validator now independently enforces:
+
+- exact repository-relative artifact/video paths, lowercase SHA-256, positive finite FPS/duration, positive non-boolean integer frame/dimensions, and exact bounded integer far/near crops;
+- exact one-to-one decisions in action order, no duplicate/orphan/missing refs, and Task 7 decision/label/reason semantics reconstructed from serialized action evidence;
+- human windows exactly reconstructed from eligible timed actions, video-side crops, and the one-confirmed-participant projection rule;
+- generated-window exact fields, types, finite video bounds, background labels, side crop, stable source ref, donor sentinel, unique refs, nonnegative index, valid model top-1/confidence, and null player;
+- strict nonnegative non-boolean positive/requested/effective counts with `effective=min(requested, positive)` and generated count bounded by effective cap.
+
+Adding a valid sentinel donor to the synthetic output fixture exposed an existing renderer bug: untimed actions reached `float(None)` during CSV ordering. The valid-bundle test provided the RED error; both renderer and authority view ordering now sort null starts after timed rows.
+
+GREEN evidence:
+
+```text
+Ran 4 tests in 0.068s
+OK
+Ran 30 tests in 0.295s
+OK
+```
+
+### 3. Darwin capability preflight
+
+The Darwin test mocks `sys.platform='darwin'` and a C library without `renamex_np`, supplies a counting publication IO, and asserts zero callback calls, zero IO operations, and no parent directory.
+
+Raw RED result:
+
+```text
+test_macos_missing_renamex_fails_before_publication_side_effects ... FAIL
+publication_io.trace contained 33 operations:
+create_parent, create_staging, six create/write/flush/fsync sequences,
+six reads, and rename
+Ran 1 test in 0.016s
+FAILED (failures=1)
+```
+
+`_require_noreplace_platform()` now resolves and configures `renamex_np` during entry preflight. Missing symbol or library raises before path calculation creates anything, IO, validation, or callback. The final rename reuses the same capability loader; Windows/Linux no-replace behavior remains unchanged.
+
+GREEN result:
+
+```text
+test_macos_missing_renamex_fails_before_publication_side_effects ... ok
+Ran 1 test in 0.003s
+OK
+```
+
+### Round 1 regression gate
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+.venv\Scripts\python.exe -m unittest \
+  tests.test_active_learning_review_contract \
+  tests.test_active_learning_review_observations \
+  tests.test_active_learning_review_projection \
+  tests.test_active_learning_review_outputs \
+  tests.test_active_learning_review
+```
+
+Raw result:
+
+```text
+Ran 109 tests in 67.091s
+OK
+```
+
+Final round checks:
+
+```text
+Scoped Ruff: All checks passed!
+Repository Ruff with both protected evidence roots excluded: All checks passed!
+compileall: exit 0
+git diff --check: exit 0
+```
+
+The unexcluded repository Ruff command still reports only the same two protected, untracked `make_video.py` import-order findings. Neither protected evidence root is changed or staged by this round.

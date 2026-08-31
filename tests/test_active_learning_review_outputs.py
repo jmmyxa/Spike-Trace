@@ -89,9 +89,13 @@ class ResultBundleRenderingTests(unittest.TestCase):
         observations = _csv_rows(artifacts["round-01-observations.csv"])
         self.assertEqual(
             tuple((row["observation_type"], row["observation_ref"]) for row in observations),
-            (("action", "clip-001/action-001"), ("outcome", "result-test/outcome-001")),
+            (
+                ("action", "clip-001/action-001"),
+                ("action", "clip-002/action-001"),
+                ("outcome", "result-test/outcome-001"),
+            ),
         )
-        self.assertEqual(observations[1]["related_action_refs_json"], '["clip-001/action-001"]')
+        self.assertEqual(observations[2]["related_action_refs_json"], '["clip-001/action-001"]')
 
     def test_content_hash_is_derived_from_semantic_authority_and_exports_exact_bytes(self):
         bundle = _rendered_bundle()
@@ -125,6 +129,9 @@ class ResultBundleRenderingTests(unittest.TestCase):
         self.assertEqual(authority["format_version"], 2)
         self.assertEqual(authority["training_projection"]["training_video_path"], "video.mp4")
         self.assertEqual(authority["training_projection"]["review_match_id"], "review-match")
+        self.assertEqual(
+            authority["training_projection"]["base_training_view"]["data_rows"], 1
+        )
         self.assertEqual(tuple(authority["sources"]), (
             "selection", "review_input", "workbook", "evidence_overrides",
             "merged_candidates", "base_manifest", "video", "verification",
@@ -149,7 +156,7 @@ class ResultBundleRenderingTests(unittest.TestCase):
             ),
         )
         self.assertEqual(manifest["artifacts"][0]["entity_counts"], {
-            "action_observations": 1,
+            "action_observations": 2,
             "outcome_observations": 1,
             "occlusion_events": 1,
             "off_camera_events": 0,
@@ -309,6 +316,27 @@ class ResultBundlePublicationTests(unittest.TestCase):
         self.assertEqual(validate_result_bundle(output_dir)["result_set_id"], "result-test")
         self.assertEqual(_staging_paths(output_dir), [])
 
+    def test_macos_missing_renamex_fails_before_publication_side_effects(self):
+        output_dir = self.root / "darwin-parent" / "bundle"
+        publication_io = _CountingIO()
+        callback = mock.Mock()
+
+        with (
+            mock.patch.object(outputs.sys, "platform", "darwin"),
+            mock.patch.object(outputs.ctypes, "CDLL", return_value=object()),
+            self.assertRaisesRegex(RuntimeError, "renamex_np"),
+        ):
+            publish_result_bundle(
+                output_dir,
+                self.bundle,
+                before_publish=callback,
+                io=publication_io,
+            )
+
+        self.assertEqual(publication_io.trace, [])
+        callback.assert_not_called()
+        self.assertFalse(output_dir.parent.exists())
+
 
 class ResultBundleTamperValidationTests(unittest.TestCase):
     def setUp(self):
@@ -396,7 +424,7 @@ class ResultBundleTamperValidationTests(unittest.TestCase):
     def test_rejects_boolean_entity_count(self):
         manifest_path = self.bundle_dir / "round-01-exports.manifest.json"
         manifest = json.loads(manifest_path.read_bytes())
-        manifest["artifacts"][0]["entity_counts"]["action_observations"] = True
+        manifest["artifacts"][0]["entity_counts"]["action_participants"] = False
         manifest_path.write_bytes(_json_presentation(manifest))
 
         with self.assertRaisesRegex(ValueError, "entity_counts"):
@@ -460,6 +488,39 @@ class ResultBundleTamperValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "authority training_projection"):
             validate_result_bundle(self.bundle_dir)
 
+    def test_rejects_rehashed_base_training_prefix_tampering(self):
+        cases = (
+            ("label", "attack"),
+            ("split", "val"),
+            ("video_path", "other-legacy.mp4"),
+            ("match_id", "other-legacy-match"),
+        )
+        for field, replacement in cases:
+            with self.subTest(field=field):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                training_path = self.bundle_dir / "action_training_round_01.csv"
+                rows = _csv_rows(training_path.read_bytes())
+                rows[0][field] = replacement
+                training_path.write_bytes(_test_csv_bytes(tuple(rows[0]), rows))
+                _refresh_export_hashes(self.bundle_dir, training_path.name)
+
+                with self.assertRaisesRegex(ValueError, "base training"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_empty_base_training_header_tampering(self):
+        for filename, raw in _rendered_bundle(
+            no_windows=True, no_base_rows=True
+        ).artifacts:
+            (self.bundle_dir / filename).write_bytes(raw)
+        training_path = self.bundle_dir / "action_training_round_01.csv"
+        original = training_path.read_bytes()
+        training_path.write_bytes(original.replace(b"video_path,", b"extra,video_path,", 1))
+        _refresh_export_hashes(self.bundle_dir, training_path.name)
+
+        with self.assertRaisesRegex(ValueError, "base training"):
+            validate_result_bundle(self.bundle_dir)
+
     def test_rejects_rehashed_training_identity_that_diverges_from_authority(self):
         training_path = self.bundle_dir / "action_training_round_01.csv"
         original = training_path.read_bytes()
@@ -496,6 +557,87 @@ class ResultBundleTamperValidationTests(unittest.TestCase):
         _rewrite_semantic_authority(self.bundle_dir, authority)
 
         with self.assertRaisesRegex(ValueError, "summary"):
+            validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_invalid_video_binding_contract(self):
+        cases = (
+            ("fps bool", lambda video: video.__setitem__("fps", True)),
+            ("duration zero", lambda video: video.__setitem__("duration_seconds", 0)),
+            ("frame count bool", lambda video: video.__setitem__("frame_count", True)),
+            ("width zero", lambda video: video.__setitem__("width", 0)),
+            ("crop bool", lambda video: video["crops"]["far"].__setitem__(0, True)),
+            ("crop bounds", lambda video: video["crops"]["far"].__setitem__(2, 101)),
+        )
+        for label, mutate in cases:
+            with self.subTest(label=label):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                mutate(authority["sources"]["video"])
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(ValueError, "sources.video"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_invalid_projection_decision_relation(self):
+        cases = (
+            ("duplicate", lambda decisions: decisions.append(deepcopy(decisions[0]))),
+            ("orphan", lambda decisions: decisions.append({
+                "action_ref": "orphan/action-001",
+                "decision": "eligible",
+                "training_label": "serve",
+                "reason": "direct_visual",
+            })),
+            ("illegal", lambda decisions: decisions.append({
+                "action_ref": "orphan/action-002",
+                "decision": "maybe",
+                "training_label": "serve",
+                "reason": "invented",
+            })),
+            ("missing", lambda decisions: decisions.clear()),
+        )
+        for label, mutate in cases:
+            with self.subTest(label=label):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                mutate(authority["training_projection"]["decisions"])
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(ValueError, "training_projection decisions"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_invalid_projection_windows_and_caps(self):
+        cases = (
+            ("human window index", lambda projection: projection["human_windows"][0].__setitem__("window_index", 0)),
+            ("human top1", lambda projection: projection["human_windows"][0].__setitem__("source_top1_confidence", 0.5)),
+            ("generated clip", lambda projection: projection["generated_background_windows"][0].__setitem__("clip_id", "")),
+            ("generated index", lambda projection: projection["generated_background_windows"][0].__setitem__("window_index", -1)),
+            ("requested cap", lambda projection: projection.__setitem__("requested_background_cap", -1)),
+            ("effective cap bool", lambda projection: projection.__setitem__("effective_background_cap", True)),
+        )
+        for label, mutate in cases:
+            with self.subTest(label=label):
+                for filename, raw in _rendered_bundle().artifacts:
+                    (self.bundle_dir / filename).write_bytes(raw)
+                authority = _authority(self.bundle_dir)
+                mutate(authority["training_projection"])
+                _rewrite_semantic_authority(self.bundle_dir, authority)
+
+                with self.assertRaisesRegex(ValueError, "training_projection"):
+                    validate_result_bundle(self.bundle_dir)
+
+    def test_rejects_rehashed_player_projection_without_confirmed_participant(self):
+        authority = _authority(self.bundle_dir)
+        authority["training_projection"]["human_windows"][0]["player_number"] = "99"
+        _rewrite_semantic_authority(self.bundle_dir, authority)
+        training_path = self.bundle_dir / "action_training_round_01.csv"
+        rows = _csv_rows(training_path.read_bytes())
+        rows[-2]["player_number"] = "99"
+        training_path.write_bytes(_test_csv_bytes(tuple(rows[0]), rows))
+        _refresh_export_hashes(self.bundle_dir, training_path.name)
+
+        with self.assertRaisesRegex(ValueError, "player|training_projection"):
             validate_result_bundle(self.bundle_dir)
 
 
@@ -566,6 +708,7 @@ def _rewrite_semantic_authority(bundle_dir: Path, authority: dict[str, object]) 
     authority_raw = authority_path.read_bytes()
     manifest = json.loads(manifest_path.read_bytes())
     manifest["content_sha256"] = content_sha256
+    manifest["sources"] = authority["sources"]
     manifest["artifacts"][0]["sha256"] = hashlib.sha256(authority_raw).hexdigest()
     manifest["artifacts"][0]["bytes"] = len(authority_raw)
     manifest_path.write_bytes(_json_presentation(manifest))
@@ -588,6 +731,40 @@ class _TracingIO:
     def rename(self, source: Path, destination: Path) -> None:
         self.trace.append("rename")
         self.delegate.rename(source, destination)
+
+
+class _CountingIO:
+    def __init__(self):
+        self.delegate = outputs._PublicationIO()
+        self.trace: list[str] = []
+
+    def _call(self, operation: str, *args):
+        self.trace.append(operation)
+        return getattr(self.delegate, operation)(*args)
+
+    def create_parent(self, path: Path) -> None:
+        self._call("create_parent", path)
+
+    def create_staging(self, path: Path) -> None:
+        self._call("create_staging", path)
+
+    def open_exclusive(self, path: Path):
+        return self._call("open_exclusive", path)
+
+    def write(self, handle, raw: bytes) -> None:
+        self._call("write", handle, raw)
+
+    def flush(self, handle) -> None:
+        self._call("flush", handle)
+
+    def fsync(self, handle) -> None:
+        self._call("fsync", handle)
+
+    def read(self, path: Path) -> bytes:
+        return self._call("read", path)
+
+    def rename(self, source: Path, destination: Path) -> None:
+        self._call("rename", source, destination)
 
 
 class _FailingIO:
@@ -627,12 +804,21 @@ class _FailingIO:
         self._call("rename", source, destination)
 
 
-def _rendered_bundle(note: str = "自由球", *, no_windows: bool = False):
+def _rendered_bundle(
+    note: str = "自由球", *, no_windows: bool = False, no_base_rows: bool = False
+):
     action = ActionObservation(
         "clip-001/action-001", "clip-001", 1, 4,
-        {"review_label": "free_ball"}, {"review_label": "free_ball"},
-        "free_ball", 1, 2, 101.0, 102.0, "far", "direct_clear",
+        {"review_label": "serve"}, {"review_label": "serve"},
+        "serve", 1, 2, 101.0, 102.0, "far",
+        "fully_occluded" if no_windows else "direct_clear",
         "direct_video", "timed", None, False, note, None, (),
+    )
+    sentinel = ActionObservation(
+        "clip-002/action-001", "clip-002", 1, 5,
+        {"review_label": "background"}, {"review_label": "background"},
+        "background", None, None, None, None, "far", "direct_clear",
+        "direct_video", None, "clip_sentinel", False, "", None, (),
     )
     outcome = OutcomeObservation(
         "result-test/outcome-001", (action.action_ref,), "continued", None,
@@ -644,10 +830,10 @@ def _rendered_bundle(note: str = "自由球", *, no_windows: bool = False):
         ((103.0, 104.0),), "screened",
     )
     observations = ObservationSet(
-        "result-test", (action,), (outcome,), (), (occlusion,), (), (),
+        "result-test", (action, sentinel), (outcome,), (), (occlusion,), (), (),
     )
     human_window = TrainingWindow(
-        action.action_ref, action.clip_id, 101.0, 102.0, "background", "free_ball",
+        action.action_ref, action.clip_id, 101.0, 102.0, "serve", "serve",
         "far", (0, 0, 100, 50), None, False, None, None, None, note,
     )
     generated_window = TrainingWindow(
@@ -656,16 +842,26 @@ def _rendered_bundle(note: str = "自由球", *, no_windows: bool = False):
         9, "attack", 0.9, "",
     )
     projection = TrainingProjection(
-        ((action.action_ref, TrainingDecision(
-            "eligible_as_background", "background", "free_ball_projects_to_background"
-        )),),
+        (
+            (action.action_ref, TrainingDecision(
+                "eligible", "serve", "direct_visual"
+            )),
+            (sentinel.action_ref, TrainingDecision(
+                "excluded", None, "background_sentinel_only"
+            )),
+        ),
         (human_window,),
         (ProtectedInterval(action.action_ref, action.clip_id, "far", 101.0, 102.0, "human_observation"),),
-        (generated_window,), 0, 1, 1,
+        (generated_window,), 1, 1, 1,
     )
     if no_windows:
         projection = TrainingProjection(
-            projection.decisions,
+            (
+                (action.action_ref, TrainingDecision(
+                    "excluded", None, "insufficient_visual_evidence"
+                )),
+                projection.decisions[1],
+            ),
             (),
             projection.protected_intervals,
             (),
@@ -682,17 +878,20 @@ def _rendered_bundle(note: str = "自由球", *, no_windows: bool = False):
         ArtifactBinding("data/overrides.json", "c" * 64),
         ArtifactBinding("outputs/merged.json", "e" * 64),
         VideoBinding(
-            "video-test", "data/video.mp4", "f" * 64, 25.0, 2500, 100, 100,
-            100.0, {"far": (0, 0, 100, 50), "near": (0, 50, 100, 100)},
+            "video-test", "data/video.mp4", "f" * 64, 25.0, 7500, 100, 100,
+            300.0, {"far": (0, 0, 100, 50), "near": (0, 50, 100, 100)},
         ),
-        {}, ({"action_ref": action.action_ref},), (), (), (), (), (), (),
+        {}, (
+            {"action_ref": action.action_ref},
+            {"action_ref": sentinel.action_ref},
+        ), (), (), (), (), (), (),
     )
     return render_result_bundle(
         review=review,
         observations=observations,
         projection=projection,
         base_fieldnames=("video_path", "start_seconds", "end_seconds", "label", "split"),
-        base_rows=({
+        base_rows=() if no_base_rows else ({
             "video_path": "legacy.mp4", "start_seconds": "1", "end_seconds": "2",
             "label": "serve", "split": "train",
         },),

@@ -6,18 +6,20 @@ import errno
 import hashlib
 import io
 import json
+import math
 import os
 import shutil
 import sys
 import uuid
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, is_dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from ._active_learning_review_contract import ArtifactBinding, ValidatedReviewInput
 from ._active_learning_review_observations import ObservationSet
 from ._active_learning_review_projection import TrainingProjection
+from .constants import ACTION_LABELS
 
 _AUTHORITY_FILENAME = "round-01-results.json"
 _TRAINING_FILENAME = "action_training_round_01.csv"
@@ -119,7 +121,7 @@ def render_result_bundle(
     if review.result_set_id != observations.result_set_id:
         raise ValueError("Review and observations result_set_id must match.")
 
-    training_bytes, training_rows = _render_training_csv(
+    training_bytes, training_rows, base_training_view = _render_training_csv(
         base_fieldnames, base_rows, projection, settings
     )
     decisions = dict(projection.decisions)
@@ -153,7 +155,9 @@ def render_result_bundle(
         "off_camera_events": _plain(observations.off_camera_events),
         "action_participants": _plain(observations.participants),
         "protected_intervals": _plain(projection.protected_intervals),
-        "training_projection": _training_projection(projection, settings),
+        "training_projection": _training_projection(
+            projection, settings, base_training_view
+        ),
         "summary": _summary(observations, projection, training_rows),
     }
     content_sha256 = hashlib.sha256(_canonical_json_bytes(semantic_authority)).hexdigest()
@@ -271,19 +275,23 @@ def validate_result_bundle(bundle_dir: str | Path) -> dict[str, object]:
     if recomputed_content != content_sha256:
         raise ValueError("Authority content_sha256 does not match semantic authority bytes.")
 
+    training_fields, training_rows = _load_csv_artifact(
+        raw_by_name[_TRAINING_FILENAME], None, "training CSV"
+    )
+    _, observation_rows = _load_csv_artifact(
+        raw_by_name[_OBSERVATIONS_FILENAME], _OBSERVATION_FIELDS, "observations CSV"
+    )
+    _, visibility_rows = _load_csv_artifact(
+        raw_by_name[_VISIBILITY_FILENAME], _VISIBILITY_FIELDS, "visibility events CSV"
+    )
+    _, participant_rows = _load_csv_artifact(
+        raw_by_name[_PARTICIPANTS_FILENAME], _PARTICIPANT_FIELDS, "action participants CSV"
+    )
     csv_rows = {
-        _TRAINING_FILENAME: _load_csv_artifact(
-            raw_by_name[_TRAINING_FILENAME], None, "training CSV"
-        ),
-        _OBSERVATIONS_FILENAME: _load_csv_artifact(
-            raw_by_name[_OBSERVATIONS_FILENAME], _OBSERVATION_FIELDS, "observations CSV"
-        ),
-        _VISIBILITY_FILENAME: _load_csv_artifact(
-            raw_by_name[_VISIBILITY_FILENAME], _VISIBILITY_FIELDS, "visibility events CSV"
-        ),
-        _PARTICIPANTS_FILENAME: _load_csv_artifact(
-            raw_by_name[_PARTICIPANTS_FILENAME], _PARTICIPANT_FIELDS, "action participants CSV"
-        ),
+        _TRAINING_FILENAME: training_rows,
+        _OBSERVATIONS_FILENAME: observation_rows,
+        _VISIBILITY_FILENAME: visibility_rows,
+        _PARTICIPANTS_FILENAME: participant_rows,
     }
     _validate_manifest_artifacts(manifest, authority, raw_by_name, csv_rows)
     _validate_exports(authority["exports"], raw_by_name)
@@ -294,6 +302,7 @@ def validate_result_bundle(bundle_dir: str | Path) -> dict[str, object]:
         sources["selection"]["sha256"],
         sources["workbook"]["sha256"],
         generator_version,
+        training_fields,
     )
     summary = _validate_summary(authority, len(csv_rows[_TRAINING_FILENAME]))
     return {
@@ -393,6 +402,8 @@ def _require_noreplace_platform() -> None:
         libc = ctypes.CDLL(None, use_errno=True)
         if not hasattr(libc, "renameat2"):
             raise RuntimeError("Atomic no-replace publication requires renameat2.")
+    elif sys.platform == "darwin":
+        _load_macos_renamex()
 
 
 def _rename_windows_noreplace(source: Path, destination: Path) -> None:
@@ -428,19 +439,24 @@ def _rename_linux_noreplace(source: Path, destination: Path) -> None:
 
 
 def _rename_macos_noreplace(source: Path, destination: Path) -> None:
-    libc = ctypes.CDLL(None, use_errno=True)
-    try:
-        renamex_np = libc.renamex_np
-    except AttributeError as exc:
-        raise RuntimeError("Atomic no-replace publication requires renamex_np.") from exc
-    renamex_np.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint)
-    renamex_np.restype = ctypes.c_int
+    renamex_np = _load_macos_renamex()
     if renamex_np(os.fsencode(source), os.fsencode(destination), 0x00000004) == 0:
         return
     error = ctypes.get_errno()
     if error == errno.EEXIST:
         raise FileExistsError(error, os.strerror(error), destination)
     raise OSError(error, os.strerror(error), destination)
+
+
+def _load_macos_renamex() -> Any:
+    try:
+        libc = ctypes.CDLL(None, use_errno=True)
+        renamex_np = libc.renamex_np
+    except (AttributeError, OSError) as exc:
+        raise RuntimeError("Atomic no-replace publication requires renamex_np.") from exc
+    renamex_np.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint)
+    renamex_np.restype = ctypes.c_int
+    return renamex_np
 
 
 def _remove_staging(staging: Path) -> None:
@@ -482,7 +498,7 @@ def _load_csv_artifact(
     raw: bytes,
     expected_fields: Sequence[str] | None,
     description: str,
-) -> list[dict[str, str]]:
+) -> tuple[tuple[str, ...], list[dict[str, str]]]:
     if not raw.startswith(b"\xef\xbb\xbf"):
         raise ValueError(f"{description} must start with a UTF-8 BOM.")
     body = raw[3:]
@@ -502,7 +518,7 @@ def _load_csv_artifact(
         or not set(_CANONICAL_COLUMNS).issubset(fields)
     ):
         raise ValueError("Training CSV header does not contain the canonical manifest schema.")
-    return list(reader)
+    return fields, list(reader)
 
 
 def _validate_sources(value: object) -> dict[str, Any]:
@@ -516,7 +532,7 @@ def _validate_sources(value: object) -> dict[str, Any]:
                 f"sources.{name} must be an artifact binding."
             )
         _exact_fields(binding, ("path", "sha256"), f"sources.{name}")
-        _nonempty_text(binding["path"], f"sources.{name}.path")
+        _repo_path_text(binding["path"], f"sources.{name}.path")
         _hash(binding["sha256"], f"sources.{name}.sha256")
     video = value["video"]
     if not isinstance(video, dict):
@@ -530,8 +546,25 @@ def _validate_sources(value: object) -> dict[str, Any]:
         "sources.video",
     )
     _nonempty_text(video["video_id"], "sources.video.video_id")
-    _nonempty_text(video["path"], "sources.video.path")
+    _repo_path_text(video["path"], "sources.video.path")
     _hash(video["sha256"], "sources.video.sha256")
+    fps = _finite_number(video["fps"], "sources.video.fps")
+    duration = _finite_number(
+        video["duration_seconds"], "sources.video.duration_seconds"
+    )
+    frame_count = _whole_number(
+        video["frame_count"], "sources.video.frame_count"
+    )
+    width = _whole_number(video["width"], "sources.video.width")
+    height = _whole_number(video["height"], "sources.video.height")
+    if fps <= 0 or duration <= 0 or frame_count < 1 or width < 1 or height < 1:
+        raise ValueError("sources.video metadata must be positive.")
+    crops = video["crops"]
+    if not isinstance(crops, dict):
+        raise ValueError("sources.video.crops must be an object.")  # noqa: TRY004
+    _exact_fields(crops, ("far", "near"), "sources.video.crops")
+    for side in ("far", "near"):
+        _validate_crop(crops[side], width, height, f"sources.video.crops.{side}")
     verification = value["verification"]
     if not isinstance(verification, dict):
         raise ValueError("sources.verification must be an object.")  # noqa: TRY004
@@ -628,8 +661,10 @@ def _validate_cross_views(
     selection_sha256: str,
     workbook_sha256: str,
     generator_version: str,
+    training_fields: tuple[str, ...],
 ) -> None:
     common = (result_set_id, selection_sha256, workbook_sha256, generator_version)
+    decisions = _validate_projection_contract(authority)
     for filename in (_OBSERVATIONS_FILENAME, _VISIBILITY_FILENAME, _PARTICIPANTS_FILENAME):
         for row in csv_rows[filename]:
             actual = (
@@ -638,7 +673,7 @@ def _validate_cross_views(
             )
             if actual != common:
                 raise ValueError(f"{filename} row result_set_id or source identity does not match.")
-    expected_observations = _authority_observation_rows(authority, common)
+    expected_observations = _authority_observation_rows(authority, common, decisions)
     if csv_rows[_OBSERVATIONS_FILENAME] != expected_observations:
         raise ValueError("Observations CSV does not match authority observations.")
     expected_events = _authority_visibility_rows(authority, common)
@@ -647,11 +682,330 @@ def _validate_cross_views(
     expected_participants = _authority_participant_rows(authority, common)
     if csv_rows[_PARTICIPANTS_FILENAME] != expected_participants:
         raise ValueError("Action participants CSV does not match authority participants.")
-    _validate_training_view(authority, csv_rows[_TRAINING_FILENAME])
+    _validate_training_view(
+        authority, csv_rows[_TRAINING_FILENAME], training_fields
+    )
+
+
+def _validate_projection_contract(authority: dict[str, Any]) -> dict[str, str]:
+    projection = authority["training_projection"]
+    if not isinstance(projection, dict):
+        raise ValueError("Authority training_projection must be an object.")  # noqa: TRY004
+    _exact_fields(
+        projection,
+        (
+            "decisions", "human_windows", "generated_background_windows",
+            "positive_training_count", "requested_background_cap",
+            "effective_background_cap", "training_video_path", "review_match_id",
+            "base_training_view",
+        ),
+        "training_projection",
+    )
+    actions = authority["action_observations"]
+    if not isinstance(actions, list):
+        raise ValueError("Authority action_observations must be an array.")  # noqa: TRY004
+    action_by_ref: dict[str, dict[str, Any]] = {}
+    expected_decisions: list[dict[str, object]] = []
+    for action in actions:
+        if not isinstance(action, dict):
+            raise ValueError("Authority action observation must be an object.")  # noqa: TRY004
+        action_ref = _nonempty_text(
+            action.get("action_ref"), "training_projection decisions action_ref"
+        )
+        if action_ref in action_by_ref:
+            raise ValueError("training_projection decisions require unique action refs.")
+        action_by_ref[action_ref] = action
+        expected_decisions.append({
+            "action_ref": action_ref,
+            **_expected_training_decision(action),
+        })
+    decisions = projection["decisions"]
+    if not isinstance(decisions, list):
+        raise ValueError("Authority training_projection decisions must be an array.")  # noqa: TRY004
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            raise ValueError("training_projection decisions must contain objects.")  # noqa: TRY004
+        _exact_fields(
+            decision,
+            ("action_ref", "decision", "training_label", "reason"),
+            "training_projection decisions item",
+        )
+    if decisions != expected_decisions:
+        raise ValueError(
+            "training_projection decisions must exactly cover authority actions."
+        )
+
+    video = authority["sources"]["video"]
+    participants = authority["action_participants"]
+    expected_players = _projected_player_numbers(participants, set(action_by_ref))
+    expected_human: list[dict[str, object]] = []
+    for action, decision in zip(actions, expected_decisions, strict=True):
+        start = _optional_finite_number(
+            action.get("start_seconds"), "training_projection action start_seconds"
+        )
+        end = _optional_finite_number(
+            action.get("end_seconds"), "training_projection action end_seconds"
+        )
+        if (start is None) != (end is None) or (
+            start is not None and (start < 0 or end <= start or end > video["duration_seconds"])
+        ):
+            raise ValueError("training_projection action interval is invalid.")
+        training_label = decision["training_label"]
+        if training_label is not None and start is None:
+            raise ValueError("training_projection eligible action must be timed.")
+        if training_label is None or start is None:
+            continue
+        action_ref = decision["action_ref"]
+        side = _enum_text(
+            action.get("team_side"), {"far", "near"},
+            "training_projection action team_side",
+        )
+        expected_human.append({
+            "source_ref": action_ref,
+            "clip_id": _nonempty_text(
+                action.get("clip_id"), "training_projection action clip_id"
+            ),
+            "start_seconds": action["start_seconds"],
+            "end_seconds": action["end_seconds"],
+            "training_label": training_label,
+            "review_label": action["review_label"],
+            "team_side": side,
+            "crop": video["crops"][side],
+            "player_number": expected_players.get(action_ref),
+            "generated": False,
+            "window_index": None,
+            "source_top1_action": None,
+            "source_top1_confidence": None,
+            "note": _text_or_empty(
+                action.get("note"), "training_projection action note"
+            ),
+        })
+    human = projection["human_windows"]
+    if not isinstance(human, list):
+        raise ValueError("Authority training_projection human_windows must be an array.")  # noqa: TRY004
+    for window in human:
+        _validate_window_shape(window, video, generated=False)
+    if human != expected_human:
+        raise ValueError(
+            "training_projection human windows do not match eligible actions or players."
+        )
+
+    generated = projection["generated_background_windows"]
+    if not isinstance(generated, list):
+        raise ValueError(  # noqa: TRY004
+            "Authority training_projection generated_background_windows must be an array."
+        )
+    generated_refs: set[str] = set()
+    human_refs = {window["source_ref"] for window in expected_human}
+    for window in generated:
+        _validate_window_shape(window, video, generated=True)
+        source_ref = window["source_ref"]
+        if source_ref in generated_refs or source_ref in human_refs:
+            raise ValueError("training_projection window source refs must be unique.")
+        generated_refs.add(source_ref)
+        expected_ref = (
+            f"{window['clip_id']}/hard-negative-"
+            f"{window['team_side']}-{window['window_index']}"
+        )
+        if source_ref != expected_ref:
+            raise ValueError("training_projection generated source_ref is invalid.")
+        donor_actions = [
+            action for action in actions if action.get("clip_id") == window["clip_id"]
+        ]
+        if not (
+            len(donor_actions) == 1
+            and donor_actions[0].get("review_label") == "background"
+            and donor_actions[0].get("background_scope") == "clip_sentinel"
+            and donor_actions[0].get("start_seconds") is None
+            and donor_actions[0].get("end_seconds") is None
+            and donor_actions[0].get("team_side") == window["team_side"]
+        ):
+            raise ValueError("training_projection generated window has no sentinel donor.")
+
+    positive_count = sum(
+        window["training_label"] != "background" for window in expected_human
+    )
+    positive = _nonnegative_integer(
+        projection["positive_training_count"],
+        "training_projection positive_training_count",
+    )
+    requested = _nonnegative_integer(
+        projection["requested_background_cap"],
+        "training_projection requested_background_cap",
+    )
+    effective = _nonnegative_integer(
+        projection["effective_background_cap"],
+        "training_projection effective_background_cap",
+    )
+    if (
+        positive != positive_count
+        or effective != min(requested, positive)
+        or len(generated) > effective
+    ):
+        raise ValueError("training_projection caps or counts are inconsistent.")
+    return {item["action_ref"]: item["decision"] for item in decisions}
+
+
+def _expected_training_decision(action: dict[str, Any]) -> dict[str, object]:
+    review_label = _enum_text(
+        action.get("review_label"),
+        {*ACTION_LABELS, "free_ball"},
+        "training_projection decisions review_label",
+    )
+    visibility = _enum_text(
+        action.get("visibility"),
+        {"direct_clear", "direct_partial", "fully_occluded", "off_camera", "unresolved"},
+        "training_projection decisions visibility",
+    )
+    evidence = _enum_text(
+        action.get("evidence_basis"),
+        {"direct_video", "referee_signal", "scoreboard", "sequence_context", "mixed"},
+        "training_projection decisions evidence_basis",
+    )
+    background_scope = action.get("background_scope")
+    if (
+        review_label == "background"
+        and background_scope not in {"timed_interval", "clip_sentinel"}
+    ) or (review_label != "background" and background_scope is not None):
+        raise ValueError("training_projection decisions background_scope is invalid.")
+    if visibility not in {"direct_clear", "direct_partial"} or evidence != "direct_video":
+        return {
+            "decision": "excluded", "training_label": None,
+            "reason": "insufficient_visual_evidence",
+        }
+    if review_label == "free_ball":
+        return {
+            "decision": "eligible_as_background", "training_label": "background",
+            "reason": "free_ball_projects_to_background",
+        }
+    if review_label == "background" and action.get("background_scope") == "clip_sentinel":
+        return {
+            "decision": "excluded", "training_label": None,
+            "reason": "background_sentinel_only",
+        }
+    return {
+        "decision": "eligible", "training_label": review_label,
+        "reason": "direct_visual",
+    }
+
+
+def _projected_player_numbers(
+    participants: object, action_refs: set[str]
+) -> dict[str, str | None]:
+    if not isinstance(participants, list):
+        raise ValueError("Authority action_participants must be an array.")  # noqa: TRY004
+    confirmed: dict[str, list[str | None]] = {}
+    for participant in participants:
+        if not isinstance(participant, dict):
+            raise ValueError("Authority action participant must be an object.")  # noqa: TRY004
+        _exact_fields(
+            participant,
+            (
+                "action_ref", "track_id", "identity_ref", "player_number",
+                "participation", "touch_status", "assignment_status",
+                "assignment_confidence", "evidence",
+            ),
+            "training_projection participant",
+        )
+        action_ref = participant.get("action_ref")
+        if action_ref not in action_refs:
+            raise ValueError("training_projection participant action_ref is invalid.")
+        for field in ("track_id", "identity_ref", "player_number"):
+            if participant[field] is not None:
+                _nonempty_text(
+                    participant[field], f"training_projection participant {field}"
+                )
+        status = _enum_text(
+            participant["assignment_status"],
+            {"confirmed", "candidate", "unresolved"},
+            "training_projection participant assignment_status",
+        )
+        confidence = participant["assignment_confidence"]
+        if confidence is not None and not _is_unit_interval(confidence):
+            raise ValueError("training_projection participant confidence is invalid.")
+        if status == "confirmed":
+            player = participant["player_number"]
+            if (
+                participant["identity_ref"] is None
+                or player is None
+                or confidence is None
+            ):
+                raise ValueError("training_projection participant player_number is invalid.")
+            confirmed.setdefault(action_ref, []).append(player)
+        elif status == "candidate" and (
+            confidence is None
+            or all(
+                participant[field] is None
+                for field in ("track_id", "identity_ref", "player_number")
+            )
+        ):
+            raise ValueError("training_projection candidate participant is invalid.")
+        elif status == "unresolved" and (
+            participant["identity_ref"] is not None
+            or participant["player_number"] is not None
+            or confidence is not None
+        ):
+            raise ValueError("training_projection unresolved participant is invalid.")
+    return {
+        action_ref: players[0] if len(players) == 1 else None
+        for action_ref, players in confirmed.items()
+    }
+
+
+def _validate_window_shape(
+    value: object, video: dict[str, Any], *, generated: bool
+) -> None:
+    description = "training_projection generated window" if generated else "training_projection human window"
+    if not isinstance(value, dict):
+        raise ValueError(f"{description} must be an object.")  # noqa: TRY004
+    fields = (
+        "source_ref", "clip_id", "start_seconds", "end_seconds", "training_label",
+        "review_label", "team_side", "crop", "player_number", "generated",
+        "window_index", "source_top1_action", "source_top1_confidence", "note",
+    )
+    _exact_fields(value, fields, description)
+    _nonempty_text(value["source_ref"], f"{description} source_ref")
+    _nonempty_text(value["clip_id"], f"{description} clip_id")
+    start = _finite_number(value["start_seconds"], f"{description} start_seconds")
+    end = _finite_number(value["end_seconds"], f"{description} end_seconds")
+    if start < 0 or end <= start or end > video["duration_seconds"]:
+        raise ValueError(f"{description} interval is invalid.")
+    side = _enum_text(value["team_side"], {"far", "near"}, f"{description} team_side")
+    crop = _validate_crop(
+        value["crop"], video["width"], video["height"], f"{description} crop"
+    )
+    if crop != video["crops"][side]:
+        raise ValueError(f"{description} crop does not match the video side.")
+    if type(value["generated"]) is not bool or value["generated"] is not generated:
+        raise ValueError(f"{description} generated flag is invalid.")
+    if generated:
+        if (
+            value["training_label"] != "background"
+            or value["review_label"] != "background"
+            or value["player_number"] is not None
+            or type(value["window_index"]) is not int
+            or value["window_index"] < 0
+            or value["source_top1_action"] not in ACTION_LABELS
+            or not _is_unit_interval(value["source_top1_confidence"])
+            or value["note"] != ""
+        ):
+            raise ValueError(f"{description} metadata is invalid.")
+    elif (
+        value["training_label"] not in ACTION_LABELS
+        or value["review_label"] not in {*ACTION_LABELS, "free_ball"}
+        or (value["player_number"] is not None and not isinstance(value["player_number"], str))
+        or value["window_index"] is not None
+        or value["source_top1_action"] is not None
+        or value["source_top1_confidence"] is not None
+        or not isinstance(value["note"], str)
+    ):
+        raise ValueError(f"{description} metadata is invalid.")
 
 
 def _validate_training_view(
-    authority: dict[str, Any], training_rows: list[dict[str, str]]
+    authority: dict[str, Any],
+    training_rows: list[dict[str, str]],
+    training_fields: tuple[str, ...],
 ) -> None:
     projection = authority["training_projection"]
     if not isinstance(projection, dict):
@@ -659,7 +1013,7 @@ def _validate_training_view(
     expected_fields = (
         "decisions", "human_windows", "generated_background_windows",
         "positive_training_count", "requested_background_cap", "effective_background_cap",
-        "training_video_path", "review_match_id",
+        "training_video_path", "review_match_id", "base_training_view",
     )
     _exact_fields(projection, expected_fields, "training_projection")
     human = projection["human_windows"]
@@ -667,8 +1021,13 @@ def _validate_training_view(
     if not isinstance(human, list) or not isinstance(generated, list):
         raise ValueError("Authority training_projection windows must be arrays.")  # noqa: TRY004
     windows = [*human, *generated]
-    if len(training_rows) < len(windows):
-        raise ValueError("Training CSV has fewer rows than authority training_projection.")
+    base_rows = _validate_base_training_view(
+        projection["base_training_view"], training_rows, training_fields
+    )
+    if len(training_rows) != base_rows + len(windows):
+        raise ValueError(
+            "Training CSV row count does not match base training view and projection."
+        )
     video_path = _nonempty_text(
         projection["training_video_path"], "training_projection training_video_path"
     )
@@ -677,7 +1036,7 @@ def _validate_training_view(
     )
     if not windows:
         return
-    projected_rows = training_rows[-len(windows):]
+    projected_rows = training_rows[base_rows:]
     fieldnames = tuple(projected_rows[0])
     if not set(_CANONICAL_COLUMNS).issubset(fieldnames):
         raise ValueError("Training CSV is missing canonical fields.")
@@ -687,6 +1046,44 @@ def _validate_training_view(
     ]
     if projected_rows != expected_rows:
         raise ValueError("Training CSV does not match authority training_projection.")
+
+
+def _validate_base_training_view(
+    value: object,
+    training_rows: list[dict[str, str]],
+    training_fields: tuple[str, ...],
+) -> int:
+    if not isinstance(value, dict):
+        raise ValueError("Authority base training view must be an object.")  # noqa: TRY004
+    _exact_fields(
+        value,
+        ("fieldnames", "data_rows", "content_sha256"),
+        "base training view",
+    )
+    fieldnames = value["fieldnames"]
+    if (
+        not isinstance(fieldnames, list)
+        or not fieldnames
+        or any(not isinstance(field, str) or not field for field in fieldnames)
+        or len(fieldnames) != len(set(fieldnames))
+        or not set(_CANONICAL_COLUMNS).issubset(fieldnames)
+    ):
+        raise ValueError("Authority base training fieldnames are invalid.")
+    if fieldnames != list(training_fields):
+        raise ValueError("Training CSV fields do not match authority base training view.")
+    data_rows = value["data_rows"]
+    if type(data_rows) is not int or data_rows < 0 or data_rows > len(training_rows):
+        raise ValueError("Authority base training data_rows must be a valid nonnegative integer.")
+    content_sha256 = _hash(
+        value["content_sha256"], "base training view content_sha256"
+    )
+    semantic = {
+        "fieldnames": fieldnames,
+        "rows": training_rows[:data_rows],
+    }
+    if hashlib.sha256(_canonical_json_bytes(semantic)).hexdigest() != content_sha256:
+        raise ValueError("Training CSV base training prefix does not match authority.")
+    return data_rows
 
 
 def _authority_training_row(
@@ -792,21 +1189,11 @@ def _validate_summary(
 
 
 def _authority_observation_rows(
-    authority: dict[str, Any], common: tuple[str, str, str, str]
+    authority: dict[str, Any],
+    common: tuple[str, str, str, str],
+    decisions: dict[str, str],
 ) -> list[dict[str, str]]:
     common_row = dict(zip(_OBSERVATION_FIELDS[:4], common, strict=True))
-    projection = authority["training_projection"]
-    if not isinstance(projection, dict) or not isinstance(projection.get("decisions"), list):
-        raise ValueError(  # noqa: TRY004
-            "Authority training_projection decisions must be an array."
-        )
-    decisions = {
-        item["action_ref"]: item["decision"]
-        for item in projection["decisions"]
-        if isinstance(item, dict)
-        and isinstance(item.get("action_ref"), str)
-        and isinstance(item.get("decision"), str)
-    }
     actions = authority["action_observations"]
     outcomes = authority["outcome_observations"]
     if not isinstance(actions, list) or not isinstance(outcomes, list):
@@ -863,7 +1250,9 @@ def _authority_observation_rows(
             "note": outcome.get("note"),
         })
     rows.sort(key=lambda row: (
-        float(row["start_seconds"]) if row["start_seconds"] != "" else float("inf"),
+        float(row["start_seconds"])
+        if row["start_seconds"] not in {"", None}
+        else float("inf"),
         str(row["observation_type"]),
         str(row["observation_ref"]),
     ))
@@ -966,6 +1355,78 @@ def _hash(value: object, description: str) -> str:
     return value
 
 
+def _repo_path_text(value: object, description: str) -> str:
+    text = _nonempty_text(value, description)
+    posix = PurePosixPath(text)
+    windows = PureWindowsPath(text)
+    if (
+        windows.drive
+        or posix.is_absolute()
+        or "\\" in text
+        or text.startswith("/")
+        or ".." in posix.parts
+    ):
+        raise ValueError(f"{description} must be a repository-relative POSIX path.")
+    return posix.as_posix()
+
+
+def _finite_number(value: object, description: str) -> float:
+    if type(value) not in {int, float} or not math.isfinite(value):
+        raise ValueError(f"{description} must be a finite number.")
+    return float(value)
+
+
+def _optional_finite_number(value: object, description: str) -> float | None:
+    if value is None:
+        return None
+    return _finite_number(value, description)
+
+
+def _whole_number(value: object, description: str) -> int:
+    if type(value) is not int:
+        raise ValueError(f"{description} must be an integer.")
+    return value
+
+
+def _nonnegative_integer(value: object, description: str) -> int:
+    result = _whole_number(value, description)
+    if result < 0:
+        raise ValueError(f"{description} must be nonnegative.")
+    return result
+
+
+def _enum_text(value: object, choices: set[str], description: str) -> str:
+    if not isinstance(value, str) or value not in choices:
+        raise ValueError(f"{description} is invalid.")
+    return value
+
+
+def _text_or_empty(value: object, description: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{description} must be text.")  # noqa: TRY004
+    return value
+
+
+def _validate_crop(
+    value: object, width: int, height: int, description: str
+) -> list[int]:
+    if not isinstance(value, list) or len(value) != 4:
+        raise ValueError(f"{description} must contain four integer coordinates.")
+    coordinates = [_whole_number(item, description) for item in value]
+    x1, y1, x2, y2 = coordinates
+    if x1 < 0 or y1 < 0 or x1 >= x2 or y1 >= y2 or x2 > width or y2 > height:
+        raise ValueError(f"{description} is outside video bounds.")
+    return coordinates
+
+
+def _is_unit_interval(value: object) -> bool:
+    return (
+        type(value) in {int, float}
+        and math.isfinite(value)
+        and 0 <= value <= 1
+    )
+
+
 def _nonempty_text(value: object, description: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{description} must be nonempty text.")
@@ -977,7 +1438,7 @@ def _render_training_csv(
     base_rows: Sequence[Mapping[str, str | None]],
     projection: TrainingProjection,
     settings: BundleSettings,
-) -> tuple[bytes, int]:
+) -> tuple[bytes, int, dict[str, object]]:
     fieldnames = list(base_fieldnames)
     for column in _CANONICAL_COLUMNS:
         if column not in fieldnames:
@@ -986,6 +1447,15 @@ def _render_training_csv(
     for row in rows:
         if not (row.get("match_id") or "").strip():
             row["match_id"] = settings.legacy_base_match_id
+    base_text_rows = [_csv_text_row(fieldnames, row) for row in rows]
+    base_training_view = {
+        "fieldnames": fieldnames,
+        "data_rows": len(base_text_rows),
+        "content_sha256": hashlib.sha256(_canonical_json_bytes({
+            "fieldnames": fieldnames,
+            "rows": base_text_rows,
+        })).hexdigest(),
+    }
     for window in projection.human_windows + projection.generated_background_windows:
         x1, y1, x2, y2 = window.crop
         row = {field: "" for field in fieldnames}
@@ -1006,7 +1476,7 @@ def _render_training_csv(
             "notes": _training_note(window),
         })
         rows.append(row)
-    return _csv_bytes(fieldnames, rows), len(rows)
+    return _csv_bytes(fieldnames, rows), len(rows), base_training_view
 
 
 def _training_note(window: Any) -> str:
@@ -1079,7 +1549,9 @@ def _observation_rows(
     return sorted(
         rows,
         key=lambda row: (
-            float(row["start_seconds"]) if row["start_seconds"] != "" else float("inf"),
+            float(row["start_seconds"])
+            if row["start_seconds"] not in {"", None}
+            else float("inf"),
             str(row["observation_type"]),
             str(row["observation_ref"]),
         ),
@@ -1169,7 +1641,9 @@ def _sources(
 
 
 def _training_projection(
-    projection: TrainingProjection, settings: BundleSettings
+    projection: TrainingProjection,
+    settings: BundleSettings,
+    base_training_view: dict[str, object],
 ) -> dict[str, object]:
     return {
         "decisions": [
@@ -1183,6 +1657,7 @@ def _training_projection(
         "effective_background_cap": projection.effective_background_cap,
         "training_video_path": settings.training_video_path,
         "review_match_id": settings.review_match_id,
+        "base_training_view": base_training_view,
     }
 
 
