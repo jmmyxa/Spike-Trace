@@ -114,3 +114,60 @@ Raw output: `All checks passed!`
   path/hash binding to be present but performs no live-file read, so it cannot
   bypass that frozen-input trust boundary.
 - No remaining implementation blockers or known functional concerns.
+
+## Fix Round 1: Review Findings
+
+### Decision and root cause
+
+- The trusted `merged` input is now the existing Task 5 `FrozenArtifact`, while
+  retaining the parameter's position and name. A parsed dictionary cannot prove
+  its origin after raw bytes and binding metadata have been discarded.
+- Projection first checks `sha256(merged.raw) == merged.sha256`, then compares
+  the frozen artifact's repository path and SHA-256 exactly with
+  `selection.source`. It verifies `merged.raw` with
+  `verify_dual_crop_review_bytes`, parses only that frozen byte payload, and
+  never reads `merged.absolute_path`.
+- Background candidates now share the same descending-confidence rank field as
+  every candidate; the non-background priority remains first and SHA-256 remains
+  the final stable tie-break.
+
+### RED
+
+Command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& '.venv\Scripts\python.exe' -m unittest \
+  tests.test_active_learning_review_projection.TrainingProjectionTests.test_background_candidates_sort_by_confidence_before_sha_tie_break \
+  tests.test_active_learning_review_projection.TrainingProjectionTests.test_rejects_substituted_frozen_merged_bytes_with_stale_hash \
+  tests.test_active_learning_review_projection.TrainingProjectionTests.test_rejects_frozen_merged_path_or_hash_that_differs_from_selection \
+  tests.test_active_learning_review_projection.TrainingProjectionTests.test_uses_frozen_bytes_when_live_merged_path_changes -v
+```
+
+Raw result before the fix: background ranking failed (`(7, 5) != (5, 7)`), and
+all four frozen-artifact binding checks errored because the old implementation
+called `_mapping(merged, "merged")` and raised `TypeError: merged must be an
+object.`
+
+### GREEN
+
+Command:
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path 'src').Path
+& '.venv\Scripts\python.exe' -m unittest tests.test_active_learning_review_projection -v
+```
+
+Raw output: `Ran 13 tests in 0.769s` / `OK`.
+
+The new focused coverage proves high-confidence predicted-background selection
+despite reverse SHA order; substituted raw bytes with a stale SHA fail; path and
+SHA mismatches against selection fail; and a mutated live `absolute_path` does
+not affect the projection because it consumes the retained raw bytes.
+
+### Regression and checks
+
+- Task 7 + Task 6: `Ran 19 tests in 0.785s` / `OK`.
+- Task 5 contract: `Ran 19 tests in 62.992s` / `OK`.
+- Ruff: `All checks passed!`
+- `git diff --check`: no output (success).

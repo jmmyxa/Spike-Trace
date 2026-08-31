@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from dataclasses import dataclass
 from typing import Any
 
+from ._active_learning_review_contract import FrozenArtifact
 from ._active_learning_review_observations import ObservationSet
 from .constants import ACTION_LABELS
+from .dual_crop_review import verify_dual_crop_review_bytes
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,7 +155,7 @@ def project_training_windows(
 
 def select_hard_negatives(
     selection: object,
-    merged: object,
+    merged: FrozenArtifact,
     observations: ObservationSet,
     protected_intervals: tuple[ProtectedInterval, ...],
     guard_seconds: float,
@@ -160,7 +163,7 @@ def select_hard_negatives(
     seed: int,
 ) -> tuple[TrainingWindow, ...]:
     """Select only model windows donated by an otherwise empty sentinel clip."""
-    _selection_source(selection)
+    parsed_merged = _verified_merged(selection, merged)
     if cap == 0:
         return ()
     if not _is_nonnegative_finite(guard_seconds):
@@ -173,7 +176,7 @@ def select_hard_negatives(
     clips = _clip_bounds(selection)
     crops = _crops(selection)
     donors = _sentinel_donors(observations, clips)
-    input_runs = _mapping(_mapping(merged, "merged")["input_runs"], "merged input_runs")
+    input_runs = _mapping(parsed_merged["input_runs"], "merged input_runs")
     candidates: list[tuple[tuple[int, float, str], TrainingWindow]] = []
     for clip_id, side in donors:
         run = _mapping(input_runs[side], f"merged {side} input run")
@@ -191,7 +194,7 @@ def select_hard_negatives(
                 (
                     (
                         0 if action != "background" else 1,
-                        -confidence if action != "background" else 0.0,
+                        -confidence,
                         _rank_tie(seed, clip_id, side, window_index),
                     ),
                     TrainingWindow(
@@ -235,7 +238,7 @@ def select_hard_negatives(
 def build_training_projection(
     observations: ObservationSet,
     selection: object,
-    merged: object,
+    merged: FrozenArtifact,
     background_guard_seconds: float,
     max_background_windows: int | None,
     background_seed: int | None,
@@ -361,13 +364,33 @@ def _crops(selection: object) -> dict[str, tuple[int, int, int, int]]:
     }
 
 
-def _selection_source(selection: object) -> None:
+def _selection_source(selection: object) -> tuple[str, str]:
     source = _mapping(_mapping(selection, "selection")["source"], "selection source")
-    if not isinstance(source.get("merged_json"), str) or not source["merged_json"]:
+    path = source.get("merged_json")
+    if not isinstance(path, str) or not path:
         raise ValueError("Selection merged candidate path is invalid.")
     digest = source.get("merged_json_sha256")
-    if not isinstance(digest, str) or len(digest) != 64:
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
         raise ValueError("Selection merged candidate SHA-256 is invalid.")
+    return path, digest
+
+
+def _verified_merged(selection: object, merged: FrozenArtifact) -> dict[str, Any]:
+    if not isinstance(merged, FrozenArtifact):
+        raise TypeError("merged must be a frozen merged artifact.")
+    raw_digest = hashlib.sha256(merged.raw).hexdigest()
+    if raw_digest != merged.sha256:
+        raise ValueError("Frozen merged bytes do not match their SHA-256.")
+    path, digest = _selection_source(selection)
+    if path != merged.repo_path or digest != merged.sha256:
+        raise ValueError("Selection source does not match frozen merged artifact.")
+    verify_dual_crop_review_bytes(merged.raw)
+    parsed = json.loads(merged.raw)
+    return _mapping(parsed, "frozen merged artifact")
 
 
 def _seed(selection: object) -> int:

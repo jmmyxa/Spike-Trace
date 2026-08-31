@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
+from spiketrace._active_learning_review_contract import FrozenArtifact
 from spiketrace._active_learning_review_observations import (
     ActionObservation,
     ActionParticipant,
@@ -17,6 +21,7 @@ from spiketrace._active_learning_review_projection import (
     project_training_windows,
     select_hard_negatives,
 )
+from spiketrace.dual_crop_review import build_dual_crop_review
 
 
 class TrainingDecisionTests(unittest.TestCase):
@@ -86,6 +91,92 @@ class TrainingProtectionTests(unittest.TestCase):
 
 
 class TrainingProjectionTests(unittest.TestCase):
+    def test_background_candidates_sort_by_confidence_before_sha_tie_break(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        selection = _selection("clip-001", start=0.0, end=10.0)
+        protected = build_protected_intervals(observations, selection)
+        low_confidence, high_confidence = sorted(
+            (0, 1),
+            key=lambda index: hashlib.sha256(
+                f"4/clip-001/far/{index}".encode()
+            ).hexdigest(),
+        )
+        merged = _merged({
+            "far": ((
+                _window(low_confidence, 1.0, 2.0, "background", 0.1),
+                _window(high_confidence, 3.0, 4.0, "background", 0.9),
+            ),),
+        })
+        selection = _bound_selection(selection, merged)
+
+        selected = select_hard_negatives(
+            selection, merged, observations, protected, 0.0, 2, 4
+        )
+
+        self.assertEqual(
+            tuple(item.window_index for item in selected),
+            (high_confidence, low_confidence),
+        )
+
+    def test_rejects_substituted_frozen_merged_bytes_with_stale_hash(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        artifact = _frozen_merged_artifact()
+        selection = _selection(
+            "clip-001",
+            start=0.0,
+            end=10.0,
+            merged_path=artifact.repo_path,
+            merged_sha256=artifact.sha256,
+        )
+        substituted = FrozenArtifact(
+            artifact.absolute_path,
+            artifact.repo_path,
+            artifact.raw + b" ",
+            artifact.sha256,
+        )
+
+        with self.assertRaisesRegex(ValueError, "SHA-256"):
+            select_hard_negatives(selection, substituted, observations, (), 0.0, 1, 0)
+
+    def test_rejects_frozen_merged_path_or_hash_that_differs_from_selection(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        artifact = _frozen_merged_artifact()
+        for path, digest in (
+            ("outputs/other.json", artifact.sha256),
+            (artifact.repo_path, "b" * 64),
+        ):
+            with self.subTest(path=path, digest=digest):
+                selection = _selection(
+                    "clip-001",
+                    start=0.0,
+                    end=10.0,
+                    merged_path=path,
+                    merged_sha256=digest,
+                )
+
+                with self.assertRaisesRegex(ValueError, "Selection source"):
+                    select_hard_negatives(selection, artifact, observations, (), 0.0, 1, 0)
+
+    def test_uses_frozen_bytes_when_live_merged_path_changes(self):
+        observations = _observations(actions=(_sentinel("clip-001", "far"),))
+        with tempfile.TemporaryDirectory() as temporary:
+            live_path = Path(temporary) / "merged.json"
+            artifact = _frozen_merged_artifact(absolute_path=live_path)
+            live_path.write_bytes(b"substituted live file")
+            selection = _selection(
+                "clip-001",
+                start=0.0,
+                end=10.0,
+                merged_path=artifact.repo_path,
+                merged_sha256=artifact.sha256,
+            )
+
+            selected = select_hard_negatives(
+                selection, artifact, observations, (), 0.0, 1, 0
+            )
+
+        self.assertIsInstance(selected, tuple)
+
     def test_projects_one_window_per_eligible_action_and_only_one_confirmed_player(self):
         action = _action("block", action_ref="clip-001/block", start=101.0, end=102.0)
         observations = _observations(
@@ -124,9 +215,11 @@ class TrainingProjectionTests(unittest.TestCase):
         selection = _selection("clip-donor", start=0.0, end=10.0, extra_clips=(("clip-disqualified", 20.0, 30.0),))
         protected = build_protected_intervals(observations, selection)
 
-        selected = select_hard_negatives(selection, _merged({"far": ((_window(3, 2.0, 3.0, "attack", 0.8),),), "near": ((_window(4, 21.0, 22.0, "attack", 0.9),),)}), observations, protected, 0.0, 4, 7)
+        merged = _merged({"far": ((_window(0, 2.0, 3.0, "attack", 0.8),),), "near": ((_window(0, 21.0, 22.0, "attack", 0.9),),)})
+        selection = _bound_selection(selection, merged)
+        selected = select_hard_negatives(selection, merged, observations, protected, 0.0, 4, 7)
 
-        self.assertEqual(tuple((window.clip_id, window.team_side, window.window_index) for window in selected), (("clip-donor", "far", 3),))
+        self.assertEqual(tuple((window.clip_id, window.team_side, window.window_index) for window in selected), (("clip-donor", "far", 0),))
 
     def test_hard_negatives_apply_same_side_guard_and_allow_other_side_same_time(self):
         sentinel_far = _sentinel("clip-far", "far")
@@ -137,24 +230,26 @@ class TrainingProjectionTests(unittest.TestCase):
         protected = build_protected_intervals(observations, selection)
         merged = _merged({
             "far": ((_window(0, 3.5, 4.0, "attack", 0.9), _window(1, 2.9, 3.5, "attack", 0.8), _window(2, 7.0, 8.0, "attack", 0.7)),),
-            "near": ((_window(3, 4.0, 5.0, "block", 0.95),),),
+            "near": ((_window(0, 4.0, 5.0, "block", 0.95),),),
         })
+        selection = _bound_selection(selection, merged)
 
         selected = select_hard_negatives(selection, merged, observations, protected, 0.5, 4, 1)
 
-        self.assertEqual(tuple((item.clip_id, item.team_side, item.window_index) for item in selected), (("clip-near", "near", 3), ("clip-far", "far", 1), ("clip-far", "far", 2)))
+        self.assertEqual(tuple((item.clip_id, item.team_side, item.window_index) for item in selected), (("clip-near", "near", 0), ("clip-far", "far", 1), ("clip-far", "far", 2)))
 
     def test_hard_negative_ranking_is_non_background_confidence_then_stable_sha(self):
         observations = _observations(actions=(_sentinel("clip-001", "far"),))
         selection = _selection("clip-001", start=0.0, end=10.0)
         protected = build_protected_intervals(observations, selection)
-        first, second = sorted((5, 7), key=lambda index: hashlib.sha256(f"4/clip-001/far/{index}".encode()).hexdigest())
-        merged = _merged({"far": ((_window(9, 1.0, 2.0, "background", 1.0), _window(second, 3.0, 4.0, "attack", 0.8), _window(first, 5.0, 6.0, "attack", 0.8), _window(3, 7.0, 8.0, "block", 0.9)),)})
+        first, second = sorted((1, 2), key=lambda index: hashlib.sha256(f"4/clip-001/far/{index}".encode()).hexdigest())
+        merged = _merged({"far": ((_window(3, 1.0, 2.0, "background", 1.0), _window(second, 3.0, 4.0, "attack", 0.8), _window(first, 5.0, 6.0, "attack", 0.8), _window(0, 7.0, 8.0, "block", 0.9)),)})
+        selection = _bound_selection(selection, merged)
 
         selected = select_hard_negatives(selection, merged, observations, protected, 0.0, 4, 4)
 
-        self.assertEqual(tuple(item.window_index for item in selected), (3, first, second, 9))
-        self.assertEqual(selected[0].source_ref, "clip-001/hard-negative-far-3")
+        self.assertEqual(tuple(item.window_index for item in selected), (0, first, second, 3))
+        self.assertEqual(selected[0].source_ref, "clip-001/hard-negative-far-0")
         self.assertEqual(selected[0].source_top1_action, "block")
         self.assertEqual(selected[0].source_top1_confidence, 0.9)
 
@@ -166,6 +261,7 @@ class TrainingProjectionTests(unittest.TestCase):
         )
         selection = _selection("clip-001", start=0.0, end=10.0)
         merged = _merged({"far": ((_window(0, 3.0, 4.0, "attack", 0.9),),)})
+        selection = _bound_selection(selection, merged)
 
         projection = build_training_projection(occluded, selection, merged, 0.0, None, 0)
 
@@ -175,18 +271,77 @@ class TrainingProjectionTests(unittest.TestCase):
         self.assertEqual(projection.generated_background_windows, ())
 
 
-def _selection(clip_id: str, *, start: float = 100.0, end: float = 110.0, extra_clips: tuple[tuple[str, float, float], ...] = ()) -> dict[str, object]:
+def _selection(
+    clip_id: str,
+    *,
+    start: float = 100.0,
+    end: float = 110.0,
+    extra_clips: tuple[tuple[str, float, float], ...] = (),
+    merged_path: str = "outputs/merged.json",
+    merged_sha256: str = "a" * 64,
+) -> dict[str, object]:
     clips = ((clip_id, start, end),) + extra_clips
     return {
-        "source": {"merged_json": "outputs/merged.json", "merged_json_sha256": "a" * 64},
+        "source": {"merged_json": merged_path, "merged_json_sha256": merged_sha256},
         "video": {"crops": {"far": [0, 0, 100, 50], "near": [0, 50, 100, 100]}},
         "settings": {"seed": 0},
         "clips": [{"clip_id": item_id, "start_seconds": item_start, "end_seconds": item_end} for item_id, item_start, item_end in clips],
     }
 
 
-def _merged(runs: dict[str, tuple[tuple[dict[str, object], ...], ...]]) -> dict[str, object]:
-    return {"input_runs": {side: {"windows": [window for group in groups for window in group]} for side, groups in runs.items()}}
+def _bound_selection(
+    selection: dict[str, object], artifact: FrozenArtifact
+) -> dict[str, object]:
+    selection["source"] = {
+        "merged_json": artifact.repo_path,
+        "merged_json_sha256": artifact.sha256,
+    }
+    return selection
+
+
+def _merged(
+    runs: dict[str, tuple[tuple[dict[str, object], ...], ...]]
+) -> FrozenArtifact:
+    root = Path(__file__).resolve().parents[1]
+    fixtures = root / "tests" / "fixtures" / "dual_crop_review"
+    with tempfile.TemporaryDirectory() as temporary:
+        directory = Path(temporary)
+        paths: dict[str, Path] = {}
+        for side in ("far", "near"):
+            payload = json.loads((fixtures / f"{side}.json").read_text("utf-8"))
+            payload["events"] = []
+            payload["windows"] = [
+                window
+                for group in runs.get(side, ())
+                for window in group
+            ]
+            path = directory / f"{side}.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            paths[side] = path
+        output = directory / "merged"
+        build_dual_crop_review(
+            paths["far"], paths["near"], output, repo_root=root
+        )
+        raw = (output / "merged_candidates.json").read_bytes()
+    return FrozenArtifact(
+        output / "merged_candidates.json",
+        "outputs/merged.json",
+        raw,
+        hashlib.sha256(raw).hexdigest(),
+    )
+
+
+def _frozen_merged_artifact(
+    *, absolute_path: Path | None = None
+) -> FrozenArtifact:
+    source = Path(__file__).resolve().parents[1] / "outputs" / "rangitoto-r3d18-bootstrap-review" / "merged_candidates.json"
+    raw = source.read_bytes()
+    return FrozenArtifact(
+        absolute_path or source,
+        "outputs/merged.json",
+        raw,
+        hashlib.sha256(raw).hexdigest(),
+    )
 
 
 def _window(index: int, start: float, end: float, action: str, confidence: float) -> dict[str, object]:
