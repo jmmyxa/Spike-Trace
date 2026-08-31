@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环。Rangitoto 首轮 40 段工作簿已经填写完成，共有 83 条人工记录；原工作簿保持不变。审计发现 v1 不能安全表达遮挡、镜头外、裁判推断、`free_ball` 和多人拦网归属，因此当前结果不会直接写入训练清单，而是先按已确认的证据分层设计迁移为 v2 权威结果。独立评估继续使用未参与训练的另一场完整比赛；号码识别运行时代码、前端和 SQLite 暂不启动。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环。Rangitoto 首轮的 40 段短片与 83 条人工记录已发布为证据感知的 v2 权威结果；原 `review.xlsx` 保持不可变，不需要再填写或运行 v1 提取。独立评估仍须使用未参与训练的另一场完整比赛；号码识别运行时代码、前端和 SQLite 暂不启动。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -64,10 +64,19 @@ Spike-Trace/
 │  ├─ usa_germany_2024_expansion_batch_02_results.json # 第二批已应用结果与来源快照
 │  ├─ *_annotations_expanded_batch_*.csv # 应用补标后的训练清单
 │  ├─ usa_germany_2024_annotations_expanded_batch_02.csv # 当前 90 条训练清单
+│  ├─ rangitoto_round_01/       # 已发布、不可覆盖的 v2 六文件结果目录
+│  │  ├─ round-01-results.json  # 权威动作/结果/可见性/参与者记录与投影摘要
+│  │  ├─ action_training_round_01.csv # 214 条训练投影
+│  │  ├─ round-01-observations.csv # 90 条可审计观察记录
+│  │  ├─ round-01-visibility-events.csv # 3 条持续时间可见性事件
+│  │  ├─ round-01-action-participants.csv # 已确认参与者（当前为空）
+│  │  └─ round-01-exports.manifest.json # 六文件清单和 SHA-256
 │  └─ *_match.json               # 比赛信息、当前清单、复核状态与半场区间
 ├─ data/active-learning/
 │  └─ rangitoto/
-│     └─ round-01-selection.json # 可复现的首轮 40 段选片规格；视频和工作簿不入库
+│     ├─ round-01-selection.json # 可复现的首轮 40 段选片规格
+│     ├─ round-01-evidence-overrides.json # 哈希绑定的补充证据
+│     └─ round-01-review-v2.json # 已合成的 v2 复核输入；视频和工作簿不入库
 ├─ docs/
 │  ├─ data-platform/              # 数据平台与用户工作区设计
 │  │  ├─ data-platform-design.md  # SQLite、文件资产、版本与 API 边界
@@ -90,7 +99,7 @@ Spike-Trace/
 │  ├─ merged_candidates.csv      # 与最终 JSON 一致的候选便携表格
 │  └─ rangitoto_action_review.xlsx # 由已验证 JSON 派生的全量审计工作簿；不要求逐行填写
 ├─ outputs/active-learning/rangitoto/
-│  ├─ round-01/                 # 本地忽略的 40 段代理、manifest 和待填 review.xlsx
+│  ├─ round-01/                 # 本地忽略的 40 段代理、manifest 和已完成的不可变 review.xlsx
 │  └─ round-01-previews/        # 本地忽略的四页工作簿预览
 ├─ src/spiketrace/
 │  ├─ active_learning_selection.py # 主动学习选片的稳定公共入口
@@ -99,7 +108,8 @@ Spike-Trace/
 │  ├─ _active_learning_selection_artifact.py # 来源信任链、制品校验与安全写入
 │  ├─ _active_learning_review_contract.py # 冻结复核输入、字节校验与证据观察契约
 │  ├─ _active_learning_review_observations.py # v2 观察对象组合、遮挡/镜头外事件合并与参与关系
-│  ├─ _active_learning_review_projection.py # 训练投影、保护区间与 sentinel 限定硬负样本
+│  ├─ _active_learning_review_projection.py # 训练投影、保护区间与限定硬负样本
+│  ├─ _active_learning_review_outputs.py # v2 六文件结果渲染、验证和无覆盖发布
 │  ├─ _active_learning_selector.py # 五桶候选生成与确定性编排
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -132,13 +142,14 @@ Spike-Trace/
 └─ tools/
    ├─ build_active_review_batch.mjs # 由选片 JSON 与代理 manifest 原子构建四页 40 段复核工作簿
    ├─ verify_active_review_batch.mjs # 验证短片、代理哈希、XLSX 投影、raw 公式和人工输入边界
-   ├─ extract_active_review_results.mjs # 读取完成的 40 段工作簿并硬链接发布不可覆盖的复核草稿 JSON
+   ├─ extract_active_review_results.mjs # v1 工作簿提取器，保留兼容但不用于已完成的本轮发布
+   ├─ active_review_io.mjs # 冻结字节、SHA-256、安全路径和无覆盖 JSON 发布
    ├─ active_review_evidence_overrides.mjs # 严格校验哈希绑定的证据覆盖信封与引用
-   ├─ active_review_workbook_semantics.mjs # 对复核工作簿执行哈希绑定的语义等价、修复审计与动作行规范化
-   ├─ active_review_xlsx_formulas.mjs # 通过 bundled JSZip/SAX 从同一 XLSX bytes 校验共享公式 OOXML
-   ├─ compose_active_review_evidence.mjs # 将冻结的选择、工作簿和证据覆盖合成为不可覆盖的 v2 证据输入
+   ├─ active_review_workbook_semantics.mjs # 工作簿语义等价、修复审计和动作行规范化
+   ├─ active_review_xlsx_formulas.mjs # 从同一 XLSX bytes 校验共享公式 OOXML
+   ├─ compose_active_review_evidence.mjs # 将选择、不可变工作簿和覆盖证据确定性合成为 v2 输入
    ├─ test_active_review_batch.mjs # 合成 40 段工作簿、预览、篡改拒绝与回滚可执行测试
-   ├─ test_active_review_evidence.mjs # 证据覆盖信封、哈希绑定与引用校验测试
+   ├─ test_active_review_evidence.mjs # Node 证据组合、篡改拒绝和真实工作簿验收测试
    ├─ test_active_review_shared_formulas.mjs # producer-shaped shared formula、raw 篡改与真实只读阶段测试
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览
    ├─ verify_rangitoto_review.mjs # 独立验证工作簿结构、行数、空白输入与公式
@@ -165,22 +176,20 @@ Spike-Trace/
 - [R3D-18 高效分阶段微调实现计划](docs/superpowers/plans/2026-08-16-action-model-efficient-finetuning.md)
 - [第二轮完整概率与不确定性选样实现计划](docs/superpowers/plans/2026-08-16-active-learning-round-two-scoring.md)
 
-上述四份实现计划已经确认，执行顺序固定为：先把已完成的首轮 40 段工作簿迁移为证据分层结果；该结果和独立
-`val` 比赛就绪后实现并运行两阶段微调；只有新 checkpoint 生成后，才升级完整概率输出并
-制作第二轮 margin/entropy 复核批次。
+Rangitoto 首轮的证据分层迁移已经完成；权威输入、训练投影和六文件 bundle 均已发布。后续工作
+不再修改该工作簿或运行 v1 提取，而是在独立比赛验证真值就绪后进行两阶段微调。
 
 两阶段微调的训练模型固定从全新 Kinetics 权重开始；旧 bootstrap checkpoint 只用于同一
 `val` 上的独立对照。训练清单中每个 `train`、`val` 或 `test` 行都必须有真实比赛级
 `match_id`，并通过所有分区之间的比赛与视频内容防泄漏检查。微调还必须同时读取对应轮次的
 results JSON，核对权威累计清单哈希和派生清单的逐行前缀，不能只凭轮次名称字符串声明数据来源。
 
-下一阶段按以下顺序推进：
+下一阶段严格按以下顺序推进：
 
-1. 保留已填写的 Rangitoto 首轮工作簿，按证据分层设计迁移 83 条人工记录并生成安全的累计训练清单。
-2. 使用未加入训练的另一场完整比赛建立固定 `val`，以后再保留第三场完整比赛作为 `test`。
-3. 动作模型基线稳定后，在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
-4. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
-5. 最后接入本地浏览器界面、SQLite 保存和 CSV/JSON 导出，形成端到端 MVP。
+1. 完成未触及的整场比赛验证真值。
+2. 运行高效的两阶段微调。
+3. 在选定回合实现身份跟踪和已确认的号码归属。
+4. 加入 SQLite，以及用户复核、统计和导出工作流。
 
 `data/annotations/*.csv` 固定使用 CRLF 换行；Python `csv` 写出的清单本身也采用这一格式。不要绕过 Git 属性手工转换这些文件的换行，否则用于基线和补标规格的 SHA-256 会变化。
 
@@ -476,36 +485,43 @@ python -m unittest discover -s tests -v
 
 ### Rangitoto 首轮主动学习复核交接
 
-`data/active-learning/rangitoto/round-01-selection.json` 是已经提交的 40 段选择证据；完整
-2,942 候选 JSON/CSV/XLSX 只作为审计证据保留。40 个代理短片、四张预览图和
-`outputs/active-learning/rangitoto/round-01/review.xlsx` 已在本地生成，不提交版本库。
+`data/active-learning/rangitoto/round-01-selection.json`、不可变工作簿、
+`round-01-evidence-overrides.json` 和 `round-01-review-v2.json` 已经组成可审计的真实输入。
+首轮 40 段共 83 条人工记录已经处理完成；工作簿 SHA-256 为
+`3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b`，保持只读，
+不需要再填写 `review.xlsx`，也不需要运行 v1 `extract_active_review_results.mjs`。
 
-该工作簿已经填写完成，共读取到 83 条人工记录；用户不需要再操作工作簿。原工作簿保持
-SHA-256 `3b3baa474bf5d20e24a2e979b389e5d1b6df755b3c8516c993d8cc719b53535b`，
-不能原位修复或覆盖。由于 v1 草稿无法无损表达遮挡、镜头外、裁判推断、`free_ball` 和多人参与，
-当前不得把它直接交给旧 `apply-active-review`。下一步按
-[证据分层迁移实现计划](docs/superpowers/plans/2026-08-30-rangitoto-evidence-aware-review.md)
-生成 v2 权威结果、七类训练投影和同步 CSV；在实现完成前不需要用户补充确认。
+发布目录 `data/annotations/rangitoto_round_01/` 是不可覆盖的六文件 bundle。权威
+`round-01-results.json` 的 `result_set_id` 为
+`YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad`，
+内容 SHA-256 为 `281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5`。
+它记录 86 条动作观察、4 条结果观察、1 条连续遮挡、2 条镜头外事件、3 个受影响动作和 0 条已确认参与者；
+训练投影含 60 条正样本、60 条生成的背景和 214 行。
 
-Task 8 已加入通用的 v2 输出层：`_active_learning_review_outputs.py` 负责确定性六文件渲染、
-跨文件验证和无覆盖原子目录发布，`apply_active_review_v2` 负责冻结来源并在发布前重验，相关行为由
-`tests/test_active_learning_review_outputs.py` 与 `tests/test_active_learning_review.py` 覆盖。可用
-`spiketrace apply-active-review-v2 ...` 发布一个新目录，并用
-`spiketrace verify-active-review-bundle OUTPUT_DIR` 只读复核；旧 `apply-active-review` 保持兼容。
-当前只完成通用代码和测试，真实 Rangitoto v2 输入与 durable 六文件结果仍由后续任务生成，仓库中尚未
-宣称存在最终 bundle。
+| 文件 | 数据行 | SHA-256 |
+| --- | ---: | --- |
+| `round-01-results.json` | — | `399e0094fb29a85f645a1c11f077a181ad33a2b041a3560deaf125c9ad5c6b5f` |
+| `action_training_round_01.csv` | 214 | `2c0ff1900c74622cf99f07527b66fc48b6e18f0462f393234624cd9719012ac6` |
+| `round-01-observations.csv` | 90 | `0faf79cedcf4f5df7371d7058a66eef68ec60347d27070391917f12fe7bf0e87` |
+| `round-01-visibility-events.csv` | 3 | `9c3904a9b00d7332554e09ae619b2ff1274a65ca4288dac825b88852034f2012` |
+| `round-01-action-participants.csv` | 0 | `97e1b6dd737e1bcdacf6b985503e7933ff7d389f310d470c1706d463be7086bc` |
+| `round-01-exports.manifest.json` | — | `2ee97d691b364d214d35f59fe6407eebb4bb63c7328aec9cc1c41c10c1029cfa` |
 
-以下仅用于从头重建或审计，不是当前操作；命令采用不同目标路径，并且这些不可覆盖的目标必须
-尚不存在：
+### 证据语义与兼容性
+
+- `free_ball` 是动作值，不是新栏目，也不会自动判为错误；它在权威观察中保持 `free_ball`，仅投影为训练 `background`。
+- 动作证据和结果证据彼此独立；连续遮挡与镜头外分别导出为有持续时间的事件。保护区间阻止它们被误采为假阴性。
+- `action_participants` 是实际参与者的多对多关系；身份尚未确认时输出为空。只有恰好一名参与者已确认时才投影到兼容的 `player_number`；无效拦网只属于实际参与者，不能凭动作标签归属。
+- 四个 Python v2 模块分别负责来源/谱系契约、观察合成、训练投影和六文件发布；Node 的 `active_review_io`、覆盖证据、工作簿语义、公式校验与 composer 工具及其测试共同保护输入链路。
+- 旧 `apply-active-review` 和 v1 提取工具继续保留兼容性；新发布必须使用单一输出目录的 v2 命令。
+
+以下命令展示已完成的合成、发布和只读验证。实际的固定目录已经存在，不能再次应用到同一路径；重建时必须使用全新的空目录。
 
 ```powershell
-spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\active-learning\rangitoto\round-01-selection-rebuild.json --repo-root .
-node tools\build_active_review_batch.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01-rebuild outputs\active-learning\rangitoto\round-01-rebuild-previews
+node tools\compose_active_review_evidence.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01\review.xlsx data\active-learning\rangitoto\round-01-evidence-overrides.json data\active-learning\rangitoto\round-01-review-v2.json
+.venv\Scripts\python.exe -m spiketrace apply-active-review-v2 data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv data\active-learning\rangitoto\round-01-selection.json data\active-learning\rangitoto\round-01-review-v2.json data\annotations\rangitoto_round_01 --repo-root . --legacy-base-match-id usa-germany-2024-olympics --review-match-id rangitoto-taka-national-final --allow-missing-videos
+.venv\Scripts\python.exe -m spiketrace verify-active-review-bundle data\annotations\rangitoto_round_01
 ```
-
-代理短片无音频；本轮人工记录使用片段内整数秒、动作和画面侧别，没有状态列、checkbox 或完成列。
-无时间的单条 `background` 表示整段已看完且没有目标动作；带时间的 `background` 是显式负样本，
-可以与动作共存。`receive` 仅指接对方发球，`dig` 仅指对方进攻后的防守起球。
 
 这 40 段是为训练补样而偏置选择的主动学习样本，不是准确率测试。只要 Rangitoto 标注加入
 训练，Rangitoto 就不能继续作为独立 `val` 或 `test`；Precision、Recall、Macro F1 和混淆
@@ -583,15 +599,16 @@ Rangitoto 就不能继续作为独立 `val` 或 `test`；可信的 Precision、R
 
 ## 当前限制
 
-当前训练数据仍只有美国队对德国队一场比赛的 90 个窗口，没有可用于生产的模型权重。
+现有 bootstrap checkpoint 仍只由美国队对德国队的 90 个窗口训练；已发布的 Rangitoto 安全训练投影
+将当前可训练清单扩展为 214 行，但尚未进行两阶段微调，也没有独立 `val`，因此没有可用于生产的模型权重。
 Rangitoto 第二场完整比赛的 `center-nearest-frame-v1` 双裁剪 format-2 复核材料、首轮 40 段
 确定性选择、本地代理和 83 条人工记录已经完成：候选池共有 2,942 个候选、4,282 个来源候选、
-823 个 duplicate groups 和 495 个 conflict groups。当前工程任务是实现证据分层迁移，安全处理
-遮挡、镜头外、推断结果、`free_ball` 与未来的多人参与关系；用户不需要继续填写工作簿。在独立
+823 个 duplicate groups 和 495 个 conflict groups。证据分层迁移已经发布，安全保留了
+遮挡、镜头外、推断结果、`free_ball` 与多人参与关系；用户不需要继续填写工作簿。在独立
 比赛真值建立前，不能把候选数或主动学习批次成绩当作准确率或泛化结果。代码已经跑通
-自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并，但训练数据仍以
-39 个 `background` 为主，
-`set`、`attack`、`receive` 和 `dig` 正样本远远不足。当前外部 YOLO 只能给已有窗口提供
+自训练工程链路、外部 YOLO 权重评估、整场顺序推理和可审计双裁剪合并。旧 90 行 bootstrap 清单以
+39 个 `background` 为主；尽管 214 行投影已增加训练素材，`set`、`attack`、`receive` 和 `dig`
+仍需要独立验证真值与两阶段微调后才能判断是否足够。当前外部 YOLO 只能给已有窗口提供
 预测证据，不能自动扫描整场，也不能完成美国队过滤、球衣号码归属、发球成功率、得分
 结果、一传到位率或上场时间。继续添加同场训练窗口只能增加训练素材，无法证明模型泛化精度；
 完成一至三轮主动学习并建立独立 `val` 或 `test` 真值后，再根据逐类指标决定是否继续微调动作模型。
