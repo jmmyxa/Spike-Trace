@@ -169,7 +169,7 @@ async function verifyRealEvidence(argv) {
   const clip034Serve = actionsFor("034").find((row) => row.review_label === "serve");
   assert.ok(clip034Serve && clip034Serve.visibility === "direct_clear" && clip034Serve.evidence_basis === "direct_video");
   assert.ok(payload.outcome_observations.some((row) => row.evidence_basis === "referee_signal" && row.related_action_refs.includes(clip034Serve.action_ref)));
-  assert.ok(actionsFor("035").some((row) => row.visibility === "fully_occluded" && row.interval_scope === "clip_bounds"));
+  assert.equal(actionsFor("035").filter((row) => row.visibility === "fully_occluded").length, 0);
   assert.ok(visibleFor("035").some((row) => row.event_kind === "occlusion" && row.interval_scope === "clip_bounds"));
   for (const suffix of ["007", "014"]) assert.ok(actionsFor(suffix).every((row) => row.source_action_slot !== null));
   await assertStableInput(selectionSnapshot.path, selectionSnapshot.bytes, "Selection");

@@ -543,15 +543,23 @@ if (process.argv[2] === "--real") {
   assert.equal(blocks.length, 40);
   assert.equal(blocks.filter((block) => block.shared && block.ordinaryCount === 0 && block.sharedCellCount === 12).length, 39);
   assert.deepEqual(blocks.find((block) => block.range === "C28:C39"), { range: "C28:C39", shared: true, ordinaryCount: 1, sharedCellCount: 11, masterCell: "C29" });
-  await assert.rejects(() => verifyWorkbookFile(selectionSnapshot.path, workbookSnapshot.path, {
+  const verifiedWorkbook = await verifyWorkbookFile(selectionSnapshot.path, workbookSnapshot.path, {
     allowManualValues: true,
     selectionBytes: selectionSnapshot.bytes,
     workbookBytes: workbookSnapshot.bytes,
     boundEvidenceOverrides,
     repoRoot: process.cwd(),
-  }), /Clip round-01-clip-023 has overlapping timed rows/);
+  });
+  assert.deepEqual(verifiedWorkbook.canonicalActionRows.filter((row) => row.clip_id === "round-01-clip-023"), [
+    { action_ref: "round-01-clip-023/action-001", clip_id: "round-01-clip-023", source_action_slot: 1, source_row: 268, raw_values: { clip_id: "round-01-clip-023", review_label: "receive", relative_start_seconds: 4, relative_end_seconds: 5, team_side: "near", note: null }, normalized_values: { clip_id: "round-01-clip-023", review_label: "receive", relative_start_seconds: 4, relative_end_seconds: 5, team_side: "near", note: null }, background_scope: null, side_inherited: false, source_repairs: [] },
+    { action_ref: "round-01-clip-023/action-002", clip_id: "round-01-clip-023", source_action_slot: 2, source_row: 269, raw_values: { clip_id: "round-01-clip-023", review_label: "set", relative_start_seconds: 5, relative_end_seconds: 6, team_side: null, note: null }, normalized_values: { clip_id: "round-01-clip-023", review_label: "set", relative_start_seconds: 5, relative_end_seconds: 6, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+    { action_ref: "round-01-clip-023/action-003", clip_id: "round-01-clip-023", source_action_slot: 3, source_row: 270, raw_values: { clip_id: "round-01-clip-023", review_label: "attack", relative_start_seconds: 6, relative_end_seconds: 7, team_side: null, note: null }, normalized_values: { clip_id: "round-01-clip-023", review_label: "attack", relative_start_seconds: 6, relative_end_seconds: 7, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+    { action_ref: "round-01-clip-023/action-004", clip_id: "round-01-clip-023", source_action_slot: 4, source_row: 271, raw_values: { clip_id: "round-01-clip-023", review_label: "dig", relative_start_seconds: 6, relative_end_seconds: 7, team_side: null, note: "被拦回的保护" }, normalized_values: { clip_id: "round-01-clip-023", review_label: "dig", relative_start_seconds: 6, relative_end_seconds: 7, team_side: "near", note: "被拦回的保护" }, background_scope: null, side_inherited: true, source_repairs: [] },
+    { action_ref: "round-01-clip-023/action-005", clip_id: "round-01-clip-023", source_action_slot: 5, source_row: 272, raw_values: { clip_id: "round-01-clip-023", review_label: "set", relative_start_seconds: 8, relative_end_seconds: 9, team_side: null, note: null }, normalized_values: { clip_id: "round-01-clip-023", review_label: "set", relative_start_seconds: 8, relative_end_seconds: 9, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+    { action_ref: "round-01-clip-023/action-006", clip_id: "round-01-clip-023", source_action_slot: 6, source_row: 273, raw_values: { clip_id: "round-01-clip-023", review_label: "attack", relative_start_seconds: 9, relative_end_seconds: 10, team_side: null, note: null }, normalized_values: { clip_id: "round-01-clip-023", review_label: "attack", relative_start_seconds: 9, relative_end_seconds: 10, team_side: "near", note: null }, background_scope: null, side_inherited: true, source_repairs: [] },
+  ]);
   await assertStableInput(selectionSnapshot.path, selectionSnapshot.bytes, "Selection");
   await assertStableInput(workbookSnapshot.path, workbookSnapshot.bytes, "Workbook");
   await assertStableInput(overrideSnapshot.path, overrideSnapshot.bytes, "Evidence override");
-  process.stdout.write(`${JSON.stringify({ shared_blocks: 40, standard_shared_blocks: 39, mixed_block: "C28:C39", public_next_blocker: "Clip round-01-clip-023 has overlapping timed rows", selection_sha256: selectionSnapshot.sha256, workbook_sha256: workbookSnapshot.sha256 })}\n`);
+  process.stdout.write(`${JSON.stringify({ shared_blocks: 40, standard_shared_blocks: 39, mixed_block: "C28:C39", canonicalization: "clip-023 source overlaps preserved", selection_sha256: selectionSnapshot.sha256, workbook_sha256: workbookSnapshot.sha256 })}\n`);
 }
