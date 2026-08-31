@@ -44,6 +44,12 @@ source .venv/bin/activate
 python -m pip install -e .
 ```
 
+需要运行 `tools/*.mjs` 工作簿或证据工具时，先安装带 `npm` 的 Node.js。全新检出中在运行下文任何裸 `node` 命令前，使用已验证的精确依赖版本进行本地 bootstrap；该命令只创建被忽略的 `node_modules/`，不需要新增 package manifest 或 lockfile：
+
+```powershell
+npm install --no-save --package-lock=false --ignore-scripts @oai/artifact-tool@2.8.52
+```
+
 程序会依次选择 CUDA、Apple MPS 或 CPU。使用预训练 R3D-18 时，torchvision 首次运行需要下载公开权重。
 
 ## 当前程序结构
@@ -494,19 +500,19 @@ python -m unittest discover -s tests -v
 
 发布目录 `data/annotations/rangitoto_round_01/` 是不可覆盖的六文件 bundle。权威
 `round-01-results.json` 的 `result_set_id` 为
-`YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad`，
-内容 SHA-256 为 `281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5`。
+`YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7`，
+内容 SHA-256 为 `6dd0b1ab2dae0481fbdb55a2c7afd1c9937024cf13a0143d0e8cd5877dc7182f`。
 它记录 86 条动作观察、4 条结果观察、1 条连续遮挡、2 条镜头外事件、3 个受影响动作和 0 条已确认参与者；
 训练投影含 60 条正样本、60 条生成的背景和 214 行。
 
 | 文件 | 数据行 | SHA-256 |
 | --- | ---: | --- |
-| `round-01-results.json` | — | `399e0094fb29a85f645a1c11f077a181ad33a2b041a3560deaf125c9ad5c6b5f` |
+| `round-01-results.json` | — | `d60bb415d64d5f9a466fc0e2a8aeab66bff11decd669fac068acabfe8d35cece` |
 | `action_training_round_01.csv` | 214 | `2c0ff1900c74622cf99f07527b66fc48b6e18f0462f393234624cd9719012ac6` |
-| `round-01-observations.csv` | 90 | `0faf79cedcf4f5df7371d7058a66eef68ec60347d27070391917f12fe7bf0e87` |
-| `round-01-visibility-events.csv` | 3 | `9c3904a9b00d7332554e09ae619b2ff1274a65ca4288dac825b88852034f2012` |
+| `round-01-observations.csv` | 90 | `06b26c03c36af9359ca647c109d637edba95c34656c2ae8b97850c8a7647f206` |
+| `round-01-visibility-events.csv` | 3 | `6aed06ddb67f3e35c74ac08cb130b09e393bcae996fd5d927b60bffe4b6f9cbd` |
 | `round-01-action-participants.csv` | 0 | `97e1b6dd737e1bcdacf6b985503e7933ff7d389f310d470c1706d463be7086bc` |
-| `round-01-exports.manifest.json` | — | `2ee97d691b364d214d35f59fe6407eebb4bb63c7328aec9cc1c41c10c1029cfa` |
+| `round-01-exports.manifest.json` | — | `af17ed6f5358d01633d90c003f8127d50a0a60a72fd57d6c6f09e849c2f2a0d4` |
 
 ### 证据语义与兼容性
 
@@ -521,8 +527,10 @@ python -m unittest discover -s tests -v
 ```powershell
 node tools\compose_active_review_evidence.mjs data\active-learning\rangitoto\round-01-selection.json outputs\active-learning\rangitoto\round-01\review.xlsx data\active-learning\rangitoto\round-01-evidence-overrides.json data\active-learning\rangitoto\round-01-review-v2.json
 .venv\Scripts\python.exe -m spiketrace apply-active-review-v2 data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv data\active-learning\rangitoto\round-01-selection.json data\active-learning\rangitoto\round-01-review-v2.json data\annotations\rangitoto_round_01 --repo-root . --legacy-base-match-id usa-germany-2024-olympics --review-match-id rangitoto-taka-national-final --allow-missing-videos
-.venv\Scripts\python.exe -m spiketrace verify-active-review-bundle data\annotations\rangitoto_round_01
+.venv\Scripts\python.exe -m spiketrace verify-active-review-bundle data\annotations\rangitoto_round_01 --repo-root .
 ```
+
+上面的发布命令未显式传入 `--video-root`，因此有效训练视频根默认为基础清单所在的 `data/annotations`；这个根会写入权威 JSON 的 `video_root_audit`，训练该投影时也应向清单加载器传入同一个 `--video-root data/annotations`。若发布时显式指定其他 `--video-root`，后续训练必须沿用该根；带 `--repo-root .` 的 bundle 验证会重新解析审计根和 `training_video_path`，并要求它们精确指向权威来源视频。
 
 如需从零重建历史主动学习选择证据（不是本轮用户操作，也不能覆盖已经发布的结果），v1 兼容的选片入口仍如下。历史代理短片无音频，人工记录使用片段内相对秒数：
 

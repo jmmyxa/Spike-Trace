@@ -1,7 +1,7 @@
 {
   "format": "spiketrace.active-review-evidence-input",
   "format_version": 2,
-  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad",
+  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7",
   "review_set_key": "rangitoto/round-01",
   "batch_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01",
   "round_id": "round-01",
@@ -15,7 +15,7 @@
   },
   "evidence_overrides": {
     "path": "data/active-learning/rangitoto/round-01-evidence-overrides.json",
-    "sha256": "ca1433a5caae776b8c81f025ec86900a577385017fdc31fe3bc96cf8f34b4283"
+    "sha256": "761012e3112d0a4d1a7e224efa30c161d8c70f3431342401fc8411097bfcb4d6"
   },
   "video": {
     "video_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p",
@@ -5211,10 +5211,8 @@
   ],
   "outcome_observations": [
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-001",
-      "related_action_refs": [
-        "round-01-clip-007/action-002"
-      ],
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-001",
+      "related_action_refs": [],
       "outcome": "point_lost",
       "result_type": null,
       "evidence_basis": "direct_video",
@@ -5222,10 +5220,8 @@
       "note": "原备注确认随后失分，但未补写不存在的 dig 动作。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-002",
-      "related_action_refs": [
-        "round-01-clip-014/action-001"
-      ],
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-002",
+      "related_action_refs": [],
       "outcome": "point_won",
       "result_type": "opponent_serve_error",
       "evidence_basis": "referee_signal",
@@ -5233,7 +5229,7 @@
       "note": "原备注记录对方发球失误；只保存裁判手势支持的得分结果，不补我方动作。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-003",
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-003",
       "related_action_refs": [
         "round-01-clip-018/supplemental-001"
       ],
@@ -5244,7 +5240,7 @@
       "note": "原备注说明 8-9 秒自由球未过网并直接失分。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-004",
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-004",
       "related_action_refs": [
         "round-01-clip-034/action-001"
       ],
@@ -5257,7 +5253,7 @@
   ],
   "visibility_observations": [
     {
-      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off_camera-source-001",
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off_camera-source-001",
       "event_kind": "off_camera",
       "clip_id": "round-01-clip-009",
       "team_side": "near",
@@ -5271,7 +5267,7 @@
       "source_reason": "原备注确认发球人未出现在镜头内，按同一 3-4 秒记录镜头外事件。"
     },
     {
-      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off_camera-source-002",
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off_camera-source-002",
       "event_kind": "off_camera",
       "clip_id": "round-01-clip-010",
       "team_side": "near",
@@ -5285,7 +5281,7 @@
       "source_reason": "原备注确认发球时未入镜，按同一 16-17 秒记录镜头外事件。"
     },
     {
-      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/occlusion-source-003",
+      "visibility_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/occlusion-source-003",
       "event_kind": "occlusion",
       "clip_id": "round-01-clip-035",
       "team_side": "near",

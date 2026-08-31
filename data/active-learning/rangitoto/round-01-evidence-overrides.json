@@ -211,9 +211,7 @@
   "outcome_observations": [
     {
       "outcome_index": 1,
-      "related_action_refs": [
-        "round-01-clip-007/action-002"
-      ],
+      "related_action_refs": [],
       "outcome": "point_lost",
       "result_type": null,
       "evidence_basis": "direct_video",
@@ -222,9 +220,7 @@
     },
     {
       "outcome_index": 2,
-      "related_action_refs": [
-        "round-01-clip-014/action-001"
-      ],
+      "related_action_refs": [],
       "outcome": "point_won",
       "result_type": "opponent_serve_error",
       "evidence_basis": "referee_signal",

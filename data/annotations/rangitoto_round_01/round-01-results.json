@@ -1,8 +1,8 @@
 {
   "format": "spiketrace.active-review-observations",
   "format_version": 2,
-  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad",
-  "content_sha256": "281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5",
+  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7",
+  "content_sha256": "6dd0b1ab2dae0481fbdb55a2c7afd1c9937024cf13a0143d0e8cd5877dc7182f",
   "batch_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01",
   "round_id": "round-01",
   "generator_version": "spike-trace/0.1.0",
@@ -13,7 +13,7 @@
     },
     "review_input": {
       "path": "data/active-learning/rangitoto/round-01-review-v2.json",
-      "sha256": "85c3aee3d5c1dcbf916a57f182c5173470800f6a5547dff4c26f85a19b28786f"
+      "sha256": "6ee9abf6ae6f55e9b3d4d94f6d489fe4e6c6abb209845a814987af479db8e58e"
     },
     "workbook": {
       "path": "outputs/active-learning/rangitoto/round-01/review.xlsx",
@@ -21,7 +21,7 @@
     },
     "evidence_overrides": {
       "path": "data/active-learning/rangitoto/round-01-evidence-overrides.json",
-      "sha256": "ca1433a5caae776b8c81f025ec86900a577385017fdc31fe3bc96cf8f34b4283"
+      "sha256": "761012e3112d0a4d1a7e224efa30c161d8c70f3431342401fc8411097bfcb4d6"
     },
     "merged_candidates": {
       "path": "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json",
@@ -5228,10 +5228,8 @@
   ],
   "outcome_observations": [
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-001",
-      "related_action_refs": [
-        "round-01-clip-007/action-002"
-      ],
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-001",
+      "related_action_refs": [],
       "outcome": "point_lost",
       "result_type": null,
       "evidence_basis": "direct_video",
@@ -5239,10 +5237,8 @@
       "note": "原备注确认随后失分，但未补写不存在的 dig 动作。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-002",
-      "related_action_refs": [
-        "round-01-clip-014/action-001"
-      ],
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-002",
+      "related_action_refs": [],
       "outcome": "point_won",
       "result_type": "opponent_serve_error",
       "evidence_basis": "referee_signal",
@@ -5250,7 +5246,7 @@
       "note": "原备注记录对方发球失误；只保存裁判手势支持的得分结果，不补我方动作。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-003",
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-003",
       "related_action_refs": [
         "round-01-clip-018/supplemental-001"
       ],
@@ -5261,7 +5257,7 @@
       "note": "原备注说明 8-9 秒自由球未过网并直接失分。"
     },
     {
-      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/outcome-004",
+      "outcome_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/outcome-004",
       "related_action_refs": [
         "round-01-clip-034/action-001"
       ],
@@ -5274,7 +5270,7 @@
   ],
   "occlusion_events": [
     {
-      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/occlusion-001",
+      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/occlusion-001",
       "event_kind": "occlusion",
       "team_side": "near",
       "start_seconds": 4491,
@@ -5285,7 +5281,7 @@
         "round-01-clip-035/action-001"
       ],
       "source_refs": [
-        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/occlusion-source-003"
+        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/occlusion-source-003"
       ],
       "source_intervals": [
         [
@@ -5298,7 +5294,7 @@
   ],
   "off_camera_events": [
     {
-      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off-camera-001",
+      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off-camera-001",
       "event_kind": "off_camera",
       "team_side": "near",
       "start_seconds": 450.2,
@@ -5309,7 +5305,7 @@
         "round-01-clip-009/action-001"
       ],
       "source_refs": [
-        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off_camera-source-001"
+        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off_camera-source-001"
       ],
       "source_intervals": [
         [
@@ -5320,7 +5316,7 @@
       "note": "发球人在动作区间内未进入镜头。"
     },
     {
-      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off-camera-002",
+      "event_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off-camera-002",
       "event_kind": "off_camera",
       "team_side": "near",
       "start_seconds": 507,
@@ -5331,7 +5327,7 @@
         "round-01-clip-010/action-001"
       ],
       "source_refs": [
-        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off_camera-source-002"
+        "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off_camera-source-002"
       ],
       "source_intervals": [
         [
@@ -5881,7 +5877,7 @@
       "reason": "human_observation"
     },
     {
-      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/occlusion-001",
+      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/occlusion-001",
       "clip_id": "round-01-clip-035",
       "team_side": "near",
       "start_seconds": 4491.0,
@@ -5889,7 +5885,7 @@
       "reason": "occlusion_clip_bounds"
     },
     {
-      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off-camera-001",
+      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off-camera-001",
       "clip_id": "round-01-clip-009",
       "team_side": "near",
       "start_seconds": 450.2,
@@ -5897,7 +5893,7 @@
       "reason": "off_camera"
     },
     {
-      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad/off-camera-002",
+      "source_ref": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7/off-camera-002",
       "clip_id": "round-01-clip-010",
       "team_side": "near",
       "start_seconds": 507,
@@ -9035,6 +9031,12 @@
     "positive_training_count": 60,
     "requested_background_cap": 60,
     "effective_background_cap": 60,
+    "background_guard_seconds": 0.5,
+    "background_seed": 42,
+    "video_root_audit": {
+      "kind": "repo_relative",
+      "path": "data/annotations"
+    },
     "training_video_path": "../YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p.mp4",
     "review_match_id": "rangitoto-taka-national-final",
     "base_training_view": {
@@ -9076,11 +9078,11 @@
     },
     "observations_csv": {
       "path": "round-01-observations.csv",
-      "sha256": "0faf79cedcf4f5df7371d7058a66eef68ec60347d27070391917f12fe7bf0e87"
+      "sha256": "06b26c03c36af9359ca647c109d637edba95c34656c2ae8b97850c8a7647f206"
     },
     "visibility_events_csv": {
       "path": "round-01-visibility-events.csv",
-      "sha256": "9c3904a9b00d7332554e09ae619b2ff1274a65ca4288dac825b88852034f2012"
+      "sha256": "6aed06ddb67f3e35c74ac08cb130b09e393bcae996fd5d927b60bffe4b6f9cbd"
     },
     "action_participants_csv": {
       "path": "round-01-action-participants.csv",

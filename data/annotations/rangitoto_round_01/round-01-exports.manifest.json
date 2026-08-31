@@ -1,8 +1,8 @@
 {
   "format": "spiketrace.active-review-exports-manifest",
   "format_version": 1,
-  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-ff966d20b55884ad",
-  "content_sha256": "281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5",
+  "result_set_id": "YTDown.com_YouTube_Rangitoto-vs-Taka-National-Final-Sets-1-_Media_k3PdQgm2jVs_001_1080p-round-01/result-a4d2b22c9150afb7",
+  "content_sha256": "6dd0b1ab2dae0481fbdb55a2c7afd1c9937024cf13a0143d0e8cd5877dc7182f",
   "generator_version": "spike-trace/0.1.0",
   "sources": {
     "selection": {
@@ -11,7 +11,7 @@
     },
     "review_input": {
       "path": "data/active-learning/rangitoto/round-01-review-v2.json",
-      "sha256": "85c3aee3d5c1dcbf916a57f182c5173470800f6a5547dff4c26f85a19b28786f"
+      "sha256": "6ee9abf6ae6f55e9b3d4d94f6d489fe4e6c6abb209845a814987af479db8e58e"
     },
     "workbook": {
       "path": "outputs/active-learning/rangitoto/round-01/review.xlsx",
@@ -19,7 +19,7 @@
     },
     "evidence_overrides": {
       "path": "data/active-learning/rangitoto/round-01-evidence-overrides.json",
-      "sha256": "ca1433a5caae776b8c81f025ec86900a577385017fdc31fe3bc96cf8f34b4283"
+      "sha256": "761012e3112d0a4d1a7e224efa30c161d8c70f3431342401fc8411097bfcb4d6"
     },
     "merged_candidates": {
       "path": "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json",
@@ -61,8 +61,8 @@
     {
       "path": "round-01-results.json",
       "media_type": "application/json",
-      "sha256": "399e0094fb29a85f645a1c11f077a181ad33a2b041a3560deaf125c9ad5c6b5f",
-      "bytes": 264866,
+      "sha256": "d60bb415d64d5f9a466fc0e2a8aeab66bff11decd669fac068acabfe8d35cece",
+      "bytes": 264935,
       "encoding": "utf-8",
       "line_ending": "lf",
       "data_rows": null,
@@ -88,8 +88,8 @@
     {
       "path": "round-01-observations.csv",
       "media_type": "text/csv",
-      "sha256": "0faf79cedcf4f5df7371d7058a66eef68ec60347d27070391917f12fe7bf0e87",
-      "bytes": 40297,
+      "sha256": "06b26c03c36af9359ca647c109d637edba95c34656c2ae8b97850c8a7647f206",
+      "bytes": 40229,
       "encoding": "utf-8-sig",
       "line_ending": "crlf",
       "data_rows": 90,
@@ -98,7 +98,7 @@
     {
       "path": "round-01-visibility-events.csv",
       "media_type": "text/csv",
-      "sha256": "9c3904a9b00d7332554e09ae619b2ff1274a65ca4288dac825b88852034f2012",
+      "sha256": "6aed06ddb67f3e35c74ac08cb130b09e393bcae996fd5d927b60bffe4b6f9cbd",
       "bytes": 2308,
       "encoding": "utf-8-sig",
       "line_ending": "crlf",

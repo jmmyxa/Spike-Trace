@@ -281,14 +281,15 @@ Rangitoto 第二场完整比赛的首轮主动学习已经完成：40 个短片�
 `data/active-learning/rangitoto/round-01-review-v2.json`，并已发布不可覆盖的六文件目录
 `data/annotations/rangitoto_round_01/`。权威 JSON 记录 86 条动作观察、4 条结果观察、1 条连续遮挡、
 2 条镜头外事件、3 个受影响动作和 0 条已确认参与者；训练投影含 60 条正样本、60 条背景和 214 行。
-权威内容 SHA-256 为 `281045e8da5b5891b3e21a398526afac0cbe2cb68ce93fabf5106880b455f6c5`，训练 CSV 的
+权威内容 SHA-256 为 `6dd0b1ab2dae0481fbdb55a2c7afd1c9937024cf13a0143d0e8cd5877dc7182f`，训练 CSV 的
 SHA-256 为 `2c0ff1900c74622cf99f07527b66fc48b6e18f0462f393234624cd9719012ac6`，六文件 manifest 的
-文件 SHA-256 为 `2ee97d691b364d214d35f59fe6407eebb4bb63c7328aec9cc1c41c10c1029cfa`。
+文件 SHA-256 为 `af17ed6f5358d01633d90c003f8127d50a0a60a72fd57d6c6f09e849c2f2a0d4`。
 
 动作证据与结果证据独立保存。连续遮挡和镜头外是不同的持续时间事件；其保护区间不得产生假阴性。
 参与者输出必须在身份确认前保持为空。一个 `block` 无论有多少参与者，都只产生一个训练窗口；
 参与关系绝不向整支队伍广播。旧 v1 应用器和提取工具保留兼容，新的权威发布使用
-`apply-active-review-v2` 的单一输出目录，并通过 `verify-active-review-bundle` 只读验证。
+`apply-active-review-v2` 的单一输出目录，并通过 `verify-active-review-bundle --repo-root .`
+对冻结选择、合并候选、保护区间和硬负样本执行来源绑定的只读重放验证。
 
 已建立 `728.0-735.0` 秒的首个试标注区间。该区间美国队位于远端，使用
 `(0, 0, 1280, 430)` 裁剪，只保留美国队半场；近端半场建议使用
