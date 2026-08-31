@@ -66,6 +66,20 @@ function compatibilityPayload(boundEvidenceOverrides) {
   return boundEvidenceOverrides?.payload?.workbook_compatibility ?? null;
 }
 
+function sharedFormulaPermissions(compatibility) {
+  return (compatibility?.shared_formula_ranges ?? []).map((entry) => {
+    const match = /^C([1-9][0-9]*):C([1-9][0-9]*)$/.exec(entry.range ?? "");
+    const start = Number(match?.[1]);
+    const end = Number(match?.[2]);
+    if (entry.sheet !== "人工动作" || entry.block_size !== 12 || entry.expected_display_value !== "播放" || !match || start < 4 || end > 483 || start > end || (start - 4) % 12 !== 0 || (end - 3) % 12 !== 0 || (end - start + 1) % entry.block_size !== 0) fail("Action shared hyperlink compatibility is invalid.");
+    return { start, end };
+  });
+}
+
+function permissionCovers(permissions, start) {
+  return permissions.some((permission) => permission.start <= start && permission.end >= start + 11);
+}
+
 function allowedBanner(snapshot, sheet, cell, value, compatibility) {
   const expected = BANNER_CELLS.find((entry) => entry[0] === sheet && entry[1] === cell)?.[2];
   if (value === expected) return;
@@ -73,8 +87,9 @@ function allowedBanner(snapshot, sheet, cell, value, compatibility) {
   if (!permission || permission.expected_value.trimEnd() !== expected || permission.actual_value !== value || value !== permission.expected_value.trimEnd()) fail(`${sheet} ${cell} banner mismatch.`);
 }
 
-function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides }) {
+function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides, rawActionFormulaBlocks }) {
   const compatibility = compatibilityPayload(boundEvidenceOverrides);
+  const formulaPermissions = sharedFormulaPermissions(compatibility);
   for (const entry of compatibility?.trimmed_banner_cells ?? []) if (entry.cell !== "A2" || !BANNER_CELLS.some(([sheet, cell]) => sheet === entry.sheet && cell === entry.cell)) fail("Workbook banner compatibility target is invalid.");
   assert.deepEqual(snapshot.names, ["短片清单", "人工动作", "候选提示", "标签说明"], "Workbook sheet order/count must be exact.");
   const byName = new Map(snapshot.sheets.map((sheet) => [sheet.name, sheet]));
@@ -118,8 +133,12 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
     const cells = actionSheet.formulas.slice(start - 1, start + 11).map((row) => row[2]);
     const expected = expectedHyperlink(selection.clips[block].clip_id);
     const expanded = cells.every((cell) => formulaText(cell) === expected && sharedFormula(cell) === undefined);
-    if (!expanded) {
-      const permission = compatibility?.shared_formula_ranges?.find((entry) => entry.sheet === "人工动作" && entry.range === range && entry.block_size === 12 && entry.expected_display_value === "播放");
+    const rawBlock = rawActionFormulaBlocks?.[block];
+    if (rawActionFormulaBlocks) {
+      if (rawBlock?.range !== range) fail(`Action raw formula block ${range} is missing.`);
+      if ((rawBlock.shared || !expanded) && (!permissionCovers(formulaPermissions, start) || cells.some((cell) => !blank(formulaText(cell)) && formulaText(cell) !== expected))) fail(`Action shared hyperlink block ${range} is invalid.`);
+    } else if (!expanded) {
+      const permission = permissionCovers(formulaPermissions, start);
       const references = cells.map(sharedFormula);
       const masterIndexes = references.flatMap((entry, index) => entry?.ref === range ? [index] : []);
       const masterIndex = masterIndexes[0];
@@ -201,7 +220,7 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
 
 export async function verifyWorkbookSemantics(workbook, selection, projection, workbookSha256, verifiedActionRows, options = {}) {
   const snapshot = await readWorkbookSemanticSnapshot(workbook);
-  const verified = verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides: options.boundEvidenceOverrides });
+  const verified = verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides: options.boundEvidenceOverrides, rawActionFormulaBlocks: options.rawActionFormulaBlocks });
   const canonical = canonicalizeWorkbookActionRows(selection, verifiedActionRows, options);
   return { ...verified, ...canonical };
 }

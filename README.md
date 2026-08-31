@@ -131,13 +131,15 @@ Spike-Trace/
 │  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
 └─ tools/
    ├─ build_active_review_batch.mjs # 由选片 JSON 与代理 manifest 原子构建四页 40 段复核工作簿
-   ├─ verify_active_review_batch.mjs # 验证短片、代理哈希、XLSX 投影、公式和人工输入边界
+   ├─ verify_active_review_batch.mjs # 验证短片、代理哈希、XLSX 投影、raw 公式和人工输入边界
    ├─ extract_active_review_results.mjs # 读取完成的 40 段工作簿并硬链接发布不可覆盖的复核草稿 JSON
    ├─ active_review_evidence_overrides.mjs # 严格校验哈希绑定的证据覆盖信封与引用
    ├─ active_review_workbook_semantics.mjs # 对复核工作簿执行哈希绑定的语义等价、修复审计与动作行规范化
+   ├─ active_review_xlsx_formulas.mjs # 通过 bundled JSZip/SAX 从同一 XLSX bytes 校验共享公式 OOXML
    ├─ compose_active_review_evidence.mjs # 将冻结的选择、工作簿和证据覆盖合成为不可覆盖的 v2 证据输入
    ├─ test_active_review_batch.mjs # 合成 40 段工作簿、预览、篡改拒绝与回滚可执行测试
    ├─ test_active_review_evidence.mjs # 证据覆盖信封、哈希绑定与引用校验测试
+   ├─ test_active_review_shared_formulas.mjs # producer-shaped shared formula、raw 篡改与真实只读阶段测试
    ├─ build_rangitoto_review.mjs # 从已验证 format-2 JSON 构建四页复核工作簿和预览
    ├─ verify_rangitoto_review.mjs # 独立验证工作簿结构、行数、空白输入与公式
    ├─ test_rangitoto_review.mjs  # 四窗口 fixture 的可执行 XLSX 集成测试

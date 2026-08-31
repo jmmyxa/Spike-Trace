@@ -8,6 +8,7 @@ import { FileBlob, SpreadsheetFile } from "@oai/artifact-tool";
 import { parseJsonObjectStrict, sha256, sha256File as sharedSha256File } from "./active_review_io.mjs";
 import { verifyWorkbookSemantics } from "./active_review_workbook_semantics.mjs";
 import { validateEvidenceOverrideReferences } from "./active_review_evidence_overrides.mjs";
+import { inspectActionFormulaBlocks } from "./active_review_xlsx_formulas.mjs";
 
 export const SHEET_NAMES = ["短片清单", "人工动作", "候选提示", "标签说明"];
 export const ACTIONS = ["background", "serve", "receive", "set", "attack", "block", "dig"];
@@ -219,6 +220,7 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
     invariant(boundEvidenceOverrides.workbookBinding?.path === expectedWorkbookPath && boundEvidenceOverrides.workbookBinding?.sha256 === sha256(workbookBytes), "Bound evidence workbook binding does not match supplied snapshot.");
   }
   const { selection, manifest, projection } = await verifyProxyBatch(absoluteSelection, path.dirname(absoluteWorkbook), { selectionBytes, repoRoot });
+  const rawActionFormulaBlocks = await inspectActionFormulaBlocks(workbookBytes, selection);
   const workbook = await importWorkbookSnapshot(absoluteWorkbook, workbookBytes);
   const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
   assert.deepEqual(inspectedSheetNames(sheetInspection), SHEET_NAMES, "Workbook sheet order/count must be exact.");
@@ -227,7 +229,7 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
   const hints = workbook.worksheets.getItem("候选提示");
   const labels = workbook.worksheets.getItem("标签说明");
   const actionRows = actions.getRange("A4:I483").values;
-  const semantic = await verifyWorkbookSemantics(workbook, selection, projection, sha256(workbookBytes), actionRows, { boundEvidenceOverrides, requirePopulatedSources: allowManualValues });
+  const semantic = await verifyWorkbookSemantics(workbook, selection, projection, sha256(workbookBytes), actionRows, { boundEvidenceOverrides, rawActionFormulaBlocks, requirePopulatedSources: allowManualValues });
   assertManualRows(actions, { allowManualValues });
   await scanFormulaErrors(workbook, "Workbook");
   const result = { batch_id: manifest.batch_id, clip_count: selection.clips.length };
