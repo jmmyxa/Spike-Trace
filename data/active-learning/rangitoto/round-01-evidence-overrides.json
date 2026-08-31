@@ -147,7 +147,7 @@
       },
       "replacement_review_label": "background",
       "visibility": "direct_clear",
-      "evidence_basis": "direct_video",
+      "evidence_basis": "sequence_context",
       "replacement_note": null,
       "reason": "原备注明确是被拦回后的保护，不属于 dig；按可见非目标区间保留。"
     },
