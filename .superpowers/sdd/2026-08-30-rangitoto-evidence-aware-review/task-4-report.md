@@ -48,3 +48,9 @@ The composer verifier seam was removed. Trust-boundary tests now build a real sy
 The artifact runtime is supplied without a worktree junction through a percent-encoded data-URL loader. Set `SPIKETRACE_PYTHON` to `.venv\\Scripts\\python.exe`, `PYTHONPATH` to `src`, and put the same loader in `NODE_OPTIONS` so spawned extraction CLI processes inherit it. With that setup, `tools/test_active_review_evidence.mjs` exits `0`, and `tools/test_active_review_batch.mjs` exits `0` after the completed/rejected review, corruption, race, and rollback cases.
 
 The workbook semantic verifier also accepts only the exact artifact-tool `HYPERLINK is not implemented. linkLocation=clips/<expected-id>.mp4, friendlyName=播放` diagnostic when its separately validated formula names the same expected clip; arbitrary display text remains rejected.
+
+## Fix round 3 GREEN
+
+The synthetic pipeline now distinguishes `pipelineRoot` (the worktree Python source) from a generated non-default `repoRoot`. Selection, proxy, manifest, workbook, override, and review output live below `<tempRepo>/input`, while the source video lives at `<tempRepo>/round-01.mp4` to match selector resolution. `verifyWorkbookFile` forwards its explicit root into proxy verification, so composition succeeds while `process.cwd()` remains the worktree.
+
+Determinism copies one completed immutable fixture tree to a second temporary repo root at identical relative paths, then composes each tree with its own explicit root and compares output bytes. It does not regenerate the second workbook. Controller verification: real evidence suite exit `0`; full batch suite exit `0` with the percent-encoded loader inherited through `NODE_OPTIONS`, `SPIKETRACE_PYTHON=.venv\\Scripts\\python.exe`, and `PYTHONPATH=src`.

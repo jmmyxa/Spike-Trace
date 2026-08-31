@@ -7,10 +7,10 @@ function digest(bytes) {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
-function runPython(repoRoot, args, context) {
+function runPython(pipelineRoot, args, context) {
   const python = process.env.SPIKETRACE_PYTHON;
   if (!python) throw new Error("SPIKETRACE_PYTHON must point to the supplied synthetic-pipeline Python.");
-  const result = spawnSync(python, args, { cwd: repoRoot, encoding: "utf8", env: { ...process.env, PYTHONPATH: path.join(repoRoot, "src"), PYTHONUTF8: "1" } });
+  const result = spawnSync(python, args, { cwd: pipelineRoot, encoding: "utf8", env: { ...process.env, PYTHONPATH: path.join(pipelineRoot, "src"), PYTHONUTF8: "1" } });
   if (result.status !== 0) throw new Error(`${context} failed (${result.status})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`);
 }
 
@@ -30,11 +30,12 @@ function addBackground(run, start) {
   run.windows.push({ window_index: run.windows.length, start_seconds: start, end_seconds: start + 1, action: "background", confidence: 0.99 });
 }
 
-export async function createSyntheticSelection(fixtureDir, { repoRoot = process.cwd() } = {}) {
+export async function createSyntheticSelection(fixtureDir, { repoRoot = process.cwd(), pipelineRoot = process.cwd() } = {}) {
   const root = path.resolve(repoRoot);
-  const videoPath = path.join(fixtureDir, "round-01.mp4");
+  const pipeline = path.resolve(pipelineRoot);
+  const videoPath = path.join(root, "round-01.mp4");
   await fs.writeFile(path.join(fixtureDir, "make_video.py"), ["import cv2, numpy as np, sys", "writer = cv2.VideoWriter(sys.argv[1], cv2.VideoWriter_fourcc(*'mp4v'), 1.0, (1920, 1080))", "assert writer.isOpened()", "for index in range(400):", "    frame = np.full((1080, 1920, 3), index % 255, dtype=np.uint8)", "    writer.write(frame)", "writer.release()"].join("\n"));
-  runPython(root, [path.join(fixtureDir, "make_video.py"), videoPath], "synthetic low-resolution video creation");
+  runPython(pipeline, [path.join(fixtureDir, "make_video.py"), videoPath], "synthetic low-resolution video creation");
   const videoBytes = await fs.readFile(videoPath);
   const video = { path: path.relative(root, videoPath).split(path.sep).join("/"), fps: 1, frame_count: 400, width: 1920, height: 1080, duration_seconds: 400 };
   const far = inferencePayload("far", video, digest(videoBytes));
@@ -49,6 +50,6 @@ export async function createSyntheticSelection(fixtureDir, { repoRoot = process.
   const farPath = path.join(fixtureDir, "far.json"); const nearPath = path.join(fixtureDir, "near.json");
   await fs.writeFile(farPath, JSON.stringify(far)); await fs.writeFile(nearPath, JSON.stringify(near));
   const mergedDir = path.join(fixtureDir, "merged"); const selectionPath = path.join(fixtureDir, "selection.json");
-  runPython(root, ["-c", ["from pathlib import Path", "from spiketrace.dual_crop_review import build_dual_crop_review", "from spiketrace.active_learning_selection import select_review_batch", "root, far, near, merged, selection = map(Path, __import__('sys').argv[1:])", "build_dual_crop_review(far, near, merged, repo_root=root)", "select_review_batch(merged / 'merged_candidates.json', selection, repo_root=root, preferred_clip_seconds=5, min_clip_seconds=5, max_clip_seconds=5)"].join("\n"), root, farPath, nearPath, mergedDir, selectionPath], "synthetic selector pipeline");
+  runPython(pipeline, ["-c", ["from pathlib import Path", "from spiketrace.dual_crop_review import build_dual_crop_review", "from spiketrace.active_learning_selection import select_review_batch", "root, far, near, merged, selection = map(Path, __import__('sys').argv[1:])", "build_dual_crop_review(far, near, merged, repo_root=root)", "select_review_batch(merged / 'merged_candidates.json', selection, repo_root=root, preferred_clip_seconds=5, min_clip_seconds=5, max_clip_seconds=5)"].join("\n"), root, farPath, nearPath, mergedDir, selectionPath], "synthetic selector pipeline");
   return selectionPath;
 }

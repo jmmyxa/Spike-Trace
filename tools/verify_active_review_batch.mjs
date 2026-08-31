@@ -218,7 +218,7 @@ export async function verifyWorkbookFile(selectionPath, workbookPath, { allowMan
     invariant(boundEvidenceOverrides.selectionBinding?.path === expectedSelectionPath && boundEvidenceOverrides.selectionBinding?.sha256 === sha256(selectionBytes), "Bound evidence selection binding does not match supplied snapshot.");
     invariant(boundEvidenceOverrides.workbookBinding?.path === expectedWorkbookPath && boundEvidenceOverrides.workbookBinding?.sha256 === sha256(workbookBytes), "Bound evidence workbook binding does not match supplied snapshot.");
   }
-  const { selection, manifest, projection } = await verifyProxyBatch(absoluteSelection, path.dirname(absoluteWorkbook), { selectionBytes });
+  const { selection, manifest, projection } = await verifyProxyBatch(absoluteSelection, path.dirname(absoluteWorkbook), { selectionBytes, repoRoot });
   const workbook = await importWorkbookSnapshot(absoluteWorkbook, workbookBytes);
   const sheetInspection = await workbook.inspect({ kind: "sheet", include: "name", maxChars: 2000 });
   assert.deepEqual(inspectedSheetNames(sheetInspection), SHEET_NAMES, "Workbook sheet order/count must be exact.");

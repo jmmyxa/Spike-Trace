@@ -169,11 +169,15 @@ async function verifyRealEvidence(argv) {
 if (process.argv[2] === "--real") await verifyRealEvidence(process.argv.slice(2));
 
 async function composerFixture() {
-  const repoRoot = path.resolve(".");
-  const fixtureRoot = await fs.mkdtemp(path.join(path.join(repoRoot, "tests"), ".active-review-evidence-fixture-"));
-  const selectionPath = await createSyntheticSelection(fixtureRoot, { repoRoot });
+  const pipelineRoot = path.resolve(".");
+  const repoRoot = await fs.mkdtemp(path.join(path.join(pipelineRoot, "tests"), ".active-review-evidence-root-"));
+  await fs.copyFile(path.join(pipelineRoot, "pyproject.toml"), path.join(repoRoot, "pyproject.toml"));
+  const fixtureRoot = path.join(repoRoot, "input");
+  await fs.mkdir(fixtureRoot);
+  const selectionPath = await createSyntheticSelection(fixtureRoot, { repoRoot, pipelineRoot });
   const batchDir = path.join(fixtureRoot, "batch");
-  await buildActiveReviewBatch(selectionPath, batchDir, path.join(fixtureRoot, "previews"));
+  const previousCwd = process.cwd();
+  try { process.chdir(repoRoot); await buildActiveReviewBatch(selectionPath, batchDir, path.join(fixtureRoot, "previews")); } finally { process.chdir(previousCwd); }
   const workbookPath = path.join(batchDir, "review.xlsx");
   const workbook = await SpreadsheetFile.importXlsx(await FileBlob.load(workbookPath));
   const actions = workbook.worksheets.getItem("人工动作");
@@ -204,7 +208,7 @@ for (const [name, mutate] of [
     const outputPath = path.join(fixture.fixtureRoot, `output-${name}.json`);
     await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.repoRoot, io: fixture.io, afterVerification: () => mutate(fixture) }), /changed during (extraction|composition)/);
     await assertNoComposerLeak(fixture, outputPath);
-  } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
+  } finally { await fs.rm(fixture.repoRoot, { recursive: true, force: true }); }
 }
 
 for (const [name, makeIo] of [
@@ -217,15 +221,20 @@ for (const [name, makeIo] of [
     const outputPath = path.join(fixture.fixtureRoot, `${name}.json`);
     await assert.rejects(() => composeActiveReviewEvidence(fixture.selectionPath, fixture.workbookPath, fixture.overridePath, outputPath, { repoRoot: fixture.repoRoot, io: { ...fixture.io, ...makeIo() } }));
     await assertNoComposerLeak(fixture, outputPath);
-  } finally { await fs.rm(fixture.fixtureRoot, { recursive: true, force: true }); }
+  } finally { await fs.rm(fixture.repoRoot, { recursive: true, force: true }); }
 }
 
 const firstComposer = await composerFixture();
+const copiedRoot = await fs.mkdtemp(path.join(path.join(path.resolve("."), "tests"), ".active-review-evidence-copy-"));
 try {
   const firstOutput = path.join(firstComposer.fixtureRoot, "result.json");
-  const secondOutput = path.join(firstComposer.fixtureRoot, "result-copy.json");
+  await fs.cp(firstComposer.repoRoot, copiedRoot, { recursive: true });
+  const relativeSelection = path.relative(firstComposer.repoRoot, firstComposer.selectionPath);
+  const relativeWorkbook = path.relative(firstComposer.repoRoot, firstComposer.workbookPath);
+  const relativeOverride = path.relative(firstComposer.repoRoot, firstComposer.overridePath);
+  const secondOutput = path.join(copiedRoot, "input", "result-copy.json");
   await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, firstOutput, { repoRoot: firstComposer.repoRoot, io: firstComposer.io });
-  await composeActiveReviewEvidence(firstComposer.selectionPath, firstComposer.workbookPath, firstComposer.overridePath, secondOutput, { repoRoot: firstComposer.repoRoot, io: firstComposer.io });
+  await composeActiveReviewEvidence(path.join(copiedRoot, relativeSelection), path.join(copiedRoot, relativeWorkbook), path.join(copiedRoot, relativeOverride), secondOutput, { repoRoot: copiedRoot });
   assert.deepEqual(await fs.readFile(firstOutput), await fs.readFile(secondOutput));
   const collisionPath = path.join(firstComposer.fixtureRoot, "collision.json");
   await fs.writeFile(collisionPath, "existing");
@@ -233,7 +242,8 @@ try {
   assert.deepEqual(await fs.readFile(collisionPath), Buffer.from("existing"));
   assert.equal((await fs.readdir(firstComposer.fixtureRoot)).some((entry) => entry.startsWith(".collision.json.tmp-")), false);
 } finally {
-  await fs.rm(firstComposer.fixtureRoot, { recursive: true, force: true });
+  await fs.rm(firstComposer.repoRoot, { recursive: true, force: true });
+  await fs.rm(copiedRoot, { recursive: true, force: true });
 }
 
 function semanticWorkbook({ mutate } = {}) {
