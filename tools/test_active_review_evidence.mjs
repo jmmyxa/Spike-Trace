@@ -402,6 +402,10 @@ try {
   const inherited = semantic.canonicalActionRows.find((row) => row.source_row === 5);
   assert.equal(inherited.side_inherited, true);
   assert.equal(inherited.normalized_values.team_side, "near");
+  assert.deepEqual(semantic.normalizationAudit, [
+    { kind: "side_inheritance", clip_id: "round-01-clip-001", action_ref: "round-01-clip-001/action-002", source_row: 5, raw_value: null, normalized_value: "near", reason: "inherit side" },
+    { kind: "read_only_repair", clip_id: "round-01-clip-002", action_ref: "round-01-clip-002/action-001", source_row: 16, raw_value: null, normalized_value: "round-01-clip-002", reason: "restore fixed identifier" },
+  ]);
   assert.equal(semantic.canonicalActionRows.find((row) => row.source_row === 4).background_scope, "timed_interval");
   await assert.rejects(() => semanticResult({ mutate: ({ actions }) => { actions[15][0] = null; } }), /Action read-only values/);
   await assert.rejects(() => semanticResult({ mutate: ({ labels }) => { labels[3][1] = "tampered"; } }), /Label instructions/);

@@ -147,16 +147,22 @@ function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workb
 function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEvidenceOverrides, requirePopulatedSources = true } = {}) {
   const repairs = compatibilityPayload(boundEvidenceOverrides)?.read_only_repairs ?? [];
   const canonicalActionRows = [];
-  const normalizationAudit = [];
+  const normalizationAuditByRow = new Map();
+  const addAudit = (entry) => {
+    const entries = normalizationAuditByRow.get(entry.source_row) ?? [];
+    entries.push(entry);
+    normalizationAuditByRow.set(entry.source_row, entries);
+  };
   for (const [index, row] of verifiedActionRows.entries()) {
     const clipIndex = Math.floor(index / 12);
     const clip = selection.clips[clipIndex];
     const slot = (index % 12) + 1;
+    const actionRef = `${clip.clip_id}/action-${String(slot).padStart(3, "0")}`;
     const rawReadOnlyClip = normalize(row[0]);
     const repair = repairs.find((entry) => entry.clip_id === clip.clip_id && entry.source_action_slot === slot);
     if (rawReadOnlyClip !== clip.clip_id) {
       if (!repair || rawReadOnlyClip !== null) fail(`Action row ${index + 4} clip_id does not match selection.`);
-      normalizationAudit.push({ sheet: "人工动作", cell: `A${index + 4}`, field: "clip_id", original_value: rawReadOnlyClip, normalized_value: clip.clip_id, source_repair: repair });
+      addAudit({ kind: "read_only_repair", clip_id: clip.clip_id, action_ref: actionRef, source_row: index + 4, raw_value: rawReadOnlyClip, normalized_value: clip.clip_id, reason: repair.reason });
     }
     if (repair && rawReadOnlyClip !== null) fail(`Action row ${index + 4} repair requires a blank clip_id.`);
     const values = row.slice(4, 9).map(normalize);
@@ -167,7 +173,7 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
     if (teamSide !== null && !SIDES.includes(teamSide)) fail(`Manual row ${index + 4} needs far or near.`);
     if ((start === null) !== (end === null) || (start !== null && (!Number.isInteger(start) || start < 0 || !Number.isInteger(end) || end <= start || end > clip.duration_seconds))) fail(`Manual row ${index + 4} needs paired non-negative whole-second times within the clip.`);
     if (reviewLabel === "background" && start === null && end === null) { /* clip sentinel checked below */ }
-    canonicalActionRows.push({ action_ref: `${clip.clip_id}/action-${String(slot).padStart(3, "0")}`, clip_id: clip.clip_id, source_action_slot: slot, source_row: index + 4, raw_values: { clip_id: rawReadOnlyClip, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, normalized_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, background_scope: reviewLabel === "background" ? (start === null ? "clip_sentinel" : "timed_interval") : null, side_inherited: false, source_repairs: repair ? [repair] : [] });
+    canonicalActionRows.push({ action_ref: actionRef, clip_id: clip.clip_id, source_action_slot: slot, source_row: index + 4, raw_values: { clip_id: rawReadOnlyClip, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, normalized_values: { clip_id: clip.clip_id, review_label: reviewLabel, relative_start_seconds: start, relative_end_seconds: end, team_side: teamSide, note }, background_scope: reviewLabel === "background" ? (start === null ? "clip_sentinel" : "timed_interval") : null, side_inherited: false, source_repairs: repair ? [repair] : [] });
   }
   const byClip = new Map();
   for (const row of canonicalActionRows) { if (!byClip.has(row.clip_id)) byClip.set(row.clip_id, []); byClip.get(row.clip_id).push(row); }
@@ -181,12 +187,15 @@ function canonicalizeWorkbookActionRows(selection, verifiedActionRows, { boundEv
     let sentinel = null;
     for (const row of rows) {
       if (row.normalized_values.team_side !== null) { if (side !== null && side !== row.normalized_values.team_side) fail(`Clip ${clip.clip_id} has conflicting sides.`); side = row.normalized_values.team_side; }
-      else { if (side === null) fail(`Clip ${clip.clip_id} has a blank first populated side.`); row.normalized_values.team_side = side; row.side_inherited = true; }
+      else { if (side === null) fail(`Clip ${clip.clip_id} has a blank first populated side.`); row.normalized_values.team_side = side; row.side_inherited = true; addAudit({ kind: "side_inheritance", clip_id: row.clip_id, action_ref: row.action_ref, source_row: row.source_row, raw_value: null, normalized_value: side, reason: "inherit side" }); }
       if (row.review_label === "background" && row.background_scope === "clip_sentinel") { if (sentinel || rows.length !== 1) fail(`Clip ${clip.clip_id} untimed background must be the only populated row.`); sentinel = row; }
     }
     const timed = rows.filter((row) => row.background_scope === "timed_interval" || row.normalized_values.review_label !== "background");
     for (let i = 0; i < timed.length; i += 1) for (let j = i + 1; j < timed.length; j += 1) if (timed[i].normalized_values.team_side === timed[j].normalized_values.team_side && timed[i].normalized_values.relative_start_seconds < timed[j].normalized_values.relative_end_seconds && timed[j].normalized_values.relative_start_seconds < timed[i].normalized_values.relative_end_seconds) fail(`Clip ${clip.clip_id} has overlapping timed rows.`);
   }
+  const normalizationAudit = [...normalizationAuditByRow.entries()]
+    .sort(([left], [right]) => left - right)
+    .flatMap(([, entries]) => entries);
   return { canonicalActionRows, normalizationAudit };
 }
 

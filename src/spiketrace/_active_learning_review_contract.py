@@ -29,6 +29,10 @@ _SOURCE_ROW_FIELDS = (
     "action_ref", "clip_id", "source_action_slot", "source_row", "raw_values",
     "normalized_values", "background_scope", "side_inherited", "source_repairs",
 )
+_SOURCE_VALUE_FIELDS = (
+    "clip_id", "review_label", "relative_start_seconds", "relative_end_seconds",
+    "team_side", "note",
+)
 _OUTCOME_FIELDS = (
     "outcome_ref", "related_action_refs", "outcome", "result_type",
     "evidence_basis", "status", "note",
@@ -311,18 +315,19 @@ def load_review_sources_v2(
     if (
         not isinstance(review["review_set_key"], str)
         or not re.fullmatch(r"[^/]+/round-[0-9]{2}", review["review_set_key"])
+        or not review["review_set_key"].endswith(f"/{round_id}")
     ):
         raise ValueError("review_set_key must be nonempty text.")
     video_binding = _video_binding(review["video"])
     if review["video"] != selection["video"]:
         raise ValueError("Review input video does not match selection.")
-    source_rows = _validate_source_rows(review["source_review_rows"])
+    source_rows = _validate_source_rows(review["source_review_rows"], selection)
     source_repairs = _validate_source_repairs(review["source_repairs"], selection)
     actions = _validate_actions(review["action_observations"], selection, source_rows, source_repairs)
     outcomes = _validate_outcomes(review["outcome_observations"], actions, expected_result)
     visibility = _validate_visibility(review["visibility_observations"], actions, selection, expected_result)
     participants = _validate_participants(review["action_participants"], actions)
-    audit = _validate_audit(review["normalization_audit"], actions)
+    audit = _validate_audit(review["normalization_audit"], actions, source_repairs)
     return ValidatedReviewInput(
         expected_result, review["review_set_key"], batch_id, round_id, 1,
         ReviewSourceHashes(selection_binding.sha256, workbook_binding.sha256, override_binding.sha256, snapshots.review_input.sha256, merged_binding.sha256),
@@ -342,10 +347,11 @@ def assert_review_snapshots_stable(snapshots: ReviewInputSnapshots) -> None:
             raise ValueError(f"{label} changed during review application.")
 
 
-def _validate_source_rows(value: object) -> list[dict[str, object]]:
+def _validate_source_rows(value: object, selection: dict[str, object]) -> list[dict[str, object]]:
     rows = _list_of_objects(value, "source_review_rows")
     seen: set[str] = set()
     slots: set[tuple[str, int]] = set()
+    clips = {clip["clip_id"]: clip for clip in selection["clips"]}
     for row in rows:
         _exact(row, _SOURCE_ROW_FIELDS, "source review row")
         ref = _text(row["action_ref"], "source action_ref")
@@ -353,6 +359,16 @@ def _validate_source_rows(value: object) -> list[dict[str, object]]:
             raise ValueError("source_review_rows contains duplicate action_ref.")
         seen.add(ref)
         _source_identity(row)
+        if (
+            row["clip_id"] not in clips
+            or row["source_action_slot"] > 12
+            or ref != f"{row['clip_id']}/action-{row['source_action_slot']:03d}"
+            or row["source_row"] != 4 + (clips[row["clip_id"]]["ordinal"] - 1) * 12 + row["source_action_slot"] - 1
+            or not isinstance(row["raw_values"], dict)
+            or not isinstance(row["normalized_values"], dict)
+        ):
+            raise ValueError("source review row identity is invalid.")
+        _validate_source_values(row)
         slot = (row["clip_id"], row["source_action_slot"])
         if slot in slots:
             raise ValueError("source_review_rows contains duplicate source slot.")
@@ -385,12 +401,25 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
             raise ValueError("action team_side or side_inherited is invalid.")
         _text(action["note"], "action note", allow_empty=True)
         _optional_text(action["source_reason"], "action source_reason")
-        if not isinstance(action["raw_values"], dict) or not isinstance(action["normalized_values"], dict) or not isinstance(action["source_repairs"], list):
+        if not isinstance(action["source_repairs"], list):
             raise TypeError("action values and repairs must be objects/arrays.")
         linked_repairs.extend(_validate_source_repairs(action["source_repairs"], selection))
         slot = action["source_action_slot"]
         row = action["source_row"]
         is_supplemental = slot is None and row is None
+        if is_supplemental:
+            if (
+                action["raw_values"] is not None
+                or action["normalized_values"] is not None
+                or action["source_repairs"]
+                or action["background_scope"] is not None
+                or action["side_inherited"]
+                or not isinstance(action["source_reason"], str)
+                or not action["source_reason"]
+            ):
+                raise ValueError("supplemental actions may not carry source-only state.")
+        elif not isinstance(action["raw_values"], dict) or not isinstance(action["normalized_values"], dict):
+            raise TypeError("source action values must be objects.")
         if slot is None or row is None:
             if slot is not None or row is not None or not ref.startswith(f"{clip_id}/supplemental-"):
                 raise ValueError("supplemental actions need null source slot and row.")
@@ -405,11 +434,25 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
                 raise ValueError("action observation source ref is dangling.")
             if any(action[field] != source[field] for field in _SOURCE_ROW_FIELDS):
                 raise ValueError("action observation does not preserve its source row.")
+            _validate_source_action_values(action)
         relative_start = action["relative_start_seconds"]
         relative_end = action["relative_end_seconds"]
+        if not is_supplemental and (
+            (label == "background" and action["background_scope"] not in {"clip_sentinel", "timed_interval"})
+            or (label != "background" and action["background_scope"] is not None)
+            or (action["background_scope"] == "clip_sentinel" and action["interval_scope"] is not None)
+            or (action["background_scope"] != "clip_sentinel" and action["interval_scope"] != "timed")
+        ):
+            raise ValueError("source action background_scope or interval_scope is invalid.")
         if is_supplemental and action["interval_scope"] == "clip_bounds":
-            if any(item is not None for item in (relative_start, relative_end, action["start_seconds"], action["end_seconds"])):
-                raise ValueError("clip_bounds supplemental action must omit timed bounds.")
+            if (
+                any(item is not None for item in (relative_start, relative_end))
+                or action["start_seconds"] != clips[clip_id]["start_seconds"]
+                or action["end_seconds"] != clips[clip_id]["end_seconds"]
+                or label == "background"
+                or action["visibility"] not in {"fully_occluded", "off_camera", "unresolved"}
+            ):
+                raise ValueError("clip_bounds supplemental action is invalid.")
         elif label == "background" and action["background_scope"] == "clip_sentinel":
             if any(item is not None for item in (relative_start, relative_end, action["start_seconds"], action["end_seconds"], action["interval_scope"])):
                 raise ValueError("clip-sentinel background must be untimed.")
@@ -429,8 +472,10 @@ def _validate_actions(value: object, selection: dict[str, object], source_rows: 
     for numbers in supplemental.values():
         if sorted(numbers) != list(range(1, len(numbers) + 1)):
             raise ValueError("supplemental action indexes must be contiguous per clip.")
-    if linked_repairs != source_repairs:
+    if sorted(_repair_key(repair) for repair in linked_repairs) != sorted(_repair_key(repair) for repair in source_repairs):
         raise ValueError("source repairs must be linked from their action observations.")
+    if source_by_ref.keys() != {action["action_ref"] for action in actions if action["source_action_slot"] is not None}:
+        raise ValueError("source review rows must map to exactly one action.")
     return actions
 
 
@@ -454,6 +499,35 @@ def _validate_source_repairs(value: object, selection: dict[str, object]) -> lis
             raise ValueError("source repairs contains duplicate repair.")
         seen.add(key)
     return repairs
+
+
+def _repair_key(repair: dict[str, object]) -> tuple[object, ...]:
+    return tuple(repair[field] for field in ("clip_id", "source_action_slot", "sheet", "cell", "field", "original_value", "normalized_value", "reason"))
+
+
+def _validate_source_values(row: dict[str, object]) -> None:
+    raw = row["raw_values"]
+    normalized = row["normalized_values"]
+    _exact(raw, _SOURCE_VALUE_FIELDS, "source values")
+    _exact(normalized, _SOURCE_VALUE_FIELDS, "source values")
+    if normalized["clip_id"] != row["clip_id"] or raw["clip_id"] not in {None, row["clip_id"]}:
+        raise ValueError("source values do not preserve the source clip.")
+
+
+def _validate_source_action_values(action: dict[str, object]) -> None:
+    normalized = {
+        "clip_id": action["clip_id"], "review_label": action["review_label"],
+        "relative_start_seconds": action["relative_start_seconds"],
+        "relative_end_seconds": action["relative_end_seconds"],
+        "team_side": action["team_side"], "note": action["note"],
+    }
+    raw = normalized.copy()
+    if action["source_repairs"]:
+        raw["clip_id"] = None
+    if action["side_inherited"]:
+        raw["team_side"] = None
+    if action["normalized_values"] != normalized or action["raw_values"] != raw:
+        raise ValueError("source values do not match action fields.")
 
 
 def _validate_outcomes(value: object, actions: list[dict[str, object]], result_id: str) -> list[dict[str, object]]:
@@ -572,16 +646,57 @@ def _validate_participants(value: object, actions: list[dict[str, object]]) -> l
     return participants
 
 
-def _validate_audit(value: object, actions: list[dict[str, object]]) -> list[dict[str, object]]:
+def _validate_audit(value: object, actions: list[dict[str, object]], source_repairs: list[dict[str, object]]) -> list[dict[str, object]]:
     audit = _list_of_objects(value, "normalization_audit")
-    refs = {action["action_ref"] for action in actions}
+    actions_by_ref = {action["action_ref"]: action for action in actions if action["source_action_slot"] is not None}
+    repairs_by_key = {
+        (repair["clip_id"], repair["source_action_slot"]): repair
+        for repair in source_repairs
+    }
+    audited_repairs: set[tuple[object, object]] = set()
+    inherited_refs: set[str] = set()
+    last_position = (-1, -1)
     for item in audit:
         _exact(item, _AUDIT_FIELDS, "normalization audit entry")
-        _enum(item["kind"], {"read_only_repair", "side_inheritance"}, "normalization audit kind")
-        if item["action_ref"] not in refs:
+        kind = _enum(item["kind"], {"read_only_repair", "side_inheritance"}, "normalization audit kind")
+        action = actions_by_ref.get(item["action_ref"])
+        if action is None:
             raise ValueError("normalization audit has dangling action_ref.")
-        _whole(item["source_row"], "normalization audit source_row")
+        if item["clip_id"] != action["clip_id"] or item["source_row"] != action["source_row"]:
+            raise ValueError("normalization audit does not match its source action.")
+        source_row = _whole(item["source_row"], "normalization audit source_row")
         _text(item["reason"], "normalization audit reason")
+        position = (source_row, 0 if kind == "read_only_repair" else 1)
+        if position < last_position:
+            raise ValueError("normalization audit must be in source-row order.")
+        last_position = position
+        if kind == "read_only_repair":
+            key = (action["clip_id"], action["source_action_slot"])
+            repair = repairs_by_key.get(key)
+            if repair is None or key in audited_repairs or item != {
+                "kind": "read_only_repair", "clip_id": repair["clip_id"],
+                "action_ref": action["action_ref"], "source_row": action["source_row"],
+                "raw_value": repair["original_value"], "normalized_value": repair["normalized_value"],
+                "reason": repair["reason"],
+            }:
+                raise ValueError("normalization audit does not match its source repair.")
+            audited_repairs.add(key)
+        else:
+            if (
+                item["action_ref"] in inherited_refs
+                or action["side_inherited"] is not True
+                or action["raw_values"].get("team_side") is not None
+                or action["normalized_values"].get("team_side") != action["team_side"]
+                or item["raw_value"] is not None
+                or item["normalized_value"] != action["team_side"]
+                or item["reason"] != "inherit side"
+            ):
+                raise ValueError("normalization audit does not match side inheritance.")
+            inherited_refs.add(item["action_ref"])
+    if audited_repairs != set(repairs_by_key):
+        raise ValueError("normalization audit must cover every source repair.")
+    if inherited_refs != {action["action_ref"] for action in actions_by_ref.values() if action["side_inherited"]}:
+        raise ValueError("normalization audit must cover every inherited side.")
     return audit
 
 

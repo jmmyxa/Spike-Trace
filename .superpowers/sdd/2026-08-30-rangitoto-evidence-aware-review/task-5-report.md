@@ -80,3 +80,27 @@ legacy behavior.
 The contract matrix now checks all five live snapshot mutations and a real
 dangling outcome reference. Fresh verification exits `0`: contract (`Ran 9`),
 dual-crop plus selection (`Ran 76`), combined (`Ran 85`), with Ruff clean.
+
+## Fix Round 4 RED/GREEN
+
+Focused RED tests first exposed four producer/consumer gaps: Node-shaped
+supplementals used null raw/normalized values; repair linkage depended on the
+top-level repair order; normalization audit entries could be unrelated to a
+repair; and a syntactically valid review-set key could name another round.
+
+The Python validator now preserves Node supplemental timing, requires exact
+source row/action identities and value payloads, binds `review_set_key` to the
+selected round, and validates complete repair/inheritance audit lineage in
+source-row order. Repair linkage compares exact repair records independent of
+top-level order. The Node workbook canonicalizer now emits Task 4 audit
+records in source-row order, retaining repair-before-inheritance ordering for
+the same row; its semantic test asserts the complete A16 repair and row-5
+inheritance entries.
+
+Fresh bounded contract verification passed all `17` methods (`8` plus `9`),
+the dual-crop and selection suites passed (`Ran 76 ... OK`), and Ruff passed
+for the modified Python files. The Node evidence test was started with the
+bundled Node runtime, artifact loader, and synthetic-pipeline Python; it
+reaches fixture construction but stops because `spiketrace build-review-clips`
+is not implemented in this branch (Task 6 scope), so this round leaves that
+unrelated command untouched.

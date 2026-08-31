@@ -4,6 +4,7 @@ import hashlib
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 from spiketrace._active_learning_review_contract import (
@@ -149,6 +150,26 @@ class ReviewContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "review_set_key"):
                 load_review_sources_v2(snapshots, selected)
 
+    def test_rejects_review_set_key_for_a_different_round(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["review_set_key"] = "rangitoto/round-02"
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "review_set_key"):
+                load_review_sources_v2(snapshots, selected)
+
     def test_accepts_node_supplemental_timing_and_result_wide_visibility_refs(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
             directory = Path(temporary)
@@ -168,14 +189,77 @@ class ReviewContractTests(unittest.TestCase):
             review["action_observations"].extend((timed, bounds))
             review["visibility_observations"] = [
                 _visibility(result, 1, "occlusion", clip, timed["action_ref"]),
-                _visibility(result, 2, "off_camera", clip, bounds["action_ref"]),
+                _visibility(result, 2, "occlusion", clip, bounds["action_ref"]),
             ]
             (directory / "review-v2.json").write_bytes(_json_bytes(review))
             snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
             selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
             validated = load_review_sources_v2(snapshots, selected)
             self.assertEqual(validated.action_observations[2]["interval_scope"], "clip_bounds")
-            self.assertEqual(validated.visibility_observations[1]["visibility_ref"], f"{result}/off_camera-source-002")
+            self.assertEqual(validated.visibility_observations[1]["visibility_ref"], f"{result}/occlusion-source-002")
+
+    def test_rejects_supplemental_action_with_source_only_state(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            supplemental = _supplemental(selection["clips"][0], 1, "timed")
+            supplemental["side_inherited"] = True
+            review["action_observations"].append(supplemental)
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "supplemental"):
+                load_review_sources_v2(snapshots, selected)
+
+    def test_rejects_non_background_source_with_background_scope(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["source_review_rows"][0]["background_scope"] = "timed_interval"
+            review["action_observations"][0]["background_scope"] = "timed_interval"
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "background_scope"):
+                load_review_sources_v2(snapshots, selected)
+
+    def test_rejects_timed_source_action_with_clip_bounds_scope(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["action_observations"][0]["interval_scope"] = "clip_bounds"
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "interval_scope"):
+                load_review_sources_v2(snapshots, selected)
 
     def test_rejects_unlinked_or_malformed_source_repairs(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
@@ -237,6 +321,123 @@ class ReviewContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "dangling"):
                 load_review_sources_v2(snapshots, selected)
 
+    def test_accepts_repair_lineage_when_top_level_repairs_are_reordered(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            first = _repair(selection["clips"][0], 1)
+            second = _repair(selection["clips"][0], 2)
+            extra = deepcopy(review["action_observations"][0])
+            extra.update({
+                "action_ref": f"{selection['clips'][0]['clip_id']}/action-002",
+                "source_action_slot": 2,
+                "source_row": 5,
+                "relative_start_seconds": 3,
+                "relative_end_seconds": 4,
+                "start_seconds": selection["clips"][0]["start_seconds"] + 3,
+                "end_seconds": selection["clips"][0]["start_seconds"] + 4,
+                "source_repairs": [second],
+            })
+            review["action_observations"][0]["source_repairs"] = [first]
+            review["action_observations"][0]["raw_values"]["clip_id"] = None
+            extra["raw_values"].update({"clip_id": None, "relative_start_seconds": 3, "relative_end_seconds": 4})
+            extra["normalized_values"].update({"relative_start_seconds": 3, "relative_end_seconds": 4})
+            review["source_review_rows"] = [
+                {key: action[key] for key in ("action_ref", "clip_id", "source_action_slot", "source_row", "raw_values", "normalized_values", "background_scope", "side_inherited", "source_repairs")}
+                for action in (review["action_observations"][0], extra)
+            ]
+            review["action_observations"].append(extra)
+            review["source_repairs"] = [second, first]
+            review["normalization_audit"] = [
+                _repair_audit(first, review["action_observations"][0]),
+                _repair_audit(second, extra),
+            ]
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            validated = load_review_sources_v2(snapshots, selected)
+
+            self.assertEqual(validated.source_repairs, (second, first))
+
+    def test_rejects_normalization_audit_that_does_not_match_its_repair(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            repair = _repair(selection["clips"][0], 1)
+            review["source_repairs"] = [repair]
+            review["source_review_rows"][0]["source_repairs"] = [repair]
+            review["action_observations"][0]["source_repairs"] = [repair]
+            review["source_review_rows"][0]["raw_values"]["clip_id"] = None
+            review["action_observations"][0]["raw_values"]["clip_id"] = None
+            audit = _repair_audit(repair, review["action_observations"][0])
+            audit["normalized_value"] = "wrong-clip"
+            review["normalization_audit"] = [audit]
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "normalization audit"):
+                load_review_sources_v2(snapshots, selected)
+
+    def test_rejects_incomplete_source_value_payloads(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["source_review_rows"][0]["raw_values"] = {"review_label": "serve"}
+            review["action_observations"][0]["raw_values"] = {"review_label": "serve"}
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "source values"):
+                load_review_sources_v2(snapshots, selected)
+
+    def test_rejects_source_values_that_diverge_from_action_fields(self):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
+            directory = Path(temporary)
+            merged_bytes = (ROOT / "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.json").read_bytes()
+            (directory / "merged.json").write_bytes(merged_bytes)
+            workbook_bytes, overrides_bytes = b"workbook", b"{}\n"
+            (directory / "review.xlsx").write_bytes(workbook_bytes)
+            (directory / "overrides.json").write_bytes(overrides_bytes)
+            selection = _valid_selection(directory, merged_bytes)
+            selection_bytes = _json_bytes(selection)
+            (directory / "selection.json").write_bytes(selection_bytes)
+            review = _valid_review(selection, selection_bytes, workbook_bytes, overrides_bytes)
+            review["source_review_rows"][0]["normalized_values"]["review_label"] = "attack"
+            review["action_observations"][0]["normalized_values"]["review_label"] = "attack"
+            (directory / "review-v2.json").write_bytes(_json_bytes(review))
+            snapshots = snapshot_review_sources_v2(directory / "review-v2.json", directory / "selection.json", ROOT)
+            selected = load_review_selection_bytes(snapshots.selection.raw, merged_bytes=snapshots.merged_candidates.raw, merged_repo_path=snapshots.merged_candidates.repo_path, repo_root=ROOT, require_video=False)
+
+            with self.assertRaisesRegex(ValueError, "source values"):
+                load_review_sources_v2(snapshots, selected)
+
 
 def _repo(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
@@ -265,8 +466,9 @@ def _valid_review(
     )
     action = {
         "action_ref": action_ref, "clip_id": clip_id, "source_action_slot": 1,
-        "source_row": 4, "raw_values": {"review_label": "serve"},
-        "normalized_values": {"review_label": "serve"}, "review_label": "serve",
+        "source_row": 4,
+        "raw_values": {"clip_id": clip_id, "review_label": "serve", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""},
+        "normalized_values": {"clip_id": clip_id, "review_label": "serve", "relative_start_seconds": 1, "relative_end_seconds": 2, "team_side": "far", "note": ""}, "review_label": "serve",
         "relative_start_seconds": 1, "relative_end_seconds": 2,
         "start_seconds": clip["start_seconds"] + 1, "end_seconds": clip["start_seconds"] + 2, "team_side": "far",
         "visibility": "direct_clear", "evidence_basis": "direct_video",
@@ -295,8 +497,18 @@ def _supplemental(clip: dict[str, object], index: int, scope: str) -> dict[str, 
         relative_start, relative_end = 3, 4
         start, end = clip["start_seconds"] + 3, clip["start_seconds"] + 4
     else:
-        relative_start = relative_end = start = end = None
-    return {"action_ref": ref, "clip_id": clip["clip_id"], "source_action_slot": None, "source_row": None, "raw_values": {}, "normalized_values": {}, "review_label": "free_ball", "relative_start_seconds": relative_start, "relative_end_seconds": relative_end, "start_seconds": start, "end_seconds": end, "team_side": "far", "visibility": "direct_clear", "evidence_basis": "mixed", "interval_scope": scope, "background_scope": None, "side_inherited": False, "note": "", "source_reason": "supplemental", "source_repairs": []}
+        relative_start = relative_end = None
+        start, end = clip["start_seconds"], clip["end_seconds"]
+    visibility = "direct_clear" if scope == "timed" else "fully_occluded"
+    return {"action_ref": ref, "clip_id": clip["clip_id"], "source_action_slot": None, "source_row": None, "raw_values": None, "normalized_values": None, "review_label": "free_ball", "relative_start_seconds": relative_start, "relative_end_seconds": relative_end, "start_seconds": start, "end_seconds": end, "team_side": "far", "visibility": visibility, "evidence_basis": "mixed", "interval_scope": scope, "background_scope": None, "side_inherited": False, "note": "", "source_reason": "supplemental", "source_repairs": []}
+
+
+def _repair(clip: dict[str, object], slot: int) -> dict[str, object]:
+    return {"clip_id": clip["clip_id"], "source_action_slot": slot, "sheet": "人工动作", "cell": f"A{3 + slot}", "field": "clip_id", "original_value": None, "normalized_value": clip["clip_id"], "reason": "restore read-only ID"}
+
+
+def _repair_audit(repair: dict[str, object], action: dict[str, object]) -> dict[str, object]:
+    return {"kind": "read_only_repair", "clip_id": repair["clip_id"], "action_ref": action["action_ref"], "source_row": action["source_row"], "raw_value": None, "normalized_value": repair["normalized_value"], "reason": repair["reason"]}
 
 
 def _visibility(result: str, index: int, kind: str, clip: dict[str, object], action_ref: str) -> dict[str, object]:
