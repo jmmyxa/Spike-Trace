@@ -524,6 +524,12 @@ node tools\compose_active_review_evidence.mjs data\active-learning\rangitoto\rou
 .venv\Scripts\python.exe -m spiketrace verify-active-review-bundle data\annotations\rangitoto_round_01
 ```
 
+如需从零重建历史主动学习选择证据（不是本轮用户操作，也不能覆盖已经发布的结果），v1 兼容的选片入口仍如下。历史代理短片无音频，人工记录使用片段内相对秒数：
+
+```powershell
+spiketrace select-review-batch outputs\rangitoto-r3d18-bootstrap-review\merged_candidates.json outputs\active-learning\rangitoto\round-01-selection-rebuild.json --repo-root .
+```
+
 这 40 段是为训练补样而偏置选择的主动学习样本，不是准确率测试。只要 Rangitoto 标注加入
 训练，Rangitoto 就不能继续作为独立 `val` 或 `test`；Precision、Recall、Macro F1 和混淆
 矩阵必须在一场从未用于训练或选样的完整比赛上测量。
