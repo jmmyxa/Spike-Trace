@@ -14,6 +14,7 @@ from spiketrace.dual_crop_review import (
     _find_cross_side_links,
     build_dual_crop_review,
     verify_dual_crop_review,
+    verify_dual_crop_review_bytes,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -853,6 +854,17 @@ class DualCropReviewVerifierTests(unittest.TestCase):
             self.assertTrue(result["verified"])
             self.assertFalse(result["csv_checked"])
             self.assertIsNone(result["hashes"]["merged_csv_sha256"])
+
+    def test_byte_verifier_matches_path_verifier_for_identical_artifacts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            _payload, json_path, csv_path = self._build_valid_artifact(directory)
+            self.assertEqual(
+                verify_dual_crop_review(json_path, csv_path=csv_path),
+                verify_dual_crop_review_bytes(
+                    json_path.read_bytes(), csv_bytes=csv_path.read_bytes()
+                ),
+            )
 
     def test_real_audit_csv_is_lf_pinned_and_verifies(self):
         relative_csv = "outputs/rangitoto-r3d18-bootstrap-review/merged_candidates.csv"

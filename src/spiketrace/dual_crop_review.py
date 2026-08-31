@@ -148,6 +148,19 @@ def verify_dual_crop_review(
 ) -> dict[str, object]:
     artifact_path = Path(json_path).expanduser().resolve()
     artifact_bytes = artifact_path.read_bytes()
+    csv_bytes = (
+        Path(csv_path).expanduser().resolve().read_bytes()
+        if csv_path is not None
+        else None
+    )
+    return verify_dual_crop_review_bytes(artifact_bytes, csv_bytes=csv_bytes)
+
+
+def verify_dual_crop_review_bytes(
+    artifact_bytes: bytes,
+    *,
+    csv_bytes: bytes | None = None,
+) -> dict[str, object]:
     artifact = _load_json_bytes(artifact_bytes, description="merged artifact")
     _require_fields(artifact, _MERGED_ROOT_FIELDS, "merged artifact", ordered=True)
     if artifact["format_version"] != 2 or artifact["merge_format_version"] != 2:
@@ -196,13 +209,12 @@ def verify_dual_crop_review(
     if artifact_bytes != _presentation_json_bytes(expected):
         raise ValueError("Merged JSON bytes are not in deterministic presentation form.")
 
-    csv_checked = csv_path is not None
+    csv_checked = csv_bytes is not None
     merged_csv_sha256: str | None = None
-    if csv_path is not None:
-        merged_csv_bytes = Path(csv_path).expanduser().resolve().read_bytes()
-        if merged_csv_bytes != _render_csv(expected["events"]):
+    if csv_bytes is not None:
+        if csv_bytes != _render_csv(expected["events"]):
             raise ValueError("Merged CSV does not match recomputed rows.")
-        merged_csv_sha256 = hashlib.sha256(merged_csv_bytes).hexdigest()
+        merged_csv_sha256 = hashlib.sha256(csv_bytes).hexdigest()
 
     duplicate_links = sum(
         len(group["links"]) for group in expected["duplicate_groups"]

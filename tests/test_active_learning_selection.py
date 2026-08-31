@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 from unittest.mock import patch
 
 from spiketrace import active_learning_selection
+from spiketrace._active_learning_review_contract import load_review_selection_bytes
 from spiketrace.active_learning_selection import (
     _relative_posix_path,
     load_review_selection,
@@ -1946,6 +1947,21 @@ class SelectionContractTests(unittest.TestCase):
 
 
 class SelectionVerifierIntegrationTests(unittest.TestCase):
+    def test_byte_selection_loader_matches_path_loader_for_identical_bytes(self):
+        selection_path = ROOT / "data/active-learning/rangitoto/round-01-selection.json"
+        selection = json.loads(selection_path.read_text(encoding="utf-8"))
+        merged_path = ROOT / selection["source"]["merged_json"]
+        self.assertEqual(
+            load_review_selection(selection_path, repo_root=ROOT, require_video=False),
+            load_review_selection_bytes(
+                selection_path.read_bytes(),
+                merged_bytes=merged_path.read_bytes(),
+                merged_repo_path=selection["source"]["merged_json"],
+                repo_root=ROOT,
+                require_video=False,
+            ),
+        )
+
     def test_real_merged_fixture_flows_through_verifier_and_selector(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as temporary:
             directory = Path(temporary)

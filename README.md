@@ -97,6 +97,7 @@ Spike-Trace/
 │  ├─ active_learning_review.py  # 应用主动学习人工结论、硬负样本与累计清单
 │  ├─ _active_learning_selection_contract.py # 选片 schema、时间与设置纯函数
 │  ├─ _active_learning_selection_artifact.py # 来源信任链、制品校验与安全写入
+│  ├─ _active_learning_review_contract.py # 冻结复核输入、字节校验与证据观察契约
 │  ├─ _active_learning_selector.py # 五桶候选生成与确定性编排
 │  ├─ cli.py                     # spiketrace 命令入口
 │  ├─ constants.py               # 稳定动作标签与格式版本
@@ -119,6 +120,7 @@ Spike-Trace/
 │  ├─ fixtures/dual_crop_review/ # 四窗口 far/near inference JSON v2 字面 fixture
 │  ├─ test_active_learning_selection.py # 主动学习选片制品契约与信任链测试
 │  ├─ test_active_learning_review.py # 人工结论应用、硬负样本与双输出回滚测试
+│  ├─ test_active_learning_review_contract.py # 冻结证据输入与严格观察契约测试
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
 │  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试

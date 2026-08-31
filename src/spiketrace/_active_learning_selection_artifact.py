@@ -317,6 +317,7 @@ def _validate_selection_payload(
     *,
     require_video: bool,
     verifier: Callable[..., object],
+    verified_merged: dict[str, object] | None = None,
 ) -> dict[str, object]:
     selection = _mapping(payload, "selection")
     _require_exact_fields(selection, SELECTION_ROOT_FIELDS, "selection")
@@ -333,19 +334,22 @@ def _validate_selection_payload(
     _require_exact_fields(selected_source, _SOURCE_FIELDS, "selection source")
     selected_video = _mapping(selection["video"], "selection video")
     _require_exact_fields(selected_video, _VIDEO_FIELDS, "selection video")
-    merged_path = _resolved_path(
-        selected_source["merged_json"], repo_root, "source merged JSON"
-    )
-    if _sha256_file(merged_path) != _sha256(
-        selected_source["merged_json_sha256"], "merged JSON SHA-256"
-    ):
-        raise ActiveLearningError("Merged JSON SHA-256 does not match.")
-    verified = validate_merged_review_source(
-        merged_path,
-        repo_root=repo_root,
-        require_video=require_video,
-        _verifier=verifier,
-    )
+    if verified_merged is None:
+        merged_path = _resolved_path(
+            selected_source["merged_json"], repo_root, "source merged JSON"
+        )
+        if _sha256_file(merged_path) != _sha256(
+            selected_source["merged_json_sha256"], "merged JSON SHA-256"
+        ):
+            raise ActiveLearningError("Merged JSON SHA-256 does not match.")
+        verified = validate_merged_review_source(
+            merged_path,
+            repo_root=repo_root,
+            require_video=require_video,
+            _verifier=verifier,
+        )
+    else:
+        verified = verified_merged
     if selected_source != verified["source"]:
         raise ActiveLearningError(
             "Selection source fields do not match the verified merged JSON."
