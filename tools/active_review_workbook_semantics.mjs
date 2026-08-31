@@ -80,6 +80,25 @@ function permissionCovers(permissions, start) {
   return permissions.some((permission) => permission.start <= start && permission.end >= start + 11);
 }
 
+function verifyRawFormulaPermissions(permissions, rawActionFormulaBlocks) {
+  if (!rawActionFormulaBlocks) return;
+  const aggregate = permissions.filter((permission) => permission.start === 4 && permission.end === 483);
+  if (aggregate.length > 0) {
+    if (permissions.length !== 1 || aggregate.length !== 1 || rawActionFormulaBlocks.some((block) => !block.shared)) fail("Action shared hyperlink compatibility is invalid.");
+    return;
+  }
+  const permittedBlocks = new Set();
+  for (const permission of permissions) {
+    if (permission.end !== permission.start + 11) fail("Action shared hyperlink compatibility is invalid.");
+    const block = (permission.start - 4) / 12;
+    if (permittedBlocks.has(block)) fail("Action shared hyperlink compatibility overlaps.");
+    permittedBlocks.add(block);
+  }
+  for (const [block, rawBlock] of rawActionFormulaBlocks.entries()) {
+    if (permittedBlocks.has(block) !== Boolean(rawBlock.shared)) fail("Action shared hyperlink compatibility does not match raw formula blocks.");
+  }
+}
+
 function allowedBanner(snapshot, sheet, cell, value, compatibility) {
   const expected = BANNER_CELLS.find((entry) => entry[0] === sheet && entry[1] === cell)?.[2];
   if (value === expected) return;
@@ -90,6 +109,7 @@ function allowedBanner(snapshot, sheet, cell, value, compatibility) {
 function verifyWorkbookSemanticSnapshot(snapshot, { selection, projection, workbookSha256, boundEvidenceOverrides, rawActionFormulaBlocks }) {
   const compatibility = compatibilityPayload(boundEvidenceOverrides);
   const formulaPermissions = sharedFormulaPermissions(compatibility);
+  verifyRawFormulaPermissions(formulaPermissions, rawActionFormulaBlocks);
   for (const entry of compatibility?.trimmed_banner_cells ?? []) if (entry.cell !== "A2" || !BANNER_CELLS.some(([sheet, cell]) => sheet === entry.sheet && cell === entry.cell)) fail("Workbook banner compatibility target is invalid.");
   assert.deepEqual(snapshot.names, ["短片清单", "人工动作", "候选提示", "标签说明"], "Workbook sheet order/count must be exact.");
   const byName = new Map(snapshot.sheets.map((sheet) => [sheet.name, sheet]));
