@@ -88,8 +88,14 @@ class ValidationEvaluationTests(unittest.TestCase):
             RallySegment("r1", None, 1, "r1", 0.0, 1.0, "rally", "near", None, 0, 0, "manual", True, True, True),
             RallySegment("nr", None, None, "", 2.0, 3.0, "non_rally", None, None, 0, 0, "manual", True, True, None),
         )
-        result = evaluate_validation(truth(coverage=coverage), inference(prediction("nrp", "serve", 2.4, 0.9, segment="nr-near-1")))
+        result = evaluate_validation(truth(coverage=coverage), ValidationInferenceResult((), (prediction("nrp", "serve", 2.4, 0.9, segment="nr-near-1"),), {"segments": ({"segment_id": "nr-near-1", "status": "non_rally", "start_seconds": 2.0, "end_seconds": 3.0},)}, "checkpoint", "video"))
         self.assertEqual(result.event_metrics["non_rally_prediction_count"], 1)
+
+    def test_foreign_prediction_id_inside_rally_is_excluded(self):
+        coverage = (RallySegment("r1", None, 1, "r1", 0.0, 1.0, "rally", "near", None, 0, 0, "manual", True, True, True),)
+        result = evaluate_validation(truth(coverage=coverage), inference(prediction("foreign", "serve", 0.5, 0.9, segment="foreign")))
+        self.assertEqual(result.event_metrics["matched_count"], 0)
+        self.assertEqual(result.event_metrics["false_positive_count"], 0)
 
     def test_report_has_zero_support_classes_and_counts_non_rally_predictions(self):
         coverage = (RallySegment("r1", None, 2, "r1", 0.0, 2.0, "rally", "far", None, 0, 0, "manual", True, True, True),)

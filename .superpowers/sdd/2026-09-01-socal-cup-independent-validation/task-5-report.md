@@ -30,6 +30,26 @@ Ran 6 tests in 0.001s
 OK
 ```
 
+## Fix round 2
+
+- Restricted temporal/status fallback to segment IDs present in locked coverage or `inference.settings["segments"]`.
+- Unknown/foreign prediction IDs are now excluded from visible false positives and non-rally counts.
+- Added a regression proving a foreign ID inside a rally is ignored; suffixed non-rally IDs remain accepted only when present in inference settings.
+
+Command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_evaluation tests.test_validation_truth tests.test_validation_inference -v
+```
+
+Output:
+
+```text
+Ran 40 tests in 0.346s
+
+OK
+```
+
 Adjacent command:
 
 ```powershell

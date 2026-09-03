@@ -235,6 +235,9 @@ def evaluate_validation(truth: ValidationTruth, inference: ValidationInferenceRe
     settings_map = {item.get("segment_id"): item for item in settings_segments if isinstance(item, dict) and isinstance(item.get("segment_id"), str)}
 
     def context(prediction: ValidationPrediction) -> tuple[str | None, str | None]:
+        known_ids = set(segment_rallies) | set(settings_map) | {s.segment_id for s in truth.coverage}
+        if prediction.segment_id not in known_ids:
+            return None, None
         rally_id = segment_rallies.get(prediction.segment_id)
         status = "rally" if rally_id is not None else None
         setting = settings_map.get(prediction.segment_id)
