@@ -43,7 +43,7 @@ class _ConstantModel:
         return torch.tensor([[0.0, 2.0]], dtype=torch.float32).repeat(batch.shape[0], 1)
 
 
-def _truth(video_path: Path, *, locked: bool = True, coverage=None) -> ValidationTruth:
+def _truth(video_path: Path, *, locked: bool = True, coverage=None, side_intervals=()) -> ValidationTruth:
     capture = cv2.VideoCapture(str(video_path))
     metadata = VideoMetadata(video_path.resolve(), float(capture.get(cv2.CAP_PROP_FPS)), int(capture.get(cv2.CAP_PROP_FRAME_COUNT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) / float(capture.get(cv2.CAP_PROP_FPS)))
     capture.release()
@@ -53,7 +53,7 @@ def _truth(video_path: Path, *, locked: bool = True, coverage=None) -> Validatio
         RallySegment("set-01-far", None, 1, "rally-02", 1.0, 2.0, "rally", "far", (4, 0, 8, 6), 0.0, 0.0, "manual", True, True, None),
         RallySegment("non-rally-01", None, None, "", 2.0, 3.0, "non_rally", None, None, 0.0, 0.0, "manual", True, True, None),
     )
-    return ValidationTruth(binding, (), (), tuple(segments), (), (), "truth-v1", locked, "truth-lock", None)
+    return ValidationTruth(binding, (), tuple(side_intervals), tuple(segments), (), (), "truth-v1", locked, "truth-lock", None)
 
 
 def _checkpoint():
@@ -109,6 +109,41 @@ class ValidationInferenceTests(unittest.TestCase):
             for message, coverage in cases:
                 with self.subTest(message=message), self.assertRaisesRegex(ValidationError, message):
                     infer_locked_validation(video, checkpoint, _truth(video, coverage=coverage), device="cpu")
+
+    def test_requires_complete_non_overlapping_side_mapping(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            video, checkpoint = root / "fixture.avi", root / "model.pt"
+            _write_video(video)
+            checkpoint.write_bytes(b"checkpoint")
+            coverage = (RallySegment("rally", None, 1, "r1", 0.0, 1.0, "rally", None, None, 0, 0, "manual", True, True, None),)
+            missing = ({"set_index": 1, "start_seconds": 0.0, "end_seconds": 0.4, "team_side": "near", "crop": [0, 0, 4, 6]},)
+            malformed = ({"set_index": 1, "start_seconds": 0.0, "end_seconds": 1.0, "team_side": "sideways", "crop": [0, 0, 4, 6]},)
+            for sides in (missing, malformed):
+                with self.subTest(sides=sides), self.assertRaises(ValidationError):
+                    infer_locked_validation(video, checkpoint, _truth(video, coverage=coverage, side_intervals=sides), device="cpu")
+            adjacent = (
+                {"set_index": 1, "start_seconds": 0.0, "end_seconds": 0.5, "team_side": "near", "crop": [0, 0, 4, 6]},
+                {"set_index": 1, "start_seconds": 0.5, "end_seconds": 1.0, "team_side": "far", "crop": [4, 0, 8, 6]},
+            )
+            with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
+                result = infer_locked_validation(video, checkpoint, _truth(video, coverage=coverage, side_intervals=adjacent), device="cpu", confidence_threshold=0.0)
+            self.assertEqual([window.team_side for window in result.windows], ["near", "far"])
+
+    def test_converts_public_parameter_and_pipeline_errors(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            video, checkpoint = root / "fixture.avi", root / "model.pt"
+            _write_video(video)
+            checkpoint.write_bytes(b"checkpoint")
+            truth = _truth(video)
+            for kwargs in ({"stride_seconds": 0}, {"stride_seconds": 2.0}, {"confidence_threshold": 2}, {"merge_gap_seconds": -1}, {"min_event_seconds": float("nan")}, {"batch_size": True}, {"device": ""}):
+                with self.subTest(kwargs=kwargs), self.assertRaises(ValidationError):
+                    with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
+                        infer_locked_validation(video, checkpoint, truth, **kwargs)
+            with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"), patch("spiketrace.validation_inference.iter_sequential_video_clip_batches", side_effect=ValueError("bad decoder")):
+                with self.assertRaises(ValidationError):
+                    infer_locked_validation(video, checkpoint, truth)
 
     def test_rejects_source_mutation_after_decoding_starts(self):
         for source_name in ("video", "checkpoint"):

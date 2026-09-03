@@ -7,7 +7,7 @@ from typing import Literal
 
 from .constants import SAMPLING_CONTRACT
 from .domain import ActionWindow
-from .errors import ValidationError
+from .errors import ValidationError, VideoError
 from .events import merge_action_windows_with_provenance
 from .inference import _file_sha256
 from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
@@ -61,6 +61,29 @@ class ValidationInferenceResult:
 
 def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]:
     segments: list[InferenceSegment] = []
+    side_records: list[tuple[int, int, float, float, str, tuple[int, int, int, int]]] = []
+    for side_index, side in enumerate(truth.side_intervals):
+        if not isinstance(side, dict):
+            raise ValidationError("side interval is invalid")
+        set_value = side.get("set_index")
+        if isinstance(set_value, bool) or not isinstance(set_value, int):
+            raise ValidationError("side interval set_index is invalid")
+        try:
+            start, end = float(side["start_seconds"]), float(side["end_seconds"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValidationError("side interval bounds are invalid") from exc
+        if not math.isfinite(start) or not math.isfinite(end) or end <= start:
+            raise ValidationError("side interval bounds are invalid")
+        team_side = side.get("team_side")
+        crop = side.get("crop")
+        if team_side not in {"near", "far"}:
+            raise ValidationError("side interval team_side is invalid")
+        if not isinstance(crop, (list, tuple)) or len(crop) != 4 or any(isinstance(value, bool) or not isinstance(value, int) for value in crop):
+            raise ValidationError("side interval crop is invalid")
+        side_records.append((side_index, set_value, start, end, team_side, tuple(crop)))
+    for left, right in zip(sorted(side_records, key=lambda item: (item[1], item[2])), sorted(side_records, key=lambda item: (item[1], item[2]))[1:]):
+        if left[1] == right[1] and left[3] > right[2] + 1e-9:
+            raise ValidationError("side intervals overlap")
     for coverage in truth.coverage:
         if coverage.status not in {"rally", "non_rally", "unusable", "pending"}:
             raise ValidationError("coverage status is invalid")
@@ -87,18 +110,10 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
                 )
             )
             continue
-        for side_index, side in enumerate(truth.side_intervals):
-            try:
-                if int(side.get("set_index")) != int(coverage.set_index):
-                    continue
-                side_start = float(side["start_seconds"])
-                side_end = float(side["end_seconds"])
-                team_side = side.get("team_side")
-                crop = side.get("crop")
-            except (KeyError, TypeError, ValueError):
-                continue
-            if team_side not in {"near", "far"} or not isinstance(crop, (list, tuple)) or len(crop) != 4:
-                continue
+        mapped = [item for item in side_records if item[1] == coverage.set_index and item[3] > coverage.start_seconds and item[2] < coverage.end_seconds]
+        mapped.sort(key=lambda item: item[2])
+        cursor = float(coverage.start_seconds)
+        for side_index, _, side_start, side_end, team_side, crop in mapped:
             start = max(float(coverage.start_seconds), side_start)
             end = min(float(coverage.end_seconds), side_end)
             if end <= start:
@@ -113,7 +128,25 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
                     tuple(crop),
                 )
             )
+            if start > cursor + 1e-9:
+                raise ValidationError(f"side intervals do not cover {coverage.segment_id}")
+            cursor = end
+        if cursor < float(coverage.end_seconds) - 1e-9:
+            raise ValidationError(f"side intervals do not cover {coverage.segment_id}")
     return tuple(segments)
+
+
+def _validate_public_parameters(*, stride_seconds: float, confidence_threshold: float, merge_gap_seconds: float, min_event_seconds: float, batch_size: int, device: str) -> None:
+    values = {"stride_seconds": stride_seconds, "confidence_threshold": confidence_threshold, "merge_gap_seconds": merge_gap_seconds, "min_event_seconds": min_event_seconds}
+    for name, value in values.items():
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ValidationError(f"{name} is invalid")
+    if stride_seconds <= 0 or merge_gap_seconds < 0 or min_event_seconds < 0 or not 0 <= confidence_threshold <= 1:
+        raise ValidationError("validation inference parameters are invalid")
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size <= 0:
+        raise ValidationError("batch_size must be positive")
+    if not isinstance(device, str) or not device:
+        raise ValidationError("device is invalid")
 
 
 def _validate_segments(segments: tuple[InferenceSegment, ...], *, duration: float, width: int, height: int) -> None:
@@ -155,6 +188,7 @@ def infer_locked_validation(
 ) -> ValidationInferenceResult:
     if not truth.locked:
         raise ValidationError("locked truth is required before validation inference")
+    _validate_public_parameters(stride_seconds=stride_seconds, confidence_threshold=confidence_threshold, merge_gap_seconds=merge_gap_seconds, min_event_seconds=min_event_seconds, batch_size=batch_size, device=device)
     source = Path(video_path).expanduser().resolve()
     checkpoint = Path(checkpoint_path).expanduser().resolve()
     if source != truth.video.video_path.resolve():
@@ -181,36 +215,52 @@ def infer_locked_validation(
             raise ValidationError("video metadata does not match locked truth binding")
     segments = _segments_from_truth(truth)
     _validate_segments(segments, duration=metadata.duration_seconds, width=metadata.width, height=metadata.height)
-    if batch_size <= 0:
-        raise ValidationError("batch_size must be positive")
-
-    torch = require_torch()
-    selected_device = resolve_device(device)
-    model, checkpoint_data = load_checkpoint(checkpoint, device=selected_device)
-    num_frames = int(checkpoint_data["num_frames"])
-    image_size = int(checkpoint_data["image_size"])
-    window_seconds = float(checkpoint_data["window_seconds"])
-    labels = list(checkpoint_data["labels"])
-    model_version = str(checkpoint_data["model_version"])
+    try:
+        torch = require_torch()
+        selected_device = resolve_device(device)
+        model, checkpoint_data = load_checkpoint(checkpoint, device=selected_device)
+        num_frames = int(checkpoint_data["num_frames"])
+        image_size = int(checkpoint_data["image_size"])
+        window_seconds = float(checkpoint_data["window_seconds"])
+        labels = list(checkpoint_data["labels"])
+        model_version = str(checkpoint_data["model_version"])
+    except ValidationError:
+        raise
+    except Exception as exc:
+        raise ValidationError("checkpoint or device is invalid") from exc
+    if not math.isfinite(window_seconds) or window_seconds <= 0 or stride_seconds > window_seconds:
+        raise ValidationError("stride_seconds cannot exceed checkpoint window_seconds")
 
     all_windows: list[ValidationWindow] = []
     predictions: list[ValidationPrediction] = []
     segment_settings: list[dict[str, object]] = []
     for segment in segments:
-        times = list(iter_window_times_range(segment.start_seconds, segment.end_seconds, window_seconds=window_seconds, stride_seconds=stride_seconds))
+        try:
+            times = list(iter_window_times_range(segment.start_seconds, segment.end_seconds, window_seconds=window_seconds, stride_seconds=stride_seconds))
+        except (ValueError, TypeError) as exc:
+            raise ValidationError("validation window range is invalid") from exc
         segment_windows: list[ActionWindow] = []
-        for batch_times, clips in iter_sequential_video_clip_batches(source, times, num_frames=num_frames, image_size=image_size, batch_size=batch_size, crop=segment.crop):
-            tensors = [frames_to_tensor(clip) for clip in clips]
-            batch = torch.stack(tensors).to(selected_device)
-            with torch.no_grad():
-                probabilities = torch.softmax(model(batch), dim=1).detach().cpu()
-            scores, indices = probabilities.max(dim=1)
-            for (start, end), score, index in zip(batch_times, scores, indices):
-                segment_windows.append(ActionWindow(round(start, 6), round(end, 6), labels[int(index)], round(float(score), 6)))
+        try:
+            batches = iter_sequential_video_clip_batches(source, times, num_frames=num_frames, image_size=image_size, batch_size=batch_size, crop=segment.crop)
+            for batch_times, clips in batches:
+                tensors = [frames_to_tensor(clip) for clip in clips]
+                batch = torch.stack(tensors).to(selected_device)
+                with torch.no_grad():
+                    probabilities = torch.softmax(model(batch), dim=1).detach().cpu()
+                scores, indices = probabilities.max(dim=1)
+                for (start, end), score, index in zip(batch_times, scores, indices):
+                    segment_windows.append(ActionWindow(round(start, 6), round(end, 6), labels[int(index)], round(float(score), 6)))
+        except ValidationError:
+            raise
+        except (ValueError, TypeError, VideoError) as exc:
+            raise ValidationError("validation video decoding failed") from exc
         segment_offset = len(all_windows)
         for local_index, window in enumerate(segment_windows):
             all_windows.append(ValidationWindow(segment_offset + local_index, segment.segment_id, segment.set_index, segment.team_side, window.start_seconds, window.end_seconds, window.action, window.confidence))
-        events, provenance = merge_action_windows_with_provenance(segment_windows, video_id=truth.video.match_id, model_version=model_version, confidence_threshold=confidence_threshold, merge_gap_seconds=merge_gap_seconds, min_event_seconds=min_event_seconds)
+        try:
+            events, provenance = merge_action_windows_with_provenance(segment_windows, video_id=truth.video.match_id, model_version=model_version, confidence_threshold=confidence_threshold, merge_gap_seconds=merge_gap_seconds, min_event_seconds=min_event_seconds)
+        except (ValueError, TypeError) as exc:
+            raise ValidationError("validation event merge failed") from exc
         for prediction_index, event in enumerate(events, start=1):
             local_indices = tuple(provenance.get(event.event_id, ()))
             predictions.append(ValidationPrediction(f"{truth.video.match_id}:set-{segment.set_index:02d}:{segment.segment_id}:pred-{prediction_index:06d}", segment.segment_id, segment.set_index, segment.team_side, event.start_ms / 1000.0, event.end_ms / 1000.0, event.action, event.confidence, tuple(segment_offset + index for index in local_indices)))
