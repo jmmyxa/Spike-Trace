@@ -99,6 +99,14 @@ def freeze_video_binding(video_path: str | Path, *, match_id: str, expected_sha2
 
 
 def write_video_binding(path: str | Path, binding: ValidationVideoBinding, *, repo_root: str | Path) -> Path:
+    relative = Path(binding.repo_video_path)
+    if relative.is_absolute() or relative.as_posix() != binding.repo_video_path or ".." in relative.parts:
+        raise ValidationError("Binding video_path must be a relative POSIX path")
+    try:
+        resolved = (binding.video_root / relative).resolve()
+        resolved.relative_to(binding.video_root.resolve())
+    except ValueError as exc:
+        raise ValidationError("Binding video_path is outside video_root") from exc
     payload = {"format_version": 1, "match_id": binding.match_id, "video_path": binding.repo_video_path, "sha256": binding.sha256, "metadata": {"fps": binding.metadata.fps, "frame_count": binding.metadata.frame_count, "width": binding.metadata.width, "height": binding.metadata.height, "duration_seconds": binding.metadata.duration_seconds}}
     destination = Path(path).expanduser().resolve()
     write_new_bytes(destination, canonical_json_bytes(payload), error_type=ValidationError)
@@ -124,6 +132,9 @@ def assert_no_content_overlap(binding: ValidationVideoBinding, *, manifest_paths
         try:
             with path.open("r", encoding="utf-8-sig", newline="") as handle:
                 for row in csv.DictReader(handle):
+                    split = row.get("split", "").strip().lower()
+                    if split not in {"train", "val", "test"}:
+                        raise ValidationError(f"Manifest row has invalid split: {split or '<empty>'}")
                     if row.get("match_id", "").strip() == binding.match_id:
                         raise ValidationError("Manifest overlaps validation match_id")
                     if row.get("video_sha256", "").strip().lower() == binding.sha256.lower():
@@ -150,6 +161,13 @@ def assert_no_content_overlap(binding: ValidationVideoBinding, *, manifest_paths
                         raise ValidationError("Selection overlaps validation match_id")
                     if key in {"video_sha256", "sha256"} and isinstance(item, str) and item.lower() == binding.sha256.lower():
                         raise ValidationError("Selection overlaps validation SHA-256")
+                    if key == "video" and isinstance(item, dict) and isinstance(item.get("path"), str):
+                        candidate = Path(item["path"]).expanduser()
+                        candidate = (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
+                        if not candidate.is_file():
+                            raise ValidationError(f"Selection video source is unreadable: {candidate}")
+                        if candidate == validation_path or sha256_file(candidate) == binding.sha256:
+                            raise ValidationError("Selection overlaps validation video")
                     if key == "path" and isinstance(item, str):
                         candidate = Path(item).expanduser()
                         candidate = (root / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()

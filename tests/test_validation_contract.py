@@ -2,6 +2,7 @@ import csv
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import cv2
@@ -84,6 +85,38 @@ class ValidationContractTests(unittest.TestCase):
 
     def test_canonical_json_is_stable(self):
         self.assertEqual(canonical_json_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
+
+    def test_rejects_absolute_binding_repo_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "fixture.avi"
+            self._video(video)
+            binding = freeze_video_binding(video, match_id="m", expected_sha256=sha256_file(video), repo_root=root)
+            invalid = replace(binding, repo_video_path=str(video))
+            with self.assertRaises(ValidationError):
+                write_video_binding(root / "binding.json", invalid, repo_root=root)
+
+    def test_selection_missing_video_path_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "fixture.avi"
+            self._video(video)
+            binding = freeze_video_binding(video, match_id="m", expected_sha256=sha256_file(video), repo_root=root)
+            selection = root / "selection.json"
+            selection.write_text(json.dumps({"video": {"path": "missing.avi"}}), encoding="utf-8")
+            with self.assertRaisesRegex(ValidationError, "missing"):
+                assert_no_content_overlap(binding, manifest_paths=[], selection_paths=[selection], repo_root=root)
+
+    def test_manifest_split_must_be_allowed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "fixture.avi"
+            self._video(video)
+            binding = freeze_video_binding(video, match_id="m", expected_sha256=sha256_file(video), repo_root=root)
+            manifest = root / "manifest.csv"
+            manifest.write_text("video_path,split,match_id\nother.avi,invalid,other\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValidationError, "split"):
+                assert_no_content_overlap(binding, manifest_paths=[manifest], selection_paths=[], repo_root=root)
 
 
 if __name__ == "__main__":
