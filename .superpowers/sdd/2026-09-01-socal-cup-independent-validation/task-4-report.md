@@ -85,3 +85,15 @@ $env:PYTHONPATH='src'
 Output: `Ran 27 tests ... OK`.
 
 Fix-round commits: `ec654b1 fix: harden locked segmented validation boundaries` (implementation, tests, docs), `820eab8 fix: accept mapping side interval records` (Mapping-compatible side records); report update follows.
+
+## Fix round 2
+
+`non_rally` coverage now runs when side intervals provide complete legal
+set/side/crop mapping (including deriving `set_index` when coverage has none),
+so downstream evaluation can count non-rally predictions. Missing mappings are
+listed in `excluded_non_rally_segments` with a reason; `unusable` remains
+excluded. Added positive mapped-non-rally and unmapped-exclusion regressions and
+updated README/project-plan semantics. The scoped suite passes: `Ran 28 tests ... OK`.
+
+Implementation commits: `5de21ae`, `06c4578` (mapped non-rally inference and
+set-interval disambiguation); report update follows.
