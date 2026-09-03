@@ -166,7 +166,10 @@ def infer_locked_validation(
         raise ValidationError("video or checkpoint is unreadable") from exc
     if initial_video_sha256.lower() != truth.video.sha256.lower():
         raise ValidationError("video SHA-256 does not match locked truth binding")
-    metadata = inspect_video(source)
+    try:
+        metadata = inspect_video(source)
+    except Exception as exc:
+        raise ValidationError("bound source video metadata is unreadable") from exc
     expected_metadata = truth.video.metadata
     for field in ("fps", "frame_count", "width", "height", "duration_seconds"):
         expected = getattr(expected_metadata, field)
