@@ -46,7 +46,7 @@ def detect_rally_candidates(video_path: str | Path, *, settings: RallyDetectionS
     import cv2
     import numpy as np
     values = (settings.sample_seconds, settings.motion_threshold, settings.dead_ball_seconds, settings.merge_gap_seconds, settings.buffer_before_seconds, settings.buffer_after_seconds)
-    if any(not math.isfinite(float(v)) or float(v) <= 0 for v in values):
+    if any(isinstance(v, bool) or not math.isfinite(float(v)) or float(v) <= 0 for v in values):
         raise ValidationError("detection settings are invalid")
     metadata = inspect_video(video_path)
     capture = cv2.VideoCapture(str(Path(video_path).expanduser().resolve()))
@@ -95,7 +95,15 @@ def complete_coverage(candidates: Sequence[tuple[float, float]], *, duration_sec
     if not math.isfinite(float(duration_seconds)) or duration_seconds <= 0:
         raise ValidationError("duration_seconds is invalid")
     normalized = []
-    for a, b in candidates:
+    try:
+        iterator = iter(candidates)
+    except TypeError as exc:
+        raise ValidationError("candidate intervals are invalid") from exc
+    for candidate in iterator:
+        try:
+            a, b = candidate
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("candidate interval is invalid") from exc
         try: start, end = float(a), float(b)
         except (TypeError, ValueError) as exc: raise ValidationError("candidate interval is invalid") from exc
         if not math.isfinite(start) or not math.isfinite(end):
@@ -122,27 +130,69 @@ def complete_coverage(candidates: Sequence[tuple[float, float]], *, duration_sec
 
 def apply_side_map(segments: Sequence[RallySegment], *, set_intervals: Sequence[Mapping[str, object]], side_intervals: Sequence[Mapping[str, object]], metadata: VideoMetadata) -> tuple[RallySegment, ...]:
     result: list[RallySegment] = []
+
+    def interval(item: Mapping[str, object], *, label: str) -> tuple[float, float]:
+        try:
+            start = float(item["start_seconds"])
+            end = float(item["end_seconds"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValidationError(f"{label} interval is malformed") from exc
+        if not math.isfinite(start) or not math.isfinite(end) or end <= start:
+            raise ValidationError(f"{label} interval is malformed")
+        return start, end
+
+    def crop_value(value: object) -> tuple[int, int, int, int]:
+        if not isinstance(value, (list, tuple)) or len(value) != 4:
+            raise ValidationError("crop must contain four integer coordinates")
+        if any(isinstance(part, bool) or not isinstance(part, int) for part in value):
+            raise ValidationError("crop must contain four integer coordinates")
+        return tuple(value)  # type: ignore[return-value]
+
     for segment in segments:
         if segment.status != "rally":
             result.append(segment); continue
-        sets = [s for s in set_intervals if float(s["start_seconds"]) <= segment.start_seconds and float(s["end_seconds"]) >= segment.end_seconds]
+        sets = []
+        for candidate in set_intervals:
+            start, end = interval(candidate, label="set")
+            if start <= segment.start_seconds and end >= segment.end_seconds:
+                sets.append((candidate, start, end))
         if len(sets) != 1:
             raise ValidationError(f"Expected exactly one set interval for {segment.segment_id}")
-        set_index = int(sets[0]["set_index"])
-        matches = [s for s in side_intervals if int(s.get("set_index", set_index)) == set_index and float(s["start_seconds"]) < segment.end_seconds and float(s["end_seconds"]) > segment.start_seconds]
-        matches.sort(key=lambda x: float(x["start_seconds"]))
+        set_item = sets[0][0]
+        try:
+            set_index_value = set_item["set_index"]
+            if isinstance(set_index_value, bool):
+                raise ValueError
+            set_index = int(set_index_value)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValidationError("set_index is malformed") from exc
+        matches = []
+        for side in side_intervals:
+            try:
+                side_set = side.get("set_index", set_index)
+                if isinstance(side_set, bool) or int(side_set) != set_index:
+                    continue
+            except (TypeError, ValueError) as exc:
+                raise ValidationError("side interval set_index is malformed") from exc
+            start, end = interval(side, label="side")
+            if start < segment.end_seconds and end > segment.start_seconds:
+                matches.append((side, start, end))
+        matches.sort(key=lambda item: item[1])
         for left, right in zip(matches, matches[1:]):
-            if float(left["end_seconds"]) > float(right["start_seconds"]):
+            if left[2] > right[1]:
                 raise ValidationError("side intervals overlap")
         if not matches:
             raise ValidationError(f"No side interval for {segment.segment_id}")
         cursor = segment.start_seconds
-        for side in sorted(matches, key=lambda x: float(x["start_seconds"])):
-            start, end = max(cursor, float(side["start_seconds"])), min(segment.end_seconds, float(side["end_seconds"]))
+        for side, side_start, side_end in matches:
+            start, end = max(cursor, side_start), min(segment.end_seconds, side_end)
             if end <= start: continue
             if side.get("team_side") not in {"near", "far"}:
                 raise ValidationError("team_side must be near or far")
-            crop = tuple(int(v) for v in side["crop"])
+            try:
+                crop = crop_value(side["crop"])
+            except (KeyError, TypeError) as exc:
+                raise ValidationError("crop must contain four integer coordinates") from exc
             if len(crop) != 4 or crop[0] < 0 or crop[1] < 0 or crop[2] <= crop[0] or crop[3] <= crop[1] or crop[2] > metadata.width or crop[3] > metadata.height:
                 raise ValidationError("crop exceeds video geometry")
             result.append(replace(segment, segment_id=f"{segment.segment_id}-{len(result)+1}", source_segment_id=segment.segment_id, set_index=set_index, start_seconds=start, end_seconds=end, team_side=side["team_side"], crop=crop, boundary_source="manual"))
@@ -155,12 +205,21 @@ def apply_side_map(segments: Sequence[RallySegment], *, set_intervals: Sequence[
 def validate_rally_queue(segments: Sequence[RallySegment], *, binding: ValidationVideoBinding, require_complete: bool = False) -> None:
     previous = 0.0
     for segment in segments:
-        if segment.start_seconds < 0 or segment.end_seconds <= segment.start_seconds or segment.end_seconds > binding.metadata.duration_seconds + 1e-9:
+        try:
+            start = float(segment.start_seconds)
+            end = float(segment.end_seconds)
+        except (TypeError, ValueError) as exc:
+            raise ValidationError("segment bounds are invalid") from exc
+        if not math.isfinite(start) or not math.isfinite(end):
             raise ValidationError("segment bounds are invalid")
-        if segment.start_seconds < previous - 1e-9:
+        if segment.status not in {"pending", "rally", "non_rally", "unusable"} or segment.boundary_source not in {"motion", "manual"}:
+            raise ValidationError("segment schema is invalid")
+        if start < 0 or end <= start or end > binding.metadata.duration_seconds + 1e-9:
+            raise ValidationError("segment bounds are invalid")
+        if start < previous - 1e-9:
             raise ValidationError("segments overlap")
-        previous = segment.end_seconds
-    if require_complete and (not segments or abs(segments[0].start_seconds) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9 or any(abs(a.end_seconds - b.start_seconds) > 1e-9 for a, b in zip(segments, segments[1:]))):
+        previous = end
+    if require_complete and (not segments or abs(float(segments[0].start_seconds)) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9 or any(abs(float(a.end_seconds) - float(b.start_seconds)) > 1e-9 for a, b in zip(segments, segments[1:]))):
         raise ValidationError("queue coverage is incomplete")
 
 
@@ -190,7 +249,9 @@ def load_rally_queue(path: str | Path, *, binding: ValidationVideoBinding) -> tu
             if crop is not None and (not isinstance(crop, (list, tuple)) or len(crop) != 4):
                 raise ValidationError("Invalid rally segment crop")
             segments.append(RallySegment(**{**item, "crop": tuple(crop) if crop is not None else None}))
-        return tuple(segments)
+        result = tuple(segments)
+        validate_rally_queue(result, binding=binding)
+        return result
     except ValidationError:
         raise
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:

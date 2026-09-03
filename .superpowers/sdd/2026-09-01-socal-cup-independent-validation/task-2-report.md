@@ -48,3 +48,44 @@ RED: added explicit-binding proxy regression; pre-fix behavior accepted proxy ge
 ## Reviewer Fix Round 3
 
 RED: `test_nonfinite_candidate_rejected` failed before implementation. GREEN: candidate endpoints now reject non-finite values before sorting, and queue loading validates required segment fields, status/boundary enums, and crop shape with fail-closed errors. Focused run: `Ran 6 tests ... OK`.
+
+## Reviewer Fix Round 4
+
+RED (side/crop validation):
+
+```powershell
+$env:PYTHONPATH='E:\Spike-Trace\.worktrees\socal-independent-validation\src'; .venv\Scripts\python.exe -m unittest tests.test_validation_rallies -v
+```
+
+Result before the fix: `test_side_map_rejects_missing_or_nonfinite_interval_fields` raised `KeyError`; non-integer crop values were silently coerced and malformed crop strings raised `ValueError` instead of `ValidationError`.
+
+RED (candidate shape):
+
+```powershell
+$env:PYTHONPATH='E:\Spike-Trace\.worktrees\socal-independent-validation\src'; .venv\Scripts\python.exe -m unittest tests.test_validation_rallies.RallyQueueTests.test_malformed_candidate_shape_rejected -v
+```
+
+Result before the fix: malformed candidate tuples raised uncaught `ValueError` during unpacking.
+
+RED (boolean setting): `test_detection_rejects_malformed_settings` produced an uncaught `VideoError` for `sample_seconds=True` because booleans were accepted as numeric settings.
+
+RED (queue numeric tamper): the new queue tamper test failed because a serialized `NaN` segment start was accepted by `load_rally_queue`.
+
+GREEN:
+
+```powershell
+$env:PYTHONPATH='E:\Spike-Trace\.worktrees\socal-independent-validation\src'; .venv\Scripts\python.exe -m unittest tests.test_validation_rallies tests.test_validation_contract -v
+```
+
+Result: `Ran 26 tests ... OK` (16 rally-queue tests, 10 adjacent validation-contract tests).
+
+Implementation: added deterministic synthetic-video regressions for motion/dead-ball ordering and buffer clamping; malformed settings/candidate shape checks; side interval, crop type/shape, and non-finite validation; queue round-trip/no-overwrite, binding/metadata/shape tamper checks; proxy manifest/source-binding/rollback and pre-existing-directory checks. Production validation now wraps malformed candidate shapes, rejects non-finite queue bounds and invalid enums on load, and fail-closes side intervals/crops without coercion.
+
+Self-review:
+
+- Tests use 20-frame synthetic MJPG videos and mocked proxy writes; no SoCal source is opened or recognition run.
+- Explicit `binding` remains required for proxies and source resolution stays constrained to the binding path/root.
+- Atomic no-overwrite queue/manifest behavior and rollback semantics remain unchanged.
+- No player tracking, OCR, database, frontend, or statistics changes.
+
+Commit: `78588f1` (round-four changes, including boolean-setting validation).
