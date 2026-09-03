@@ -4,7 +4,7 @@
 和元数据冻结，验证清单与选择 JSON 仅扫描显式传入的来源并 fail-closed 防止内容重叠。
 
 > 文档状态：已确认的项目基线  
-> 更新日期：2026-08-30
+> 更新日期：2026-09-04
 > 用途：保存产品决策、MVP 边界和技术路线，供项目成员及后续 AI 持续开发时使用。
 
 ## 1. 项目愿景
@@ -261,6 +261,12 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 - Rangitoto 已完成的 40 段、83 条人工记录已发布为 v2 分层结果和训练投影；推断或不可见动作
   只保留为比赛事实，不进入视觉训练。
 - 已用真实比赛建立第一份同场零样本基线报告；独立验证基线仍待第二场比赛。
+- SoCal Cup 已作为当前独立 `val` 验收交付物：固定来源声明位于
+  `data/validation/socal_cup_c2_video.json`，六个验证模块、八个验证测试模块和九个显式 CLI
+  命令已具备；运行时仍必须重新校验源视频 SHA-256 与元数据。
+- 当前尚未生成 SoCal 草稿、锁定真值或预测输出。下一步是 prediction-blind 地逐回合检查代理、
+  填写 C2 全部动作或 `no_c2_action=true`，再锁定 `data/validation/socal_cup_c2_validation.json`
+  与 `data/validation/socal_cup_c2_validation.csv`；真值锁定前不得加载 checkpoint。
 
 ### 阶段 B：增强事件理解
 
@@ -282,6 +288,13 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 - 按比赛、局次和球员统计。
 - CSV、XLSX、JSON、PDF 导出。
 - 数据备份、恢复和模型升级。
+
+SoCal 独立验证的固定边界如下：视频相对路径为
+`data/SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4`，
+`match_id=socal-cup-final-2025`，目标队为 `C2 Attack 17-1 Elite`，内容 SHA-256 为
+`b29e55cde114f5fda745349f86cc878d8abb81ba44ee430f467885bd7ce11c17`。该 match ID 和内容 SHA
+只能出现在独立 `val` 真值及其报告中，不能进入任何 `train`/`test` 清单、主动学习选择源、
+伪标签或训练缓存；复制、改名或重新编码也必须被内容隔离门禁拒绝。
 
 ## 13. 当前数据状态和下一步输入
 
@@ -408,7 +421,7 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 
 下一步严格按以下顺序执行：
 
-1. 完成未触及的整场比赛验证真值（已具备 prediction-blind 草稿与不可变锁定 bundle 契约）。
+1. 完成 SoCal 未触及整场比赛的 prediction-blind 回合真值（已具备来源声明、草稿与不可变锁定 bundle 契约）。
 2. 运行高效的两阶段微调。
 3. 在选定回合实现身份跟踪和已确认的号码归属。
 4. 加入 SQLite，以及用户复核、统计和导出工作流。
@@ -431,3 +444,10 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 独立验证回合队列模块已加入：它生成 prediction-blind 的运动候选，补齐整场回合/非回合覆盖，按已确认换边区间应用近端/远端裁剪，并写出不含音轨的静音代理与原子 manifest。
 
 SoCal C2 独立验证命令均要求显式传入视频、真值、清单、选择源和 checkpoint 路径。冻结真值后使用 `evaluate-validation`，结果发布为不可覆盖的五文件目录 `outputs/validation/socal-cup-c2-baseline/`；可用 `verify-validation` 在不加载模型的情况下重算文件哈希、源视频绑定和跨文件计数。
+
+当前独立验证模块为 `validation_contract.py`、`validation_rallies.py`、`validation_truth.py`、
+`validation_inference.py`、`validation_evaluation.py` 和 `validation_outputs.py`；对应的八个
+验证测试模块另含 `test_socal_validation_integration.py`，用合成视频覆盖冻结、队列、草稿、锁定
+和输出契约，不读取真实 SoCal 视频。详细九命令参数、人工交接和提交边界记录在
+`data/validation/README.md`。真值锁定前不生成 SoCal baseline 识别结果；锁定后结果仍只属于
+`val`，并必须使用新的不可覆盖输出目录。
