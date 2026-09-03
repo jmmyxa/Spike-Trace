@@ -60,4 +60,4 @@ $env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validatio
 
 The fix binds `csv_sha256` into the lock digest, centralizes source-root/hash resolution, validates every split rally part and mapped side crop, preserves strict text/schema types, uses `csv.writer`, and rolls back a newly published CSV if JSON publication fails.
 
-Fix commit: `360433842b81a121dec2e0277d19a5d9048aab41`.
+Fix commit: `6d60d5145bfa254470a69256e18b38743e75cb49`.
