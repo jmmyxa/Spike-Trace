@@ -88,4 +88,4 @@ Self-review:
 - Atomic no-overwrite queue/manifest behavior and rollback semantics remain unchanged.
 - No player tracking, OCR, database, frontend, or statistics changes.
 
-Commit: `78588f1` (round-four changes, including boolean-setting validation).
+Implementation commit: `08d4384` (round-four changes, including boolean-setting validation). This report is committed separately.
