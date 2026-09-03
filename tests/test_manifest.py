@@ -41,6 +41,18 @@ class ManifestTests(unittest.TestCase):
             records = load_manifest(manifest, require_files=False)
             self.assertEqual(records[0].crop, (0, 0, 1280, 430))
 
+    def test_loads_optional_match_and_rally_ids(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            manifest = root / "annotations.csv"
+            manifest.write_text(
+                "video_path,start_seconds,end_seconds,label,split,match_id,rally_id\n"
+                "match.avi,0,1,serve,train,m-1,r-2\n", encoding="utf-8"
+            )
+            record = load_manifest(manifest, require_files=False)[0]
+            self.assertEqual(record.match_id, "m-1")
+            self.assertEqual(record.rally_id, "r-2")
+
     def test_loads_dig_label(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

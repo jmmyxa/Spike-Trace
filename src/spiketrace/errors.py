@@ -20,3 +20,7 @@ class ReviewError(SpikeTraceError):
 
 class ActiveLearningError(SpikeTraceError):
     """Raised when an active-learning artifact is invalid or unsafe to apply."""
+
+
+class ValidationError(SpikeTraceError):
+    """Raised when independent-validation source contracts are invalid."""
