@@ -132,7 +132,7 @@ def assert_no_content_overlap(binding: ValidationVideoBinding, *, manifest_paths
         try:
             with path.open("r", encoding="utf-8-sig", newline="") as handle:
                 for row in csv.DictReader(handle):
-                    split = row.get("split", "").strip().lower()
+                    split = (row.get("split") or "").strip().lower()
                     if split not in {"train", "val", "test"}:
                         raise ValidationError(f"Manifest row has invalid split: {split or '<empty>'}")
                     if row.get("match_id", "").strip() == binding.match_id:
