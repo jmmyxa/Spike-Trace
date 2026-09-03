@@ -46,6 +46,10 @@ class RallyQueueTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             complete_coverage(((0.0, 1.0),), duration_seconds=float("nan"), binding=self.binding)
 
+    def test_proxy_requires_explicit_binding(self):
+        with self.assertRaises(ValidationError):
+            write_rally_proxies((), tempfile.mkdtemp(), repo_root=Path("."))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -78,13 +78,13 @@ def detect_rally_candidates(video_path: str | Path, *, settings: RallyDetectionS
             runs[-1][1] = t + settings.sample_seconds
         else:
             runs.append([t, t + settings.sample_seconds])
-    merged: list[tuple[float, float]] = []
+    finalized: list[tuple[float, float]] = []
     for start, end in runs:
-        if merged and start - merged[-1][1] < settings.dead_ball_seconds:
-            merged[-1] = (merged[-1][0], end)
+        if finalized and start - finalized[-1][1] < settings.dead_ball_seconds:
+            finalized[-1] = (finalized[-1][0], end)
         else:
-            merged.append((max(0.0, start - settings.buffer_before_seconds), min(metadata.duration_seconds, end + settings.buffer_after_seconds)))
-    return tuple(merged)
+            finalized.append((start, end))
+    return tuple((max(0.0, start - settings.buffer_before_seconds), min(metadata.duration_seconds, end + settings.buffer_after_seconds)) for start, end in finalized)
 
 
 def _segment(segment_id: str, start: float, end: float, status: str, rally_id: str = "") -> RallySegment:
@@ -164,25 +164,35 @@ def write_rally_queue(path: str | Path, *, binding: ValidationVideoBinding, segm
 
 
 def load_rally_queue(path: str | Path, *, binding: ValidationVideoBinding) -> tuple[RallySegment, ...]:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
-    frozen = data.get("binding", {})
-    if data.get("format_version") != 1 or frozen.get("sha256", "").lower() != binding.sha256.lower() or frozen.get("match_id") != binding.match_id or frozen.get("video_path") != binding.repo_video_path:
-        raise ValidationError("Queue binding mismatch")
-    return tuple(RallySegment(**{**item, "crop": tuple(item["crop"]) if item.get("crop") else None}) for item in data["segments"])
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8")); frozen = data["binding"]
+        if data.get("format_version") != 1 or frozen["sha256"].lower() != binding.sha256.lower() or frozen["match_id"] != binding.match_id or frozen["video_path"] != binding.repo_video_path:
+            raise ValidationError("Queue binding mismatch")
+        expected = binding.metadata.to_dict()
+        actual = frozen["metadata"]
+        for key, value in expected.items():
+            if key == "path": continue
+            if abs(float(actual[key]) - float(value)) > 1e-6: raise ValidationError("Queue metadata mismatch")
+        return tuple(RallySegment(**{**item, "crop": tuple(item["crop"]) if item.get("crop") else None}) for item in data["segments"])
+    except ValidationError:
+        raise
+    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        raise ValidationError("Invalid rally queue") from exc
 
 
-def write_rally_proxies(queue: Sequence[RallySegment], output_dir: str | Path, *, video_root: str | Path | None = None, repo_root: str | Path, output_fps: float = 15.0, max_width: int = 960) -> dict[str, object]:
+def write_rally_proxies(queue: Sequence[RallySegment], output_dir: str | Path, *, video_root: str | Path | None = None, repo_root: str | Path, binding: ValidationVideoBinding | None = None, output_fps: float = 15.0, max_width: int = 960) -> dict[str, object]:
     output = Path(output_dir).expanduser().resolve()
     if output.exists(): raise ValidationError(f"Output directory already exists: {output}")
     output.mkdir(parents=True)
     clips = output / "clips"; clips.mkdir()
     manifest: list[dict[str, object]] = []
     try:
-        root = Path(video_root or repo_root).expanduser().resolve()
-        videos = [p for p in root.rglob("*") if p.suffix.lower() in {".mp4", ".avi", ".mov", ".mkv"}]
-        if len(videos) != 1:
-            raise ValidationError("Unable to resolve the bound source video")
-        source = videos[0]
+        if binding is None:
+            raise ValidationError("binding is required for proxy generation")
+        root = Path(video_root).expanduser().resolve() if video_root is not None else binding.video_root.resolve()
+        source = (root / binding.repo_video_path).resolve()
+        if not source.is_file() or source != binding.video_path.resolve():
+            raise ValidationError("Bound source video does not match explicit video_root")
         for segment in queue:
             if segment.status not in {"pending", "rally"}: continue
             destination = clips / f"{segment.segment_id}.mp4"

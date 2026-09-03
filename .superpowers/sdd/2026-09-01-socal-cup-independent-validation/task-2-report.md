@@ -40,3 +40,7 @@ Recorded after staging all requested files.
 RED: added regressions for internal coverage gaps and non-finite duration; the pre-fix run failed `test_invalid_settings_rejected` (ValidationError not raised).
 
 GREEN: after enforcing finite duration/settings, contiguous complete coverage, side interval overlap/team validation, and queue binding identity/version checks, `python -m unittest tests.test_validation_rallies -v` reports `Ran 4 tests ... OK`.
+
+## Reviewer Fix Round 2
+
+RED: added explicit-binding proxy regression; pre-fix behavior accepted proxy generation without a frozen source. GREEN: proxy generation now requires `binding`, resolves only `binding.repo_video_path` beneath explicit `video_root` (or the binding root), and validates identity. Raw candidate gaps are evaluated before buffering; queue loading validates shape, format, binding identity, and metadata with fail-closed `ValidationError`. Focused run: `Ran 5 tests ... OK`.
