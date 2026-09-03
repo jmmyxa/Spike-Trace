@@ -12,6 +12,7 @@ from spiketrace.validation_rallies import (
     apply_side_map,
     complete_coverage,
     validate_rally_queue,
+    write_rally_proxies,
 )
 
 
@@ -35,6 +36,15 @@ class RallyQueueTests(unittest.TestCase):
         self.assertEqual([(s.start_seconds, s.end_seconds) for s in rallies], [(2.0, 6.0), (6.0, 10.0)])
         self.assertEqual(rallies[0].team_side, "near")
         self.assertEqual(rallies[1].source_segment_id, rallies[0].source_segment_id)
+
+    def test_require_complete_rejects_internal_gap(self):
+        segments = complete_coverage(((2.0, 3.0),), duration_seconds=12.0, binding=self.binding)
+        with self.assertRaisesRegex(ValidationError, "incomplete"):
+            validate_rally_queue((segments[0], segments[1], replace(segments[2], start_seconds=3.5)), binding=self.binding, require_complete=True)
+
+    def test_invalid_settings_rejected(self):
+        with self.assertRaises(ValidationError):
+            complete_coverage(((0.0, 1.0),), duration_seconds=float("nan"), binding=self.binding)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Literal, Mapping, Sequence
@@ -44,6 +45,9 @@ class RallySegment:
 def detect_rally_candidates(video_path: str | Path, *, settings: RallyDetectionSettings) -> tuple[tuple[float, float], ...]:
     import cv2
     import numpy as np
+    values = (settings.sample_seconds, settings.motion_threshold, settings.dead_ball_seconds, settings.merge_gap_seconds, settings.buffer_before_seconds, settings.buffer_after_seconds)
+    if any(not math.isfinite(float(v)) or float(v) <= 0 for v in values):
+        raise ValidationError("detection settings are invalid")
     metadata = inspect_video(video_path)
     capture = cv2.VideoCapture(str(Path(video_path).expanduser().resolve()))
     if not capture.isOpened():
@@ -88,6 +92,8 @@ def _segment(segment_id: str, start: float, end: float, status: str, rally_id: s
 
 
 def complete_coverage(candidates: Sequence[tuple[float, float]], *, duration_seconds: float, binding: ValidationVideoBinding) -> tuple[RallySegment, ...]:
+    if not math.isfinite(float(duration_seconds)) or duration_seconds <= 0:
+        raise ValidationError("duration_seconds is invalid")
     normalized = sorted((float(a), float(b)) for a, b in candidates)
     previous = 0.0
     output: list[RallySegment] = []
@@ -117,12 +123,18 @@ def apply_side_map(segments: Sequence[RallySegment], *, set_intervals: Sequence[
             raise ValidationError(f"Expected exactly one set interval for {segment.segment_id}")
         set_index = int(sets[0]["set_index"])
         matches = [s for s in side_intervals if int(s.get("set_index", set_index)) == set_index and float(s["start_seconds"]) < segment.end_seconds and float(s["end_seconds"]) > segment.start_seconds]
+        matches.sort(key=lambda x: float(x["start_seconds"]))
+        for left, right in zip(matches, matches[1:]):
+            if float(left["end_seconds"]) > float(right["start_seconds"]):
+                raise ValidationError("side intervals overlap")
         if not matches:
             raise ValidationError(f"No side interval for {segment.segment_id}")
         cursor = segment.start_seconds
         for side in sorted(matches, key=lambda x: float(x["start_seconds"])):
             start, end = max(cursor, float(side["start_seconds"])), min(segment.end_seconds, float(side["end_seconds"]))
             if end <= start: continue
+            if side.get("team_side") not in {"near", "far"}:
+                raise ValidationError("team_side must be near or far")
             crop = tuple(int(v) for v in side["crop"])
             if len(crop) != 4 or crop[0] < 0 or crop[1] < 0 or crop[2] <= crop[0] or crop[3] <= crop[1] or crop[2] > metadata.width or crop[3] > metadata.height:
                 raise ValidationError("crop exceeds video geometry")
@@ -141,7 +153,7 @@ def validate_rally_queue(segments: Sequence[RallySegment], *, binding: Validatio
         if segment.start_seconds < previous - 1e-9:
             raise ValidationError("segments overlap")
         previous = segment.end_seconds
-    if require_complete and (not segments or abs(segments[0].start_seconds) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9):
+    if require_complete and (not segments or abs(segments[0].start_seconds) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9 or any(abs(a.end_seconds - b.start_seconds) > 1e-9 for a, b in zip(segments, segments[1:]))):
         raise ValidationError("queue coverage is incomplete")
 
 
@@ -153,7 +165,9 @@ def write_rally_queue(path: str | Path, *, binding: ValidationVideoBinding, segm
 
 def load_rally_queue(path: str | Path, *, binding: ValidationVideoBinding) -> tuple[RallySegment, ...]:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
-    if data.get("binding", {}).get("sha256", "").lower() != binding.sha256.lower(): raise ValidationError("Queue binding mismatch")
+    frozen = data.get("binding", {})
+    if data.get("format_version") != 1 or frozen.get("sha256", "").lower() != binding.sha256.lower() or frozen.get("match_id") != binding.match_id or frozen.get("video_path") != binding.repo_video_path:
+        raise ValidationError("Queue binding mismatch")
     return tuple(RallySegment(**{**item, "crop": tuple(item["crop"]) if item.get("crop") else None}) for item in data["segments"])
 
 
