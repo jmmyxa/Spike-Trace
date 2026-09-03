@@ -74,6 +74,23 @@ class ValidationEvaluationTests(unittest.TestCase):
         self.assertEqual(result.matches, ())
         self.assertEqual((result.diagnostic_confusion[0].truth_label, result.diagnostic_confusion[0].predicted_label), ("set", "receive"))
 
+    def test_split_rally_assigns_per_side_by_action_center(self):
+        coverage = (
+            RallySegment("r1-near-1", None, 1, "r1", 0.0, 1.0, "rally", "near", None, 0, 0, "manual", True, True, False),
+            RallySegment("r1-far-2", None, 1, "r1", 1.0, 2.0, "rally", "far", None, 0, 0, "manual", True, True, False),
+        )
+        report = evaluate_validation(truth(actions=(truth_action("a", "serve", 0.5), truth_action("b", "attack", 1.5)), coverage=coverage), inference(prediction("pa", "serve", 0.5, 0.9, segment="r1-near-1"), prediction("pb", "attack", 1.5, 0.9, segment="r1-far-2")))
+        self.assertEqual(report.event_metrics["per_side"]["near"]["matched"], 1)
+        self.assertEqual(report.event_metrics["per_side"]["far"]["matched"], 1)
+
+    def test_non_rally_suffix_prediction_is_counted(self):
+        coverage = (
+            RallySegment("r1", None, 1, "r1", 0.0, 1.0, "rally", "near", None, 0, 0, "manual", True, True, True),
+            RallySegment("nr", None, None, "", 2.0, 3.0, "non_rally", None, None, 0, 0, "manual", True, True, None),
+        )
+        result = evaluate_validation(truth(coverage=coverage), inference(prediction("nrp", "serve", 2.4, 0.9, segment="nr-near-1")))
+        self.assertEqual(result.event_metrics["non_rally_prediction_count"], 1)
+
     def test_report_has_zero_support_classes_and_counts_non_rally_predictions(self):
         coverage = (RallySegment("r1", None, 2, "r1", 0.0, 2.0, "rally", "far", None, 0, 0, "manual", True, True, True),)
         report = evaluate_validation(truth(actions=(truth_action("a", "serve", 0.5),), coverage=coverage), inference(prediction("p", "serve", 0.5, 0.9), prediction("nr", "attack", 3.0, 0.8, segment="non-rally")))

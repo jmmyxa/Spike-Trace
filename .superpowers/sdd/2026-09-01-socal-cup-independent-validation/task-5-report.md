@@ -56,3 +56,24 @@ Output: completed successfully with no diagnostics.
 
 - `ValidationPrediction` has no explicit rally identifier; evaluator maps each prediction segment to its rally from locked coverage before invoking strict matching. Direct `match_events` calls fail closed across differing segment/rally IDs.
 - Event and window metrics intentionally exclude non-rally/unusable coverage and visibility-overlapping predictions; non-rally predictions are reported separately.
+
+## Fix round 1
+
+- Mapped inference segment IDs to rally IDs before strict matching, preserving cross-rally isolation for split rallies.
+- Assigned per-side event counts by each action/prediction center segment, including side switches within one rally.
+- Resolved mapped segment status from inference settings and temporal coverage so suffixed non-rally IDs are counted.
+- Added regressions for split-side attribution and suffixed non-rally predictions.
+
+Command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_evaluation tests.test_validation_truth tests.test_validation_inference -v
+```
+
+Output:
+
+```text
+Ran 39 tests in 0.332s
+
+OK
+```

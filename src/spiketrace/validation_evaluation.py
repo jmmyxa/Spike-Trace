@@ -199,21 +199,28 @@ def _event_metrics(predictions: Sequence[ValidationPrediction], actions: Sequenc
     for label in result.false_positive_ids:
         pred = next((p for p in predictions if p.prediction_id == label), None)
         if pred is not None: by_set.setdefault(str(pred.set_index), {"matched": 0, "false_positive": 0, "false_negative": 0})["false_positive"] += 1
+    def side_at(center: float, rally_id: str | None = None) -> str | None:
+        candidates = [s for s in coverage if s.status == "rally" and s.coverage_confirmed and (rally_id is None or s.rally_id == rally_id) and s.start_seconds <= center < s.end_seconds and s.team_side]
+        return candidates[0].team_side if candidates else None
+
+    action_by_ref = {a.action_ref: a for a in actions}
+    prediction_by_id = {p.prediction_id: p for p in predictions}
     per_side: dict[str, dict[str, int]] = {}
-    seen_side_rallies: set[str] = set()
-    for segment in coverage:
-        if segment.status == "rally" and segment.coverage_confirmed and segment.team_side:
-            if segment.rally_id in seen_side_rallies:
-                continue
-            seen_side_rallies.add(segment.rally_id)
-            row = per_side.setdefault(segment.team_side, {"matched": 0, "false_positive": 0, "false_negative": 0})
-            refs = {a.action_ref for a in actions if a.rally_id == segment.rally_id}
-            row["matched"] += sum(m.truth_ref in refs for m in result.matches)
-            row["false_negative"] += sum(ref in result.false_negative_refs for ref in refs)
+    for match in result.matches:
+        action = action_by_ref.get(match.truth_ref)
+        side = side_at(_center(action), action.rally_id) if action else None
+        if side:
+            per_side.setdefault(side, {"matched": 0, "false_positive": 0, "false_negative": 0})["matched"] += 1
+    for ref in result.false_negative_refs:
+        action = action_by_ref.get(ref)
+        side = side_at(_center(action), action.rally_id) if action else None
+        if side:
+            per_side.setdefault(side, {"matched": 0, "false_positive": 0, "false_negative": 0})["false_negative"] += 1
     for prediction_id in result.false_positive_ids:
-        pred = next((p for p in predictions if p.prediction_id == prediction_id), None)
-        if pred is not None and pred.team_side:
-            per_side.setdefault(pred.team_side, {"matched": 0, "false_positive": 0, "false_negative": 0})["false_positive"] += 1
+        pred = prediction_by_id.get(prediction_id)
+        side = side_at(_center(pred), None) if pred else None
+        if side:
+            per_side.setdefault(side, {"matched": 0, "false_positive": 0, "false_negative": 0})["false_positive"] += 1
     return {"classes": list(active), "per_class": per_class, "support": support, "macro_f1": round(sum(v["f1"] for v in per_class.values()) / len(active), 6), "matched_count": len(result.matches), "false_positive_count": len(result.false_positive_ids), "false_negative_count": len(result.false_negative_refs), "false_positives_per_minute": round(len(result.false_positive_ids) / rally_seconds * 60, 6) if rally_seconds else 0.0, "per_set": by_set, "per_side": per_side, "rally_seconds": rally_seconds}
 
 
@@ -224,11 +231,30 @@ def evaluate_validation(truth: ValidationTruth, inference: ValidationInferenceRe
     covered_ids = {s.segment_id for s in confirmed}; rally_ids = {s.rally_id for s in confirmed}
     visible_actions = tuple(a for a in truth.actions if a.visibility == "visible" and a.rally_id in rally_ids)
     segment_rallies = {s.segment_id: s.rally_id for s in confirmed}
-    predictions = tuple(p for p in inference.predictions if p.segment_id in covered_ids and not _overlaps_visibility(p.start_seconds, p.end_seconds, truth, segment_rallies.get(p.segment_id)))
+    settings_segments = inference.settings.get("segments", ()) if isinstance(inference.settings, dict) else ()
+    settings_map = {item.get("segment_id"): item for item in settings_segments if isinstance(item, dict) and isinstance(item.get("segment_id"), str)}
+
+    def context(prediction: ValidationPrediction) -> tuple[str | None, str | None]:
+        rally_id = segment_rallies.get(prediction.segment_id)
+        status = "rally" if rally_id is not None else None
+        setting = settings_map.get(prediction.segment_id)
+        if setting is not None:
+            status = str(setting.get("status"))
+        candidates = [s for s in truth.coverage if s.start_seconds <= _center(prediction) < s.end_seconds and s.status in {"rally", "non_rally", "unusable"}]
+        if candidates:
+            candidate = min(candidates, key=lambda s: (abs(_center(prediction) - _center(s)), s.segment_id))
+            if status is None or prediction.segment_id not in segment_rallies:
+                status = candidate.status
+            if rally_id is None and candidate.status == "rally":
+                rally_id = candidate.rally_id
+        return rally_id, status
+
+    prediction_context = {p.prediction_id: context(p) for p in inference.predictions}
+    predictions = tuple(p for p in inference.predictions if prediction_context[p.prediction_id][0] in rally_ids and prediction_context[p.prediction_id][1] == "rally" and not _overlaps_visibility(p.start_seconds, p.end_seconds, truth, prediction_context[p.prediction_id][0]))
     grouped_matches: list[EventMatch] = []; grouped_diagnostics: list[EventMatch] = []; grouped_fp: list[str] = []; grouped_fn: list[str] = []
     for rally_id in sorted(rally_ids):
         rally_actions = tuple(a for a in visible_actions if a.rally_id == rally_id)
-        rally_predictions = tuple(replace(p, segment_id=rally_id) for p in predictions if segment_rallies.get(p.segment_id) == rally_id)
+        rally_predictions = tuple(replace(p, segment_id=rally_id) for p in predictions if prediction_context[p.prediction_id][0] == rally_id)
         result = match_events(rally_predictions, rally_actions)
         grouped_matches.extend(result.matches); grouped_diagnostics.extend(result.diagnostic_confusion); grouped_fp.extend(result.false_positive_ids); grouped_fn.extend(result.false_negative_refs)
     event_result = EventMatchResult(tuple(grouped_matches), tuple(grouped_fp), tuple(grouped_fn), tuple(grouped_diagnostics))
@@ -249,7 +275,6 @@ def evaluate_validation(truth: ValidationTruth, inference: ValidationInferenceRe
                 affected.update(s.rally_id for s in confirmed if s.start_seconds < interval.end_seconds and s.end_seconds > interval.start_seconds)
         visibility_metrics[kind] = {"interval_count": len(intervals), "seconds": sum(max(0.0, v.end_seconds - v.start_seconds) for v in intervals), "affected_rally_count": len(affected)}
     event = _event_metrics(predictions, visible_actions, event_result, confirmed)
-    non_rally_ids = {s.segment_id for s in truth.coverage if s.status == "non_rally"}
-    event["non_rally_prediction_count"] = sum(p.segment_id in non_rally_ids for p in inference.predictions)
+    event["non_rally_prediction_count"] = sum(prediction_context[p.prediction_id][1] == "non_rally" for p in inference.predictions)
     rows = tuple(asdict(item) for item in event_result.diagnostic_confusion)
     return ValidationReport(event, window_metrics, coverage_metrics, visibility_metrics, rows)
