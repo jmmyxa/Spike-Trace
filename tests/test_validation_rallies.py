@@ -10,7 +10,7 @@ import numpy as np
 
 from spiketrace.domain import VideoMetadata
 from spiketrace.errors import ValidationError, VideoError
-from spiketrace.validation_contract import ValidationVideoBinding
+from spiketrace.validation_contract import ValidationVideoBinding, sha256_file
 from spiketrace.validation_rallies import (
     RallyDetectionSettings,
     apply_side_map,
@@ -193,7 +193,7 @@ class RallyQueueTests(unittest.TestCase):
             source = root / "fixture.avi"
             _write_motion_video(source)
             metadata = VideoMetadata(source, 2.0, 20, 16, 12, 10.0)
-            binding = ValidationVideoBinding("m", source, root, "fixture.avi", "a" * 64, metadata)
+            binding = ValidationVideoBinding("m", source, root, "fixture.avi", sha256_file(source), metadata)
             segment = replace(complete_coverage(((1.0, 2.0),), duration_seconds=10.0, binding=binding)[1], status="pending")
             output = root / "proxies"
             with patch("spiketrace.validation_rallies.write_proxy_video") as writer:
@@ -206,6 +206,25 @@ class RallyQueueTests(unittest.TestCase):
             with patch("spiketrace.validation_rallies.write_proxy_video", side_effect=VideoError("decode failed")), self.assertRaises(VideoError):
                 write_rally_proxies((segment,), failed, video_root=root, repo_root=root, binding=binding)
             self.assertFalse(failed.exists())
+
+    def test_proxy_rejects_same_path_source_with_changed_content(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "fixture.avi"
+            _write_motion_video(source)
+            metadata = VideoMetadata(source, 2.0, 20, 16, 12, 10.0)
+            binding = ValidationVideoBinding("m", source, root, "fixture.avi", sha256_file(source), metadata)
+            segment = replace(complete_coverage(((1.0, 2.0),), duration_seconds=10.0, binding=binding)[1], status="pending")
+            source.write_bytes(b"replacement source")
+            output = root / "proxies"
+
+            with patch("spiketrace.validation_rallies.write_proxy_video") as writer:
+                writer.side_effect = lambda _source, destination, *_args, **_kwargs: destination.write_bytes(b"proxy")
+                with self.assertRaises(ValidationError):
+                    write_rally_proxies((segment,), output, video_root=root, repo_root=root, binding=binding)
+
+            writer.assert_not_called()
+            self.assertFalse(output.exists())
 
     def test_proxy_rejects_binding_root_mismatch(self):
         with tempfile.TemporaryDirectory() as temporary:

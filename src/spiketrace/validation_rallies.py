@@ -9,7 +9,12 @@ from typing import Literal, Mapping, Sequence
 
 from .domain import VideoMetadata
 from .errors import ValidationError, VideoError
-from .validation_contract import ValidationVideoBinding, canonical_json_bytes, write_new_bytes
+from .validation_contract import (
+    ValidationVideoBinding,
+    canonical_json_bytes,
+    sha256_file,
+    write_new_bytes,
+)
 from .video import inspect_video, write_proxy_video
 
 
@@ -271,6 +276,8 @@ def write_rally_proxies(queue: Sequence[RallySegment], output_dir: str | Path, *
         source = (root / binding.repo_video_path).resolve()
         if not source.is_file() or source != binding.video_path.resolve():
             raise ValidationError("Bound source video does not match explicit video_root")
+        if sha256_file(source) != binding.sha256:
+            raise ValidationError("Bound source video SHA-256 mismatch")
         for segment in queue:
             if segment.status not in {"pending", "rally"}: continue
             destination = clips / f"{segment.segment_id}.mp4"
