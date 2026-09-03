@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Literal
 
 from .constants import SAMPLING_CONTRACT
@@ -63,7 +64,7 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
     segments: list[InferenceSegment] = []
     side_records: list[tuple[int, int, float, float, str, tuple[int, int, int, int]]] = []
     for side_index, side in enumerate(truth.side_intervals):
-        if not isinstance(side, dict):
+        if not isinstance(side, Mapping):
             raise ValidationError("side interval is invalid")
         set_value = side.get("set_index")
         if isinstance(set_value, bool) or not isinstance(set_value, int):
