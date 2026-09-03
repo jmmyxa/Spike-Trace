@@ -95,3 +95,18 @@ $env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validatio
 Round 3 now resolves default sources from `repo_root`, permits only explicitly matching external `video_root` mappings, re-reads source metadata with `inspect_video`, rejects pseudo-numeric coverage values, and counts split no-action rallies uniquely.
 
 Round 3 implementation commit: `efc0be6f07619e198ef03805f7cf323637402b24`.
+
+## Review Fix Round 4
+
+RED regression matrix expanded in `tests/test_validation_truth.py` to cover duplicate action references and overlapping actions, action bounds, pending coverage, non-rally action rejection, free-ball projection, visibility/no-action row suppression, literal CSV bytes (ordered 13-column header, UTF-8 BOM, LF endings, crop coordinates, empty player number), destination collisions, paired publication rollback, split-rally unique no-action counting, and real source-file replacement. The source replacement test writes a readable video at the frozen path and verifies failure on both SHA mismatch and, with the frozen hash supplied, metadata mismatch; JSON metadata tampering remains covered independently.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\\Scripts\\python.exe -m unittest tests.test_validation_truth -v
+# Ran 23 tests ... OK
+$env:PYTHONPATH='src'; .venv\\Scripts\\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+Round 4 implementation changes add strict `source_segment_id`/`no_c2_action` coverage typing, strict locked-video metadata types/path checks, and a post-inspection source hash recheck to close TOCTOU mutation. `load_locked_truth` now parses and validates the locked authority/CSV without performing source I/O; `verify_truth_bundle` performs the caller-authorized source re-read with `repo_root`/`video_root` before returning counts.
