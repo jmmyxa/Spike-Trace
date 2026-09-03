@@ -65,7 +65,7 @@ spiketrace evaluate-validation `
   "data\SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4" `
   data\validation\socal_cup_c2_validation.json `
   --truth-csv data\validation\socal_cup_c2_validation.csv `
-  runs\action-r3d18\best.pt `
+  runs\rangitoto-r3d18-bootstrap\best.pt `
   outputs\validation\socal-cup-c2-baseline `
   --repo-root . --video-root E:\Spike-Trace `
   --manifest data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv `
