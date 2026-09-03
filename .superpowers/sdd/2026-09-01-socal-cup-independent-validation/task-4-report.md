@@ -45,6 +45,7 @@ Output: `Ran 25 tests ... OK`.
 - `7a696a4 feat: add locked segmented validation inference` (implementation, tests, docs)
 - `5f517cb docs: record Task 4 validation inference report` (this report)
 - `19749bb fix: wrap validation metadata read failures` (validation error boundary)
+- `0f8ecb3 feat: record excluded validation coverage` (explicit non-rally/unusable settings map)
 
 ## Concerns
 
