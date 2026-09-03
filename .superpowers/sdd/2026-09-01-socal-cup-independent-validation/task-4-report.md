@@ -84,4 +84,4 @@ $env:PYTHONPATH='src'
 
 Output: `Ran 27 tests ... OK`.
 
-Fix-round commits: `ec654b1 fix: harden locked segmented validation boundaries` (implementation, tests, docs); report update follows.
+Fix-round commits: `ec654b1 fix: harden locked segmented validation boundaries` (implementation, tests, docs), `820eab8 fix: accept mapping side interval records` (Mapping-compatible side records); report update follows.
