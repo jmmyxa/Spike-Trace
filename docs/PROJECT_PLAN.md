@@ -429,3 +429,5 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 - 人工修正数据是未来训练集的重要资产，后续产品不得丢弃修正历史。
 
 独立验证回合队列模块已加入：它生成 prediction-blind 的运动候选，补齐整场回合/非回合覆盖，按已确认换边区间应用近端/远端裁剪，并写出不含音轨的静音代理与原子 manifest。
+
+SoCal C2 独立验证命令均要求显式传入视频、真值、清单、选择源和 checkpoint 路径。冻结真值后使用 `evaluate-validation`，结果发布为不可覆盖的五文件目录 `outputs/validation/socal-cup-c2-baseline/`；可用 `verify-validation` 在不加载模型的情况下重算文件哈希、源视频绑定和跨文件计数。

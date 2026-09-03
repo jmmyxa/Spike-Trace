@@ -4,13 +4,36 @@ import argparse
 import json
 import math
 import sys
+import subprocess
+from datetime import datetime, timezone
 from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
-from .errors import SpikeTraceError
+from .errors import SpikeTraceError, ValidationError
 from .manifest import load_manifest, summarize_manifest
 from .video import inspect_video
+
+
+def _path(value: object) -> str:
+    return str(Path(value).expanduser().resolve())
+
+
+def _queue_binding(path: Path):
+    from .domain import VideoMetadata
+    from .validation_contract import ValidationVideoBinding
+    data = json.loads(path.read_text(encoding="utf-8"))
+    item = data["binding"]
+    metadata = item["metadata"]
+    video = Path(metadata["path"]).expanduser().resolve()
+    return ValidationVideoBinding(item["match_id"], video, video.parent, item["video_path"], item["sha256"], VideoMetadata(video, float(metadata["fps"]), int(metadata["frame_count"]), int(metadata["width"]), int(metadata["height"]), float(metadata["duration_seconds"])))
+
+
+def _git_sha(repo_root: Path) -> str:
+    try:
+        return subprocess.check_output(["git", "-C", str(repo_root), "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return "unknown"
 
 
 def _positive_int(value: str) -> int:
@@ -250,6 +273,39 @@ def build_parser() -> argparse.ArgumentParser:
     verify_review_bundle_parser.add_argument(
         "--repo-root", type=Path, default=Path(".")
     )
+
+    freeze = subparsers.add_parser("freeze-validation-video")
+    freeze.add_argument("video", type=Path); freeze.add_argument("binding_json", type=Path)
+    freeze.add_argument("--repo-root", type=Path, required=True); freeze.add_argument("--video-root", type=Path, required=True)
+    freeze.add_argument("--match-id", required=True); freeze.add_argument("--expected-sha256", required=True)
+
+    prepare = subparsers.add_parser("prepare-validation-rallies")
+    prepare.add_argument("binding_json", type=Path); prepare.add_argument("queue_json", type=Path); prepare.add_argument("proxy_dir", type=Path)
+    prepare.add_argument("--repo-root", type=Path, required=True); prepare.add_argument("--video-root", type=Path, required=True); prepare.add_argument("--side-map", type=Path, required=True)
+
+    init_truth = subparsers.add_parser("init-validation-truth")
+    init_truth.add_argument("queue_json", type=Path); init_truth.add_argument("draft_json", type=Path); init_truth.add_argument("--code-sha", required=True)
+
+    val_truth = subparsers.add_parser("validate-validation-truth")
+    val_truth.add_argument("binding_json", type=Path); val_truth.add_argument("draft_json", type=Path); val_truth.add_argument("--repo-root", type=Path, required=True); val_truth.add_argument("--video-root", type=Path, required=True)
+
+    lock_truth = subparsers.add_parser("lock-validation-truth")
+    lock_truth.add_argument("binding_json", type=Path); lock_truth.add_argument("draft_json", type=Path); lock_truth.add_argument("truth_json", type=Path); lock_truth.add_argument("truth_csv", type=Path)
+    lock_truth.add_argument("--repo-root", type=Path, required=True); lock_truth.add_argument("--video-root", type=Path, required=True); lock_truth.add_argument("--code-sha", required=True); lock_truth.add_argument("--created-at", required=True)
+
+    verify_truth = subparsers.add_parser("verify-validation-truth")
+    verify_truth.add_argument("binding_json", type=Path); verify_truth.add_argument("truth_json", type=Path); verify_truth.add_argument("truth_csv", type=Path); verify_truth.add_argument("--repo-root", type=Path, required=True); verify_truth.add_argument("--video-root", type=Path, required=True)
+
+    isolation = subparsers.add_parser("verify-validation-isolation")
+    isolation.add_argument("binding_json", type=Path); isolation.add_argument("--repo-root", type=Path, required=True); isolation.add_argument("--video-root", type=Path, required=True); isolation.add_argument("--manifest", type=Path, action="append", required=True); isolation.add_argument("--selection-source", type=Path, action="append", default=[])
+
+    evaluate = subparsers.add_parser("evaluate-validation")
+    evaluate.add_argument("video", type=Path); evaluate.add_argument("truth_json", type=Path); evaluate.add_argument("checkpoint", type=Path); evaluate.add_argument("output_dir", type=Path)
+    evaluate.add_argument("--repo-root", type=Path, required=True); evaluate.add_argument("--video-root", type=Path, required=True); evaluate.add_argument("--manifest", type=Path, action="append", required=True); evaluate.add_argument("--selection-source", type=Path, action="append", default=[])
+    evaluate.add_argument("--stride-seconds", type=_positive_float, default=0.4); evaluate.add_argument("--confidence-threshold", type=float, default=0.5); evaluate.add_argument("--merge-gap-seconds", type=float, default=0.25); evaluate.add_argument("--min-event-seconds", type=float, default=0.2); evaluate.add_argument("--batch-size", type=_positive_int, default=8); evaluate.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
+
+    verify_validation = subparsers.add_parser("verify-validation")
+    verify_validation.add_argument("output_dir", type=Path); verify_validation.add_argument("--repo-root", type=Path, required=True); verify_validation.add_argument("--video-root", type=Path, required=True)
     return parser
 
 
@@ -424,6 +480,92 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         from ._active_learning_review_outputs import validate_result_bundle
 
         return validate_result_bundle(args.output_dir, repo_root=args.repo_root)
+
+    if args.command == "freeze-validation-video":
+        from .validation_contract import freeze_video_binding, write_video_binding
+        binding = freeze_video_binding(args.video, match_id=args.match_id, expected_sha256=args.expected_sha256, repo_root=args.repo_root, video_root=args.video_root)
+        write_video_binding(args.binding_json, binding, repo_root=args.repo_root)
+        return {"binding_json": str(args.binding_json.resolve()), "match_id": binding.match_id, "video_sha256": binding.sha256}
+
+    if args.command == "prepare-validation-rallies":
+        from .validation_contract import load_video_binding
+        from .validation_rallies import RallyDetectionSettings, apply_side_map, complete_coverage, detect_rally_candidates, write_rally_proxies, write_rally_queue
+        binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
+        side_payload = json.loads(args.side_map.read_text(encoding="utf-8"))
+        set_intervals = side_payload.get("set_intervals", [])
+        side_intervals = side_payload.get("side_intervals", [])
+        candidates = detect_rally_candidates(binding.video_path, settings=RallyDetectionSettings())
+        segments = apply_side_map(complete_coverage(candidates, duration_seconds=binding.metadata.duration_seconds, binding=binding), set_intervals=set_intervals, side_intervals=side_intervals, metadata=binding.metadata)
+        write_rally_queue(args.queue_json, binding=binding, segments=segments, set_intervals=set_intervals, side_intervals=side_intervals, settings=RallyDetectionSettings(), code_sha="cli")
+        proxy = write_rally_proxies(segments, args.proxy_dir, video_root=args.video_root, repo_root=args.repo_root, binding=binding)
+        return {"queue_json": str(args.queue_json.resolve()), "proxy_dir": str(args.proxy_dir.resolve()), "segments": len(segments), "proxies": proxy.get("proxies", [])}
+
+    if args.command == "init-validation-truth":
+        from .validation_truth import init_truth_draft
+        path = init_truth_draft(args.queue_json, args.draft_json, code_sha=args.code_sha)
+        return {"draft_json": str(path)}
+
+    if args.command == "validate-validation-truth":
+        from .validation_contract import load_video_binding
+        from .validation_truth import validate_truth_draft
+        binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
+        truth = validate_truth_draft(args.draft_json, binding=binding)
+        return {"locked": truth.locked, "coverage_segments": len(truth.coverage), "visible_actions": sum(a.visibility == "visible" for a in truth.actions)}
+
+    if args.command == "lock-validation-truth":
+        from .validation_contract import load_video_binding
+        from .validation_truth import lock_truth_bundle
+        binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
+        result = lock_truth_bundle(args.draft_json, args.truth_csv, args.truth_json, binding=binding, repo_root=args.repo_root, code_sha=args.code_sha, created_at=args.created_at)
+        return {key: str(value) for key, value in result.items()}
+
+    if args.command == "verify-validation-truth":
+        from .validation_contract import load_video_binding
+        from .validation_truth import verify_truth_bundle
+        binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
+        return verify_truth_bundle(args.truth_json, args.truth_csv, binding=binding, repo_root=args.repo_root, video_root=args.video_root)
+
+    if args.command == "verify-validation-isolation":
+        from .validation_contract import assert_no_content_overlap, load_video_binding
+        binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
+        assert_no_content_overlap(binding, manifest_paths=args.manifest, selection_paths=args.selection_source, repo_root=args.repo_root, video_root=args.video_root)
+        return {"ok": True, "manifests": len(args.manifest), "selection_sources": len(args.selection_source)}
+
+    if args.command == "evaluate-validation":
+        from .validation_contract import assert_no_content_overlap, load_video_binding
+        from .validation_truth import load_locked_truth
+        from .validation_inference import infer_locked_validation
+        from .validation_evaluation import evaluate_validation
+        from .validation_outputs import write_validation_outputs
+        from .validation_contract import freeze_video_binding, ValidationVideoBinding
+        from .domain import VideoMetadata
+        truth_data = json.loads(args.truth_json.read_text(encoding="utf-8"))
+        video_info = truth_data.get("video", {})
+        if not isinstance(video_info, dict):
+            raise ValidationError("Locked truth video binding is invalid")
+        video_root = args.video_root.resolve()
+        source = (video_root / str(video_info.get("video_path", ""))).resolve()
+        expected_metadata = video_info.get("metadata")
+        if isinstance(expected_metadata, dict):
+            expected_metadata = {key: value for key, value in expected_metadata.items() if key != "path"}
+        csv_path = args.truth_json.with_suffix(".csv")
+        metadata_info = video_info.get("metadata") if isinstance(video_info.get("metadata"), dict) else {}
+        metadata = VideoMetadata(source, float(metadata_info.get("fps", 0)), int(metadata_info.get("frame_count", 0)), int(metadata_info.get("width", 0)), int(metadata_info.get("height", 0)), float(metadata_info.get("duration_seconds", 0)))
+        binding = ValidationVideoBinding(str(video_info.get("match_id", "")), source, video_root, str(video_info.get("video_path", "")), str(video_info.get("sha256", "")), metadata)
+        truth = load_locked_truth(args.truth_json, csv_path, binding=binding)
+        binding = freeze_video_binding(source, match_id=binding.match_id, expected_sha256=binding.sha256, repo_root=args.repo_root, video_root=video_root, expected_metadata=expected_metadata)
+        from .validation_truth import verify_truth_bundle
+        verify_truth_bundle(args.truth_json, csv_path, binding=binding, repo_root=args.repo_root, video_root=args.video_root)
+        assert_no_content_overlap(binding, manifest_paths=args.manifest, selection_paths=args.selection_source, repo_root=args.repo_root, video_root=args.video_root)
+        inference = infer_locked_validation(args.video, args.checkpoint, truth, stride_seconds=args.stride_seconds, confidence_threshold=args.confidence_threshold, merge_gap_seconds=args.merge_gap_seconds, min_event_seconds=args.min_event_seconds, batch_size=args.batch_size, device=args.device)
+        report = evaluate_validation(truth, inference)
+        created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        paths = write_validation_outputs(args.output_dir, truth=truth, inference=inference, report=report, checkpoint_path=args.checkpoint, code_sha=_git_sha(args.repo_root), parameters={"stride_seconds": args.stride_seconds, "confidence_threshold": args.confidence_threshold, "merge_gap_seconds": args.merge_gap_seconds, "min_event_seconds": args.min_event_seconds, "batch_size": args.batch_size, "device": args.device, "truth_json_path": str(args.truth_json), "truth_csv_path": str(csv_path)}, created_at=created_at)
+        return {key: str(value) for key, value in paths.items()}
+
+    if args.command == "verify-validation":
+        from .validation_outputs import verify_validation_outputs
+        return verify_validation_outputs(args.output_dir, repo_root=args.repo_root, video_root=args.video_root)
 
     raise ValueError(f"Unknown command: {args.command}")
 

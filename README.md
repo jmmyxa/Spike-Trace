@@ -25,6 +25,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 - 锁定真值后的分段推理：按 rally/non_rally 覆盖和半场裁剪生成绝对时间窗口，并保留事件来源窗口索引。
 - 独立验证评估：对可见动作执行确定性事件匹配，生成一秒窗口分类指标、覆盖率、可见性排除和混淆诊断报告。
 - 分段推理对侧区间映射、裁剪、参数和解码异常统一 fail-closed 抛出验证错误；无裁剪的 non_rally 显式排除。
+- SoCal 独立验证提供显式路径 CLI 门禁（`freeze-validation-video`、`prepare-validation-rallies`、`init/validate/lock/verify-validation-truth`、`verify-validation-isolation`、`evaluate-validation`、`verify-validation`）。评估结果以不可覆盖的五文件 bundle 写入 `outputs/validation/socal-cup-c2-baseline/`：`metrics.json`、`confusion_matrix.csv`、`predicted-events.json`、`predicted-events.csv` 和 `run-manifest.json`。
 
 ## 环境安装
 
