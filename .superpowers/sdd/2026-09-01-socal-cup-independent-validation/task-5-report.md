@@ -30,6 +30,25 @@ Ran 6 tests in 0.001s
 OK
 ```
 
+## Fix round 3
+
+- Raw `non_rally`/`unusable` coverage IDs no longer participate in rally-time fallback; they retain their excluded status unless inference settings explicitly map them.
+- Added a regression proving a raw non-rally ID overlapping rally time is neither matched nor counted as a visible false positive.
+
+Command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_evaluation tests.test_validation_truth tests.test_validation_inference -v
+```
+
+Output:
+
+```text
+Ran 41 tests in 0.336s
+
+OK
+```
+
 ## Fix round 2
 
 - Restricted temporal/status fallback to segment IDs present in locked coverage or `inference.settings["segments"]`.

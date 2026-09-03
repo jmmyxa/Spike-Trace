@@ -233,9 +233,12 @@ def evaluate_validation(truth: ValidationTruth, inference: ValidationInferenceRe
     segment_rallies = {s.segment_id: s.rally_id for s in confirmed}
     settings_segments = inference.settings.get("segments", ()) if isinstance(inference.settings, dict) else ()
     settings_map = {item.get("segment_id"): item for item in settings_segments if isinstance(item, dict) and isinstance(item.get("segment_id"), str)}
+    raw_status = {s.segment_id: s.status for s in truth.coverage if s.status in {"non_rally", "unusable"}}
 
     def context(prediction: ValidationPrediction) -> tuple[str | None, str | None]:
-        known_ids = set(segment_rallies) | set(settings_map) | {s.segment_id for s in truth.coverage}
+        if prediction.segment_id in raw_status and prediction.segment_id not in settings_map:
+            return None, raw_status[prediction.segment_id]
+        known_ids = set(segment_rallies) | set(settings_map)
         if prediction.segment_id not in known_ids:
             return None, None
         rally_id = segment_rallies.get(prediction.segment_id)

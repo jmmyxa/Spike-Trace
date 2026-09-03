@@ -97,6 +97,16 @@ class ValidationEvaluationTests(unittest.TestCase):
         self.assertEqual(result.event_metrics["matched_count"], 0)
         self.assertEqual(result.event_metrics["false_positive_count"], 0)
 
+    def test_raw_non_rally_id_cannot_be_reassigned_by_time(self):
+        coverage = (
+            RallySegment("r1", None, 1, "r1", 0.0, 1.0, "rally", "near", None, 0, 0, "manual", True, True, True),
+            RallySegment("nr", None, None, "", 2.0, 3.0, "non_rally", None, None, 0, 0, "manual", True, True, None),
+        )
+        result = evaluate_validation(truth(coverage=coverage), inference(prediction("raw", "serve", 0.5, 0.9, segment="nr")))
+        self.assertEqual(result.event_metrics["matched_count"], 0)
+        self.assertEqual(result.event_metrics["false_positive_count"], 0)
+        self.assertEqual(result.event_metrics["non_rally_prediction_count"], 1)
+
     def test_report_has_zero_support_classes_and_counts_non_rally_predictions(self):
         coverage = (RallySegment("r1", None, 2, "r1", 0.0, 2.0, "rally", "far", None, 0, 0, "manual", True, True, True),)
         report = evaluate_validation(truth(actions=(truth_action("a", "serve", 0.5),), coverage=coverage), inference(prediction("p", "serve", 0.5, 0.9), prediction("nr", "attack", 3.0, 0.8, segment="non-rally")))
