@@ -35,7 +35,7 @@ spiketrace prepare-validation-rallies `
 spiketrace init-validation-truth `
   data\validation\socal_cup_c2_queue.json `
   data\validation\socal_cup_c2_truth-draft.json `
-  --code-sha <draft-code-sha>
+  --code-sha (git rev-parse HEAD)
 
 spiketrace validate-validation-truth `
   data\validation\socal_cup_c2_binding.json `
@@ -48,7 +48,7 @@ spiketrace lock-validation-truth `
   data\validation\socal_cup_c2_validation.json `
   data\validation\socal_cup_c2_validation.csv `
   --repo-root . --video-root E:\Spike-Trace `
-  --code-sha <lock-code-sha> --created-at <utc-iso8601>
+  --code-sha (git rev-parse HEAD) --created-at "2026-09-04T00:00:00Z"
 
 spiketrace verify-validation-truth `
   data\validation\socal_cup_c2_binding.json `

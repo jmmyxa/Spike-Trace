@@ -54,7 +54,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 .venv\Scripts\spiketrace.exe init-validation-truth `
   data\validation\socal_cup_c2_queue.json `
   data\validation\socal_cup_c2_truth-draft.json `
-  --code-sha <draft-code-sha>
+  --code-sha (git rev-parse HEAD)
 
 .venv\Scripts\spiketrace.exe validate-validation-truth `
   data\validation\socal_cup_c2_binding.json `
@@ -67,7 +67,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
   data\validation\socal_cup_c2_validation.json `
   data\validation\socal_cup_c2_validation.csv `
   --repo-root . --video-root E:\Spike-Trace `
-  --code-sha <lock-code-sha> --created-at <utc-iso8601>
+  --code-sha (git rev-parse HEAD) --created-at "2026-09-04T00:00:00Z"
 
 .venv\Scripts\spiketrace.exe verify-validation-truth `
   data\validation\socal_cup_c2_binding.json `
