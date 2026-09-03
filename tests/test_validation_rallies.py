@@ -50,6 +50,10 @@ class RallyQueueTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             write_rally_proxies((), tempfile.mkdtemp(), repo_root=Path("."))
 
+    def test_nonfinite_candidate_rejected(self):
+        with self.assertRaises(ValidationError):
+            complete_coverage(((float("nan"), 2.0),), duration_seconds=12.0, binding=self.binding)
+
 
 if __name__ == "__main__":
     unittest.main()

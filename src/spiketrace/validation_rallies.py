@@ -94,7 +94,14 @@ def _segment(segment_id: str, start: float, end: float, status: str, rally_id: s
 def complete_coverage(candidates: Sequence[tuple[float, float]], *, duration_seconds: float, binding: ValidationVideoBinding) -> tuple[RallySegment, ...]:
     if not math.isfinite(float(duration_seconds)) or duration_seconds <= 0:
         raise ValidationError("duration_seconds is invalid")
-    normalized = sorted((float(a), float(b)) for a, b in candidates)
+    normalized = []
+    for a, b in candidates:
+        try: start, end = float(a), float(b)
+        except (TypeError, ValueError) as exc: raise ValidationError("candidate interval is invalid") from exc
+        if not math.isfinite(start) or not math.isfinite(end):
+            raise ValidationError("candidate interval is invalid")
+        normalized.append((start, end))
+    normalized.sort()
     previous = 0.0
     output: list[RallySegment] = []
     rally_num = 0
@@ -173,7 +180,17 @@ def load_rally_queue(path: str | Path, *, binding: ValidationVideoBinding) -> tu
         for key, value in expected.items():
             if key == "path": continue
             if abs(float(actual[key]) - float(value)) > 1e-6: raise ValidationError("Queue metadata mismatch")
-        return tuple(RallySegment(**{**item, "crop": tuple(item["crop"]) if item.get("crop") else None}) for item in data["segments"])
+        segments = []
+        for item in data["segments"]:
+            if not isinstance(item, dict) or not all(k in item for k in ("segment_id", "start_seconds", "end_seconds", "status", "boundary_source")):
+                raise ValidationError("Invalid rally segment")
+            if item["status"] not in {"pending", "rally", "non_rally", "unusable"} or item["boundary_source"] not in {"motion", "manual"}:
+                raise ValidationError("Invalid rally segment")
+            crop = item.get("crop")
+            if crop is not None and (not isinstance(crop, (list, tuple)) or len(crop) != 4):
+                raise ValidationError("Invalid rally segment crop")
+            segments.append(RallySegment(**{**item, "crop": tuple(crop) if crop is not None else None}))
+        return tuple(segments)
     except ValidationError:
         raise
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:

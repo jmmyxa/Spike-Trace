@@ -44,3 +44,7 @@ GREEN: after enforcing finite duration/settings, contiguous complete coverage, s
 ## Reviewer Fix Round 2
 
 RED: added explicit-binding proxy regression; pre-fix behavior accepted proxy generation without a frozen source. GREEN: proxy generation now requires `binding`, resolves only `binding.repo_video_path` beneath explicit `video_root` (or the binding root), and validates identity. Raw candidate gaps are evaluated before buffering; queue loading validates shape, format, binding identity, and metadata with fail-closed `ValidationError`. Focused run: `Ran 5 tests ... OK`.
+
+## Reviewer Fix Round 3
+
+RED: `test_nonfinite_candidate_rejected` failed before implementation. GREEN: candidate endpoints now reject non-finite values before sorting, and queue loading validates required segment fields, status/boundary enums, and crop shape with fail-closed errors. Focused run: `Ran 6 tests ... OK`.
