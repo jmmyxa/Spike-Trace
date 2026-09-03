@@ -152,9 +152,9 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 7. 对持续时间过短的孤立结果进行过滤。
 8. 输出最终事件及推理证据。
 
-锁定独立验证真值后，`spiketrace.validation_inference.infer_locked_validation` 仅对具备
-`team_side`/`crop` 的 rally 子区间执行上述窗口推理。每段独立解码和合并，窗口与预测保留
-绝对时间、段标识和来源窗口索引；`non_rally` 区间因没有裁剪契约而保留为评估排除范围，不伪造裁剪。
+锁定独立验证真值后，`spiketrace.validation_inference.infer_locked_validation` 对能由侧区间
+完整映射到 `team_side`/`crop` 的 rally 与 non_rally 子区间执行上述窗口推理。每段独立解码和合并，窗口与预测保留
+绝对时间、段标识和来源窗口索引；没有完整裁剪映射的 non_rally 区间保留为评估排除范围。
 入口在加载 checkpoint 前检查 `truth.locked`，并在解码前后校验视频与 checkpoint SHA-256。
 侧区间必须无重叠且完整覆盖 rally；非法参数、窗口、合并或解码错误统一转换为验证错误。
 

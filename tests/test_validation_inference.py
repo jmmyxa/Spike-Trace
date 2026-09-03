@@ -130,6 +130,20 @@ class ValidationInferenceTests(unittest.TestCase):
                 result = infer_locked_validation(video, checkpoint, _truth(video, coverage=coverage, side_intervals=adjacent), device="cpu", confidence_threshold=0.0)
             self.assertEqual([window.team_side for window in result.windows], ["near", "far"])
 
+    def test_runs_non_rally_when_side_mapping_is_available(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            video, checkpoint = root / "fixture.avi", root / "model.pt"
+            _write_video(video)
+            checkpoint.write_bytes(b"checkpoint")
+            sides = ({"set_index": 1, "start_seconds": 2.0, "end_seconds": 3.0, "team_side": "near", "crop": [0, 0, 4, 6]},)
+            with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
+                result = infer_locked_validation(video, checkpoint, _truth(video, side_intervals=sides), device="cpu", confidence_threshold=0.0)
+            non_rally_windows = [window for window in result.windows if window.segment_id.startswith("non-rally-01")]
+            self.assertTrue(non_rally_windows)
+            self.assertEqual(result.settings["segments"][-1]["status"], "non_rally")
+            self.assertFalse(result.settings["excluded_non_rally_segments"])
+
     def test_converts_public_parameter_and_pipeline_errors(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

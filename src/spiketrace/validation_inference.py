@@ -24,6 +24,7 @@ class InferenceSegment:
     end_seconds: float
     team_side: Literal["near", "far"]
     crop: tuple[int, int, int, int]
+    status: Literal["rally", "non_rally"] = "rally"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,8 +61,9 @@ class ValidationInferenceResult:
     video_sha256: str
 
 
-def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]:
+def _segments_from_truth(truth: ValidationTruth) -> tuple[tuple[InferenceSegment, ...], list[dict[str, object]]]:
     segments: list[InferenceSegment] = []
+    exclusions: list[dict[str, object]] = []
     side_records: list[tuple[int, int, float, float, str, tuple[int, int, int, int]]] = []
     for side_index, side in enumerate(truth.side_intervals):
         if not isinstance(side, Mapping):
@@ -88,9 +90,12 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
     for coverage in truth.coverage:
         if coverage.status not in {"rally", "non_rally", "unusable", "pending"}:
             raise ValidationError("coverage status is invalid")
-        if coverage.status != "rally":
+        if coverage.status == "unusable":
             continue
-        if isinstance(coverage.set_index, bool) or not isinstance(coverage.set_index, int):
+        if coverage.status not in {"rally", "non_rally"}:
+            exclusions.append({"segment_id": coverage.segment_id, "start_seconds": coverage.start_seconds, "end_seconds": coverage.end_seconds, "status": coverage.status, "reason": "unsupported coverage status"})
+            continue
+        if coverage.status == "rally" and (isinstance(coverage.set_index, bool) or not isinstance(coverage.set_index, int)):
             raise ValidationError("inference segment set_index is invalid")
         for value in (coverage.start_seconds, coverage.end_seconds):
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
@@ -99,7 +104,7 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
             raise ValidationError("inference segment team_side is invalid")
         if coverage.crop is not None and (not isinstance(coverage.crop, (tuple, list)) or len(coverage.crop) != 4):
             raise ValidationError("inference segment crop is invalid")
-        if coverage.team_side in {"near", "far"} and coverage.crop is not None:
+        if coverage.status == "rally" and coverage.team_side in {"near", "far"} and coverage.crop is not None:
             segments.append(
                 InferenceSegment(
                     coverage.segment_id,
@@ -108,13 +113,32 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
                     float(coverage.end_seconds),
                     coverage.team_side,
                     tuple(coverage.crop),
+                    "rally",
                 )
             )
             continue
-        mapped = [item for item in side_records if item[1] == coverage.set_index and item[3] > coverage.start_seconds and item[2] < coverage.end_seconds]
+        mapped = [item for item in side_records if (coverage.set_index is None or item[1] == coverage.set_index) and item[3] > coverage.start_seconds and item[2] < coverage.end_seconds]
         mapped.sort(key=lambda item: item[2])
         cursor = float(coverage.start_seconds)
-        for side_index, _, side_start, side_end, team_side, crop in mapped:
+        complete = True
+        for _, _, side_start, side_end, _, _ in mapped:
+            start = max(cursor, side_start)
+            end = min(float(coverage.end_seconds), side_end)
+            if end <= start:
+                continue
+            if start > cursor + 1e-9:
+                complete = False
+                break
+            cursor = end
+        if cursor < float(coverage.end_seconds) - 1e-9:
+            complete = False
+        if not complete:
+            if coverage.status == "non_rally":
+                exclusions.append({"segment_id": coverage.segment_id, "start_seconds": coverage.start_seconds, "end_seconds": coverage.end_seconds, "status": coverage.status, "reason": "no complete side/crop mapping"})
+                continue
+            raise ValidationError(f"side intervals do not cover {coverage.segment_id}")
+        cursor = float(coverage.start_seconds)
+        for side_index, mapped_set_index, side_start, side_end, team_side, crop in mapped:
             start = max(float(coverage.start_seconds), side_start)
             end = min(float(coverage.end_seconds), side_end)
             if end <= start:
@@ -122,19 +146,23 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[InferenceSegment, ...]
             segments.append(
                 InferenceSegment(
                     f"{coverage.segment_id}-{team_side}-{side_index + 1}",
-                    int(coverage.set_index),
+                    int(mapped_set_index if coverage.set_index is None else coverage.set_index),
                     start,
                     end,
                     team_side,
                     tuple(crop),
+                    coverage.status,
                 )
             )
             if start > cursor + 1e-9:
                 raise ValidationError(f"side intervals do not cover {coverage.segment_id}")
             cursor = end
         if cursor < float(coverage.end_seconds) - 1e-9:
+            if coverage.status == "non_rally":
+                exclusions.append({"segment_id": coverage.segment_id, "start_seconds": coverage.start_seconds, "end_seconds": coverage.end_seconds, "status": coverage.status, "reason": "no complete side/crop mapping"})
+                continue
             raise ValidationError(f"side intervals do not cover {coverage.segment_id}")
-    return tuple(segments)
+    return tuple(segments), exclusions
 
 
 def _validate_public_parameters(*, stride_seconds: float, confidence_threshold: float, merge_gap_seconds: float, min_event_seconds: float, batch_size: int, device: str) -> None:
@@ -214,7 +242,7 @@ def infer_locked_validation(
                 raise ValidationError("video metadata does not match locked truth binding")
         elif observed != expected:
             raise ValidationError("video metadata does not match locked truth binding")
-    segments = _segments_from_truth(truth)
+    segments, mapping_exclusions = _segments_from_truth(truth)
     _validate_segments(segments, duration=metadata.duration_seconds, width=metadata.width, height=metadata.height)
     try:
         torch = require_torch()
@@ -265,7 +293,7 @@ def infer_locked_validation(
         for prediction_index, event in enumerate(events, start=1):
             local_indices = tuple(provenance.get(event.event_id, ()))
             predictions.append(ValidationPrediction(f"{truth.video.match_id}:set-{segment.set_index:02d}:{segment.segment_id}:pred-{prediction_index:06d}", segment.segment_id, segment.set_index, segment.team_side, event.start_ms / 1000.0, event.end_ms / 1000.0, event.action, event.confidence, tuple(segment_offset + index for index in local_indices)))
-        segment_settings.append({"segment_id": segment.segment_id, "set_index": segment.set_index, "start_seconds": segment.start_seconds, "end_seconds": segment.end_seconds, "team_side": segment.team_side, "crop": list(segment.crop), "window_count": len(segment_windows)})
+        segment_settings.append({"segment_id": segment.segment_id, "set_index": segment.set_index, "start_seconds": segment.start_seconds, "end_seconds": segment.end_seconds, "team_side": segment.team_side, "crop": list(segment.crop), "status": segment.status, "window_count": len(segment_windows)})
 
     try:
         final_video_sha256 = _file_sha256(source)
@@ -294,15 +322,9 @@ def infer_locked_validation(
         "locked_truth_sha256": truth.locked_sha256,
         "segments": segment_settings,
         "non_rally_inference": "omitted: no team_side/crop",
-        "excluded_non_rally_segments": [
-            {
-                "segment_id": segment.segment_id,
-                "start_seconds": segment.start_seconds,
-                "end_seconds": segment.end_seconds,
-                "status": segment.status,
-            }
-            for segment in truth.coverage
-            if segment.status in {"non_rally", "unusable"}
+        "excluded_non_rally_segments": mapping_exclusions + [
+            {"segment_id": segment.segment_id, "start_seconds": segment.start_seconds, "end_seconds": segment.end_seconds, "status": segment.status, "reason": "unusable coverage"}
+            for segment in truth.coverage if segment.status == "unusable"
         ],
         "checkpoint_sha256": initial_checkpoint_sha256,
         "video_sha256": initial_video_sha256,
