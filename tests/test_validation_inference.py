@@ -43,7 +43,7 @@ class _ConstantModel:
         return torch.tensor([[0.0, 2.0]], dtype=torch.float32).repeat(batch.shape[0], 1)
 
 
-def _truth(video_path: Path, *, locked: bool = True, coverage=None, side_intervals=()) -> ValidationTruth:
+def _truth(video_path: Path, *, locked: bool = True, coverage=None, side_intervals=(), set_intervals=()) -> ValidationTruth:
     capture = cv2.VideoCapture(str(video_path))
     metadata = VideoMetadata(video_path.resolve(), float(capture.get(cv2.CAP_PROP_FPS)), int(capture.get(cv2.CAP_PROP_FRAME_COUNT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_COUNT)) / float(capture.get(cv2.CAP_PROP_FPS)))
     capture.release()
@@ -53,7 +53,7 @@ def _truth(video_path: Path, *, locked: bool = True, coverage=None, side_interva
         RallySegment("set-01-far", None, 1, "rally-02", 1.0, 2.0, "rally", "far", (4, 0, 8, 6), 0.0, 0.0, "manual", True, True, None),
         RallySegment("non-rally-01", None, None, "", 2.0, 3.0, "non_rally", None, None, 0.0, 0.0, "manual", True, True, None),
     )
-    return ValidationTruth(binding, (), tuple(side_intervals), tuple(segments), (), (), "truth-v1", locked, "truth-lock", None)
+    return ValidationTruth(binding, tuple(set_intervals), tuple(side_intervals), tuple(segments), (), (), "truth-v1", locked, "truth-lock", None)
 
 
 def _checkpoint():
@@ -138,7 +138,7 @@ class ValidationInferenceTests(unittest.TestCase):
             checkpoint.write_bytes(b"checkpoint")
             sides = ({"set_index": 1, "start_seconds": 2.0, "end_seconds": 3.0, "team_side": "near", "crop": [0, 0, 4, 6]},)
             with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
-                result = infer_locked_validation(video, checkpoint, _truth(video, side_intervals=sides), device="cpu", confidence_threshold=0.0)
+                result = infer_locked_validation(video, checkpoint, _truth(video, side_intervals=sides, set_intervals=({"set_index": 1, "start_seconds": 0.0, "end_seconds": 3.0},)), device="cpu", confidence_threshold=0.0)
             non_rally_windows = [window for window in result.windows if window.segment_id.startswith("non-rally-01")]
             self.assertTrue(non_rally_windows)
             self.assertEqual(result.settings["segments"][-1]["status"], "non_rally")

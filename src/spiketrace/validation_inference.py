@@ -104,7 +104,7 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[tuple[InferenceSegment
             raise ValidationError("inference segment team_side is invalid")
         if coverage.crop is not None and (not isinstance(coverage.crop, (tuple, list)) or len(coverage.crop) != 4):
             raise ValidationError("inference segment crop is invalid")
-        if coverage.status == "rally" and coverage.team_side in {"near", "far"} and coverage.crop is not None:
+        if coverage.team_side in {"near", "far"} and coverage.crop is not None and isinstance(coverage.set_index, int) and not isinstance(coverage.set_index, bool):
             segments.append(
                 InferenceSegment(
                     coverage.segment_id,
@@ -113,11 +113,26 @@ def _segments_from_truth(truth: ValidationTruth) -> tuple[tuple[InferenceSegment
                     float(coverage.end_seconds),
                     coverage.team_side,
                     tuple(coverage.crop),
-                    "rally",
+                    coverage.status,
                 )
             )
             continue
-        mapped = [item for item in side_records if (coverage.set_index is None or item[1] == coverage.set_index) and item[3] > coverage.start_seconds and item[2] < coverage.end_seconds]
+        effective_set_index = coverage.set_index
+        if coverage.status == "non_rally" and effective_set_index is None:
+            containing_sets = []
+            for interval in truth.set_intervals:
+                try:
+                    set_index = interval.get("set_index")
+                    start, end = float(interval["start_seconds"]), float(interval["end_seconds"])
+                except (AttributeError, KeyError, TypeError, ValueError):
+                    continue
+                if isinstance(set_index, int) and not isinstance(set_index, bool) and start <= coverage.start_seconds and end >= coverage.end_seconds:
+                    containing_sets.append(set_index)
+            if len(containing_sets) != 1:
+                exclusions.append({"segment_id": coverage.segment_id, "start_seconds": coverage.start_seconds, "end_seconds": coverage.end_seconds, "status": coverage.status, "reason": "ambiguous or missing set mapping"})
+                continue
+            effective_set_index = containing_sets[0]
+        mapped = [item for item in side_records if item[1] == effective_set_index and item[3] > coverage.start_seconds and item[2] < coverage.end_seconds]
         mapped.sort(key=lambda item: item[2])
         cursor = float(coverage.start_seconds)
         complete = True
@@ -321,7 +336,7 @@ def infer_locked_validation(
         "checkpoint": str(checkpoint),
         "locked_truth_sha256": truth.locked_sha256,
         "segments": segment_settings,
-        "non_rally_inference": "omitted: no team_side/crop",
+        "non_rally_inference": "mapped side/crop segments included; unmapped intervals excluded",
         "excluded_non_rally_segments": mapping_exclusions + [
             {"segment_id": segment.segment_id, "start_seconds": segment.start_seconds, "end_seconds": segment.end_seconds, "status": segment.status, "reason": "unusable coverage"}
             for segment in truth.coverage if segment.status == "unusable"
