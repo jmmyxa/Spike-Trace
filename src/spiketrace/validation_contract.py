@@ -135,9 +135,9 @@ def assert_no_content_overlap(binding: ValidationVideoBinding, *, manifest_paths
                     split = (row.get("split") or "").strip().lower()
                     if split not in {"train", "val", "test"}:
                         raise ValidationError(f"Manifest row has invalid split: {split or '<empty>'}")
-                    if row.get("match_id", "").strip() == binding.match_id:
+                    if (row.get("match_id") or "").strip() == binding.match_id:
                         raise ValidationError("Manifest overlaps validation match_id")
-                    if row.get("video_sha256", "").strip().lower() == binding.sha256.lower():
+                    if (row.get("video_sha256") or "").strip().lower() == binding.sha256.lower():
                         raise ValidationError("Manifest overlaps validation SHA-256")
                     raw = (row.get("video_path") or "").strip()
                     if raw:

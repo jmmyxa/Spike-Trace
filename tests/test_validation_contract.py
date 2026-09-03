@@ -129,6 +129,16 @@ class ValidationContractTests(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 assert_no_content_overlap(binding, manifest_paths=[manifest], selection_paths=[], repo_root=root)
 
+    def test_manifest_missing_optional_values_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "fixture.avi"
+            self._video(video)
+            binding = freeze_video_binding(video, match_id="m", expected_sha256=sha256_file(video), repo_root=root)
+            manifest = root / "manifest.csv"
+            manifest.write_text("video_path,split,match_id,video_sha256\nother.avi,val\n", encoding="utf-8")
+            assert_no_content_overlap(binding, manifest_paths=[manifest], selection_paths=[], repo_root=root)
+
 
 if __name__ == "__main__":
     unittest.main()
