@@ -158,6 +158,10 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 入口在加载 checkpoint 前检查 `truth.locked`，并在解码前后校验视频与 checkpoint SHA-256。
 侧区间必须无重叠且完整覆盖 rally；非法参数、窗口、合并或解码错误统一转换为验证错误。
 
+`spiketrace.validation_evaluation` 消费锁定真值与分段推理结果，使用一秒绝对窗口和确定性动态规划
+事件匹配输出六类动作的事件 Precision/Recall/F1、混淆诊断、覆盖率与可见性排除统计；
+`free_ball` 投影为 `background`，non-rally 与不可用区间不会进入窗口支持集。
+
 ### 7.3 事件输出契约
 
 ```json
