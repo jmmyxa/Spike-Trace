@@ -243,6 +243,16 @@ def infer_locked_validation(
         "locked_truth_sha256": truth.locked_sha256,
         "segments": segment_settings,
         "non_rally_inference": "omitted: no team_side/crop",
+        "excluded_non_rally_segments": [
+            {
+                "segment_id": segment.segment_id,
+                "start_seconds": segment.start_seconds,
+                "end_seconds": segment.end_seconds,
+                "status": segment.status,
+            }
+            for segment in truth.coverage
+            if segment.status in {"non_rally", "unusable"}
+        ],
         "checkpoint_sha256": initial_checkpoint_sha256,
         "video_sha256": initial_video_sha256,
     }
