@@ -61,3 +61,18 @@ $env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validatio
 The fix binds `csv_sha256` into the lock digest, centralizes source-root/hash resolution, validates every split rally part and mapped side crop, preserves strict text/schema types, uses `csv.writer`, and rolls back a newly published CSV if JSON publication fails.
 
 Fix commit: `6d60d5145bfa254470a69256e18b38743e75cb49`.
+
+## Review Fix Round 2
+
+Added RED regressions for CSV parser/order, explicit repository-root participation, split-rally confirmation/counting, strict coverage and locked action fields, and publication collision behavior.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 10 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+The implementation now validates every split rally part, counts no-action rallies by unique rally ID, enforces locked action fields and coverage types, uses `csv.reader` for projection comparison, and requires a valid explicit repository root during source resolution.
