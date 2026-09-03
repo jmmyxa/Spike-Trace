@@ -83,6 +83,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 .venv\Scripts\spiketrace.exe evaluate-validation `
   "data\SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4" `
   data\validation\socal_cup_c2_validation.json `
+  --truth-csv data\validation\socal_cup_c2_validation.csv `
   runs\rangitoto-r3d18-bootstrap\best.pt `
   outputs\validation\socal-cup-c2-baseline `
   --repo-root . --video-root E:\Spike-Trace `

@@ -194,6 +194,8 @@ class SoCalValidationIntegrationTests(unittest.TestCase):
                             str(truth_json),
                             str(checkpoint),
                             str(output_dir),
+                            "--truth-csv",
+                            str(truth_csv),
                             "--repo-root",
                             str(root),
                             "--video-root",
