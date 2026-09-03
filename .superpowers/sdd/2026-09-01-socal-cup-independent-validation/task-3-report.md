@@ -76,3 +76,5 @@ $env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validatio
 ```
 
 The implementation now validates every split rally part, counts no-action rallies by unique rally ID, enforces locked action fields and coverage types, uses `csv.reader` for projection comparison, and requires a valid explicit repository root during source resolution.
+
+Round 2 implementation commit: `3c21bd3503921fe0fb766fc5ee57899e05c25b83`.
