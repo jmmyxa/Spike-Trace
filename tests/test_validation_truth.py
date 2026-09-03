@@ -36,6 +36,16 @@ class TruthTests(unittest.TestCase):
                           settings=RallyDetectionSettings(), code_sha="q")
         return root,binding,queue
 
+    def _draft_payload(self, binding, queue):
+        root = Path(queue).parent
+        draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        return root, draft, json.loads(draft.read_text(encoding="utf-8"))
+
+    def _write_and_validate(self, draft, payload, binding):
+        draft.write_bytes(canonical_json_bytes(payload))
+        return validate_truth_draft(draft, binding=binding)
+
     def test_draft_is_prediction_blind_and_free_ball_projects(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"
         init_truth_draft(queue,draft,code_sha="abc123")
@@ -52,6 +62,101 @@ class TruthTests(unittest.TestCase):
         for bad in ({**base,"start_seconds":12.5},{**base,"player_number":"7"},{**base,"label":"wat"},{**base,"rally_id":"non"}):
             payload["actions"]=[bad]; draft.write_text(json.dumps(payload))
             with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
+
+    def test_rejects_duplicate_action_ref_and_duplicate_action(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
+        base = {"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"video","player_number":None,"notes":""}
+        payload["actions"] = [base, {**base, "start_seconds": 13, "end_seconds": 14}]
+        with self.assertRaisesRegex(ValidationError, "duplicate or invalid action_ref"):
+            self._write_and_validate(draft, payload, binding)
+        payload["actions"] = [base, {**base, "action_ref":"b", "start_seconds":12, "end_seconds":13}]
+        with self.assertRaisesRegex(ValidationError, "overlapping duplicate action"):
+            self._write_and_validate(draft, payload, binding)
+
+    def test_rejects_action_outside_rally_and_pending_coverage(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
+        payload["actions"] = [{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":9,"end_seconds":10,"visibility":"visible","evidence":"video","player_number":None,"notes":""}]
+        with self.assertRaisesRegex(ValidationError, "whole seconds within rally"):
+            self._write_and_validate(draft, payload, binding)
+        payload["actions"] = []
+        payload["coverage"][0].update(coverage_confirmed=False, all_c2_actions_checked=False, no_c2_action=None)
+        with self.assertRaisesRegex(ValidationError, "pending or inconsistent"):
+            self._write_and_validate(draft, payload, binding)
+
+    def test_rejects_actions_in_non_rally_segments(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True)
+        payload["coverage"][2]["rally_id"] = "non-rally-001"
+        payload["actions"] = [{"action_ref":"a","rally_id":"non-rally-001","label":"serve","start_seconds":17,"end_seconds":18,"visibility":"visible","evidence":"video","player_number":None,"notes":""}]
+        with self.assertRaises(ValidationError):
+            self._write_and_validate(draft, payload, binding)
+
+    def test_free_ball_projection_and_visibility_rows_are_distinct(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
+        payload["actions"] = [
+            {"action_ref":"free","rally_id":"set-01-rally-001","label":"free_ball","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"video","player_number":None,"notes":""},
+            {"action_ref":"hidden","rally_id":"set-01-rally-001","label":"attack","start_seconds":13,"end_seconds":14,"visibility":"fully_occluded","evidence":"video","player_number":None,"notes":""},
+        ]
+        payload["visibility_events"] = [{"event_ref":"v1","rally_id":"set-01-rally-001","kind":"fully_occluded","start_seconds":13,"end_seconds":14,"notes":"net"}]
+        self._write_and_validate(draft, payload, binding)
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            rows = list(csv.reader(handle))
+        self.assertEqual(rows[1][3], "background")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(verify_truth_bundle(json_path, csv_path, binding=binding, repo_root=root)["visibility_intervals"], 1)
+
+    def test_csv_bytes_header_order_lf_bom_crop_and_empty_player(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
+        payload["actions"] = [{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"video","player_number":None,"notes":""}]
+        draft.write_bytes(canonical_json_bytes(payload)); csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        raw = csv_path.read_bytes()
+        self.assertTrue(raw.startswith(b"\xef\xbb\xbf")); self.assertNotIn(b"\r\n", raw)
+        self.assertEqual(raw.decode("utf-8-sig"), CSV_HEADER + "\nmatch.avi,12,13,serve,near,,0,0,100,80,val,match-1,set-01-rally-001\n")
+
+    def test_destination_collision_is_rejected_without_overwrite(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True); payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload)); csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        original_csv, original_json = csv_path.read_bytes(), json_path.read_bytes()
+        with self.assertRaisesRegex(ValidationError, "Destination already exists"):
+            lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="later")
+        self.assertEqual(csv_path.read_bytes(), original_csv); self.assertEqual(json_path.read_bytes(), original_json)
+
+    def test_verify_rejects_replaced_source_video_metadata(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True); payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload)); csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        replacement = root / "replacement.avi"
+        writer = cv2.VideoWriter(str(replacement), cv2.VideoWriter_fourcc(*"MJPG"), 2.0, (100, 80))
+        for _ in range(20): writer.write(np.zeros((80, 100, 3), dtype=np.uint8))
+        writer.release()
+        binding.video_path.write_bytes(replacement.read_bytes())
+        with self.assertRaises(ValidationError):
+            verify_truth_bundle(json_path, csv_path, binding=binding, repo_root=root)
+
+    def test_verify_re_reads_replaced_source_metadata_after_hash_binding(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True); payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload)); csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        replacement = root / "replacement-size.avi"
+        writer = cv2.VideoWriter(str(replacement), cv2.VideoWriter_fourcc(*"MJPG"), 1.0, (90, 80))
+        for _ in range(20): writer.write(np.zeros((80, 90, 3), dtype=np.uint8))
+        writer.release()
+        binding.video_path.write_bytes(replacement.read_bytes())
+        import spiketrace.validation_truth as truth_mod
+        with patch.object(truth_mod, "sha256_file", return_value=binding.sha256):
+            with self.assertRaisesRegex(ValidationError, "metadata mismatch"):
+                verify_truth_bundle(json_path, csv_path, binding=binding, repo_root=root)
 
     def test_lock_projection_and_verify(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False); payload["actions"]=[{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"x","player_number":None,"notes":""}]; draft.write_text(json.dumps(payload))
@@ -101,9 +206,30 @@ class TruthTests(unittest.TestCase):
         tampered=json.loads(json_path.read_text()); tampered["video"]["metadata"]["width"]=999; json_path.write_bytes(canonical_json_bytes(tampered))
         with self.assertRaises(ValidationError): load_locked_truth(json_path,csv_path,binding=binding)
 
+    def test_locked_metadata_rejects_pseudo_numeric_values(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True); payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload)); csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(draft, csv_path, json_path, binding=binding, repo_root=root, code_sha="x", created_at="now")
+        locked = json.loads(json_path.read_text(encoding="utf-8"))
+        locked["video"]["metadata"]["frame_count"] = "20"
+        json_path.write_bytes(canonical_json_bytes(locked))
+        with self.assertRaises(ValidationError):
+            load_locked_truth(json_path, csv_path, binding=binding)
+
     def test_coverage_rejects_string_numeric(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0]["start_seconds"]="10"; payload["coverage"][0]["no_c2_action"]=True; draft.write_text(json.dumps(payload))
         with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
+
+    def test_coverage_rejects_invalid_source_and_no_action_types(self):
+        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        payload["coverage"][0]["source_segment_id"] = ["not", "text"]
+        with self.assertRaises(ValidationError):
+            self._write_and_validate(draft, payload, binding)
+        payload["coverage"][0]["source_segment_id"] = "set-01-rally-001"
+        payload["coverage"][0]["no_c2_action"] = [True]
+        with self.assertRaises(ValidationError):
+            self._write_and_validate(draft, payload, binding)
 
     def test_unique_no_action_count_for_split_rally(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); first=payload["coverage"][0]; first.update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=True); second=payload["coverage"][1]; second.update(rally_id=first["rally_id"],coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=True); draft.write_text(json.dumps(payload)); csv_path=root/"truth.csv"; json_path=root/"truth.json"; lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="now"); report=verify_truth_bundle(json_path,csv_path,binding=binding,repo_root=root); self.assertEqual(report["no_action_rallies"],1)

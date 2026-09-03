@@ -103,6 +103,14 @@ def _check_binding(video: Mapping[str, object], binding: ValidationVideoBinding)
     if not isinstance(metadata, dict):
         raise ValidationError("Truth video metadata is invalid")
     _check_fields(metadata, {"path", "fps", "frame_count", "width", "height", "duration_seconds"}, "metadata")
+    if metadata.get("path") != str(binding.video_path):
+        raise ValidationError("Truth video metadata path mismatch")
+    for field in ("frame_count", "width", "height"):
+        if isinstance(metadata.get(field), bool) or not isinstance(metadata.get(field), int):
+            raise ValidationError("Truth video metadata is invalid")
+    for field in ("fps", "duration_seconds"):
+        if isinstance(metadata.get(field), bool) or not isinstance(metadata.get(field), (int, float)):
+            raise ValidationError("Truth video metadata is invalid")
     for key, expected in binding.metadata.to_dict().items():
         if key == "path":
             continue
@@ -146,6 +154,8 @@ def _resolve_bound_source(binding: ValidationVideoBinding, *, repo_root: str | P
                 raise ValidationError("Bound source video metadata mismatch")
         elif observed != expected:
             raise ValidationError("Bound source video metadata mismatch")
+    if sha256_file(source).lower() != binding.sha256.lower():
+        raise ValidationError("Bound source video SHA-256 mismatch")
     return source
 
 
@@ -167,6 +177,9 @@ def _coverage_from_payload(items: object) -> tuple[RallySegment, ...]:
                 raise ValidationError("coverage status is invalid")
             if not isinstance(item.get("segment_id"), str) or not isinstance(item.get("rally_id"), str):
                 raise ValidationError("coverage identifiers are invalid")
+            source_segment_id = item.get("source_segment_id")
+            if source_segment_id is not None and not isinstance(source_segment_id, str):
+                raise ValidationError("coverage source_segment_id is invalid")
             if item.get("boundary_source") not in {"motion", "manual"} or item.get("team_side") not in {None, "near", "far"}:
                 raise ValidationError("coverage enum is invalid")
             if item.get("set_index") is not None and (isinstance(item.get("set_index"), bool) or not isinstance(item.get("set_index"), int)):
@@ -176,6 +189,9 @@ def _coverage_from_payload(items: object) -> tuple[RallySegment, ...]:
             for flag in ("coverage_confirmed", "all_c2_actions_checked"):
                 if not isinstance(item.get(flag), bool):
                     raise ValidationError("coverage confirmation is invalid")
+            no_c2_action = item.get("no_c2_action")
+            if no_c2_action is not None and not isinstance(no_c2_action, bool):
+                raise ValidationError("coverage no_c2_action is invalid")
             result.append(RallySegment(**{**item, "crop": crop}))
         except (TypeError, ValueError) as exc:
             raise ValidationError("coverage record is invalid") from exc
@@ -411,7 +427,6 @@ def load_locked_truth(json_path: str | Path, csv_path: str | Path, *, binding: V
     data = _read_json(json_path)
     if data.get("state") != "locked" or not isinstance(data.get("integrity"), dict) or not data["integrity"].get("locked_sha256"):
         raise ValidationError("Locked truth is missing lock hash")
-    _resolve_bound_source(binding, repo_root=binding.video_root, video_root=binding.video_root)
     truth = _validate_records(data, binding, locked=True)
     authority = dict(data); authority.pop("integrity", None)
     if _lock_digest(authority, truth.csv_sha256 or "") != data["integrity"].get("locked_sha256"):
