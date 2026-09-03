@@ -113,7 +113,9 @@ def _check_binding(video: Mapping[str, object], binding: ValidationVideoBinding)
 
 
 def _resolve_bound_source(binding: ValidationVideoBinding, *, repo_root: str | Path, video_root: str | Path | None = None) -> Path:
-    del repo_root
+    repository = Path(repo_root).expanduser().resolve()
+    if not repository.is_dir():
+        raise ValidationError("Repository root is invalid")
     relative = Path(binding.repo_video_path)
     if relative.is_absolute() or relative.as_posix() != binding.repo_video_path or ".." in relative.parts:
         raise ValidationError("Binding video_path must be relative POSIX")
@@ -146,6 +148,14 @@ def _coverage_from_payload(items: object) -> tuple[RallySegment, ...]:
                 crop = tuple(crop)
             if item.get("status") not in {"pending", "rally", "non_rally", "unusable"}:
                 raise ValidationError("coverage status is invalid")
+            if not isinstance(item.get("segment_id"), str) or not isinstance(item.get("rally_id"), str):
+                raise ValidationError("coverage identifiers are invalid")
+            if item.get("boundary_source") not in {"motion", "manual"} or item.get("team_side") not in {None, "near", "far"}:
+                raise ValidationError("coverage enum is invalid")
+            if item.get("set_index") is not None and (isinstance(item.get("set_index"), bool) or not isinstance(item.get("set_index"), int)):
+                raise ValidationError("coverage set_index is invalid")
+            for bound in ("start_seconds", "end_seconds", "buffer_before_seconds", "buffer_after_seconds"):
+                _num(item.get(bound), f"coverage {bound}")
             for flag in ("coverage_confirmed", "all_c2_actions_checked"):
                 if not isinstance(item.get(flag), bool):
                     raise ValidationError("coverage confirmation is invalid")
@@ -217,6 +227,8 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
             raise ValidationError("action record is invalid")
         _check_fields(raw, _ACTION_FIELDS, "action")
         required_action = {"action_ref", "rally_id", "label", "start_seconds", "end_seconds", "visibility", "evidence", "notes"}
+        if locked:
+            required_action |= {"match_id", "projected_label", "player_number"}
         if not required_action.issubset(raw):
             raise ValidationError("action record is missing fields")
         if set(raw) - {"action_ref", "rally_id", "label", "projected_label", "start_seconds", "end_seconds", "visibility", "evidence", "player_number", "notes", "match_id"}:
@@ -410,6 +422,12 @@ def verify_truth_bundle(json_path: str | Path, csv_path: str | Path, *, binding:
         raise
     except (OSError, csv.Error) as exc:
         raise ValidationError("CSV is unreadable") from exc
-    expected = [r for r in _csv_bytes(truth).decode("utf-8-sig").splitlines()[1:] if r]
-    if rows != [r.split(",") for r in expected]: raise ValidationError("CSV projection mismatch")
-    return {"coverage_segments": len(truth.coverage), "visible_actions": sum(a.visibility == "visible" for a in truth.actions), "no_action_rallies": sum(s.status == "rally" and s.no_c2_action is True for s in truth.coverage), "visibility_intervals": len(truth.visibility_events)}
+    try:
+        import io
+        generated = csv.reader(io.StringIO(_csv_bytes(truth).decode("utf-8-sig"), newline=""))
+        next(generated, None)
+        expected_rows = list(generated)
+    except csv.Error as exc:
+        raise ValidationError("CSV projection is invalid") from exc
+    if rows != expected_rows: raise ValidationError("CSV projection mismatch")
+    return {"coverage_segments": len(truth.coverage), "visible_actions": sum(a.visibility == "visible" for a in truth.actions), "no_action_rallies": len({s.rally_id for s in truth.coverage if s.status == "rally" and s.no_c2_action is True}), "visibility_intervals": len(truth.visibility_events)}
