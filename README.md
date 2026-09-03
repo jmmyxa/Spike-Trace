@@ -22,6 +22,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 - 训练集/验证集损失、逐类 Precision/Recall/F1 和混淆矩阵。
 - 可复现 checkpoint，包含标签、预处理参数、指标和模型版本。
 - 整场视频滑动窗口推理（单次顺序解码整段视频）、动作事件合并、JSON/CSV 导出。
+- 锁定真值后的分段推理：按每段半场裁剪生成绝对时间窗口，并保留事件来源窗口索引。
 
 ## 环境安装
 
@@ -127,6 +128,7 @@ Spike-Trace/
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
 │  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
+│  ├─ validation_inference.py    # 锁定真值分段推理、半场裁剪和绝对时间来源契约
 │  ├─ manifest.py                # 标注 CSV 加载、校验与摘要
 │  ├─ metrics.py                 # 分类指标和混淆矩阵
 │  ├─ ml.py                      # PyTorch 模型、设备和 checkpoint
