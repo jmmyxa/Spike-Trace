@@ -203,7 +203,7 @@ mapped = apply_side_map(
 self.assertEqual(mapped[0].team_side, "near")
 ~~~
 
-Test an interval crossing 6.0 seconds is rejected instead of silently inheriting one crop, and test proxy output is absent after a simulated decode failure.
+Test an interval crossing 6.0 seconds is split into two mapped segments with preserved source lineage instead of silently inheriting one crop, and test proxy output is absent after a simulated decode failure.
 
 - [ ] **Step 2: Run the rally tests and verify RED**
 
@@ -577,7 +577,7 @@ git commit -m "feat: publish isolated validation runs"
 
 - [ ] **Step 1: Write the integration and documentation assertions**
 
-Add tests that load data/validation/socal_cup_c2_video.json, assert the exact match ID, path, dimensions, FPS, frame count, duration, and SHA from the design, assert README/PROJECT_PLAN contain C2 Attack 17-1 Elite, the new module names, five output filenames, the explicit no-prediction-before-lock rule, and the val-only isolation rule, and add a synthetic end-to-end test that runs freeze → queue → draft → lock → evaluate with a fake checkpoint and verifies the output directory.
+Add tests that load data/validation/socal_cup_c2_video.json, assert the exact match ID, path, dimensions, FPS, frame count, duration, and SHA from the design, and add a synthetic end-to-end test that runs freeze → queue → draft → lock → evaluate with a fake checkpoint and verifies the output directory. Documentation is reviewed manually during this task; do not write brittle tests that merely search README/PROJECT_PLAN text.
 
 - [ ] **Step 2: Run integration tests and verify RED**
 
