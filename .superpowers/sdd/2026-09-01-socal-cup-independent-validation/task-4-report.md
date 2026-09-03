@@ -43,7 +43,8 @@ Output: `Ran 25 tests ... OK`.
 ## Commits
 
 - `7a696a4 feat: add locked segmented validation inference` (implementation, tests, docs)
-- Follow-up report commit will include this file.
+- `5f517cb docs: record Task 4 validation inference report` (this report)
+- `19749bb fix: wrap validation metadata read failures` (validation error boundary)
 
 ## Concerns
 
