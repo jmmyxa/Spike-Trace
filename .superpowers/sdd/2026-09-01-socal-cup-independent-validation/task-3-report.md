@@ -44,3 +44,20 @@ Result: `Ran 32 tests ... OK`.
 ## Commit
 
 `0125471efe1c44a8cf4913db6e253772e7a9b1d4` (`feat: add locked validation truth bundle`)
+
+## Review Fix Round 1
+
+RED regressions covered CSV-hash rebinding, explicit-root substitution, split-rally confirmation, strict evidence typing, and paired-publication rollback.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 10 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+The fix binds `csv_sha256` into the lock digest, centralizes source-root/hash resolution, validates every split rally part and mapped side crop, preserves strict text/schema types, uses `csv.writer`, and rolls back a newly published CSV if JSON publication fails.
+
+Fix commit: `360433842b81a121dec2e0277d19a5d9048aab41`.

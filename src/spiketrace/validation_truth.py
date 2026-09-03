@@ -20,6 +20,8 @@ _VIDEO_FIELDS = {"match_id", "video_path", "sha256", "metadata"}
 _ACTION_FIELDS = {"action_ref", "match_id", "rally_id", "label", "projected_label", "start_seconds", "end_seconds", "visibility", "evidence", "player_number", "notes"}
 _VIS_FIELDS = {"event_ref", "rally_id", "kind", "start_seconds", "end_seconds", "notes"}
 _COVERAGE_FIELDS = {f.name for f in RallySegment.__dataclass_fields__.values()}
+_SET_FIELDS = {"set_index", "start_seconds", "end_seconds"}
+_SIDE_FIELDS = {"segment_id", "set_index", "start_seconds", "end_seconds", "team_side", "crop"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,6 +101,7 @@ def _check_binding(video: Mapping[str, object], binding: ValidationVideoBinding)
     metadata = video.get("metadata")
     if not isinstance(metadata, dict):
         raise ValidationError("Truth video metadata is invalid")
+    _check_fields(metadata, {"path", "fps", "frame_count", "width", "height", "duration_seconds"}, "metadata")
     for key, expected in binding.metadata.to_dict().items():
         if key == "path":
             continue
@@ -107,6 +110,24 @@ def _check_binding(video: Mapping[str, object], binding: ValidationVideoBinding)
                 raise ValidationError("Truth video metadata mismatch")
         except (KeyError, TypeError, ValueError) as exc:
             raise ValidationError("Truth video metadata is invalid") from exc
+
+
+def _resolve_bound_source(binding: ValidationVideoBinding, *, repo_root: str | Path, video_root: str | Path | None = None) -> Path:
+    del repo_root
+    relative = Path(binding.repo_video_path)
+    if relative.is_absolute() or relative.as_posix() != binding.repo_video_path or ".." in relative.parts:
+        raise ValidationError("Binding video_path must be relative POSIX")
+    root = Path(video_root).expanduser().resolve() if video_root is not None else binding.video_root.resolve()
+    source = (root / relative).resolve()
+    try:
+        source.relative_to(root)
+    except ValueError as exc:
+        raise ValidationError("Binding video_path escapes video root") from exc
+    if source != binding.video_path.resolve() or not source.is_file():
+        raise ValidationError("Bound source video does not match explicit video_root")
+    if sha256_file(source).lower() != binding.sha256.lower():
+        raise ValidationError("Bound source video SHA-256 mismatch")
+    return source
 
 
 def _coverage_from_payload(items: object) -> tuple[RallySegment, ...]:
@@ -160,14 +181,28 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
     set_intervals = data.get("set_intervals"); side_intervals = data.get("side_intervals")
     if not isinstance(set_intervals, list) or not isinstance(side_intervals, list):
         raise ValidationError("Intervals must be lists")
-    for interval in [*set_intervals, *side_intervals]:
+    for interval in set_intervals:
+        if not isinstance(interval, dict): raise ValidationError("Interval record is invalid")
+        _check_fields(interval, _SET_FIELDS, "set interval")
+        set_index = interval.get("set_index")
+        if isinstance(set_index, bool) or not isinstance(set_index, int): raise ValidationError("set interval set_index is invalid")
+        start, end = _num(interval.get("start_seconds"), "interval start"), _num(interval.get("end_seconds"), "interval end")
+        if end <= start or start < 0 or end > binding.metadata.duration_seconds: raise ValidationError("Interval bounds are invalid")
+    for interval in side_intervals:
         if not isinstance(interval, dict):
             raise ValidationError("Interval record is invalid")
+        _check_fields(interval, _SIDE_FIELDS, "side interval")
         if "start_seconds" not in interval or "end_seconds" not in interval:
             raise ValidationError("Interval record is missing bounds")
         start, end = _num(interval.get("start_seconds"), "interval start"), _num(interval.get("end_seconds"), "interval end")
         if end <= start or start < 0 or end > binding.metadata.duration_seconds:
             raise ValidationError("Interval bounds are invalid")
+        if interval.get("team_side") not in {"near", "far"}: raise ValidationError("side team_side is invalid")
+        set_index = interval.get("set_index")
+        if isinstance(set_index, bool) or not isinstance(set_index, int): raise ValidationError("side set_index is invalid")
+        crop = interval.get("crop")
+        if not isinstance(crop, (list, tuple)) or len(crop) != 4 or any(isinstance(v, bool) or not isinstance(v, int) for v in crop): raise ValidationError("side crop is invalid")
+        if crop[0] < 0 or crop[1] < 0 or crop[2] <= crop[0] or crop[3] <= crop[1] or crop[2] > binding.metadata.width or crop[3] > binding.metadata.height: raise ValidationError("side crop geometry is invalid")
     actions_raw = data.get("actions")
     if not isinstance(actions_raw, list):
         raise ValidationError("actions must be a list")
@@ -207,17 +242,23 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
         player = raw.get("player_number")
         if player not in (None, ""):
             raise ValidationError("player_number must be empty")
-        action = GroundTruthAction(ref, binding.match_id, rally_id, str(label), "background" if label == "free_ball" else str(label), start, end, visibility, str(raw.get("evidence", "")), None, str(raw.get("notes", "")))
+        if not isinstance(raw.get("evidence"), str) or not isinstance(raw.get("notes"), str):
+            raise ValidationError("action evidence and notes must be strings")
+        action = GroundTruthAction(ref, binding.match_id, rally_id, str(label), "background" if label == "free_ball" else str(label), start, end, visibility, raw["evidence"], None, raw["notes"])
         if "projected_label" in raw and raw.get("projected_label") != action.projected_label:
             raise ValidationError("projected label mismatch")
         actions.append(action); by_rally.setdefault(rally_id, []).append(action)
     for rally_id, rally_parts in rally_segments.items():
-        rally = rally_parts[0]
-        if not rally.coverage_confirmed or not rally.all_c2_actions_checked:
-            raise ValidationError("rally coverage is pending")
-        has = bool(by_rally.get(rally.rally_id))
-        if rally.no_c2_action is None or bool(rally.no_c2_action) != (not has):
+        has = bool(by_rally.get(rally_id))
+        flags = {part.no_c2_action for part in rally_parts}
+        if len(flags) != 1 or any(not part.coverage_confirmed or not part.all_c2_actions_checked for part in rally_parts):
+            raise ValidationError("rally coverage is pending or inconsistent")
+        flag = next(iter(flags))
+        if flag is None or bool(flag) != (not has):
             raise ValidationError("no_c2_action does not match actions")
+        for action in by_rally.get(rally_id, ()):
+            if not any(part.start_seconds <= action.start_seconds and action.end_seconds <= part.end_seconds for part in rally_parts):
+                raise ValidationError("action must fit one rally segment")
     for segment in coverage:
         if segment.status in {"non_rally", "unusable"} and by_rally.get(segment.rally_id):
             raise ValidationError("actions cannot be in non-rally coverage")
@@ -243,7 +284,8 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
             raise ValidationError("visibility interval is out of bounds")
         rally_id = raw.get("rally_id")
         if rally_id is not None and rally_id not in rally_segments: raise ValidationError("visibility rally is invalid")
-        vis_refs.add(ref); visibility_events.append(VisibilityInterval(ref, rally_id, kind, start, end, str(raw.get("notes", ""))))
+        if not isinstance(raw.get("notes"), str): raise ValidationError("visibility notes must be a string")
+        vis_refs.add(ref); visibility_events.append(VisibilityInterval(ref, rally_id, kind, start, end, raw["notes"]))
     annotation = data.get("annotation")
     if not isinstance(annotation, dict): raise ValidationError("annotation is invalid")
     _check_fields(annotation, {"annotation_version", "code_sha", "created_at"}, "annotation")
@@ -279,18 +321,25 @@ def validate_truth_draft(draft_json: str | Path, *, binding: ValidationVideoBind
 def _csv_bytes(truth: ValidationTruth) -> bytes:
     import io
     out = io.StringIO(newline="")
-    out.write("\ufeff" + CSV_HEADER + "\n")
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(_CSV_FIELDS)
     for action in truth.actions:
         if action.visibility != "visible": continue
         segment = next((s for s in truth.coverage if s.rally_id == action.rally_id and s.status == "rally" and s.start_seconds <= action.start_seconds and s.end_seconds >= action.end_seconds), None)
         if segment is None: raise ValidationError("action has no mapped rally segment")
         side = next((s for s in truth.side_intervals if _side_set_index(s, segment.set_index) == segment.set_index and float(s.get("start_seconds", -1)) <= action.start_seconds and float(s.get("end_seconds", -1)) >= action.end_seconds), None)
         if side is None: raise ValidationError("action has no mapped side interval")
-        crop = side.get("crop") or segment.crop
-        if not crop or len(crop) != 4: raise ValidationError("action crop is missing")
-        row = [truth.video.repo_video_path, str(int(action.start_seconds)), str(int(action.end_seconds)), action.projected_label, str(side.get("team_side", segment.team_side or "")), "", str(crop[0]), str(crop[1]), str(crop[2]), str(crop[3]), "val", truth.video.match_id, action.rally_id]
-        out.write(",".join(row) + "\n")
-    return out.getvalue().encode("utf-8")
+        crop = side.get("crop")
+        if not isinstance(crop, (list, tuple)) or len(crop) != 4: raise ValidationError("action crop is missing")
+        row = [truth.video.repo_video_path, str(int(action.start_seconds)), str(int(action.end_seconds)), action.projected_label, str(side.get("team_side", "")), "", str(crop[0]), str(crop[1]), str(crop[2]), str(crop[3]), "val", truth.video.match_id, action.rally_id]
+        writer.writerow(row)
+    return ("\ufeff" + out.getvalue()).encode("utf-8")
+
+
+def _lock_digest(authority: Mapping[str, object], csv_digest: str) -> str:
+    basis = dict(authority)
+    basis["integrity"] = {"csv_sha256": csv_digest}
+    return hashlib.sha256(canonical_json_bytes(basis)).hexdigest()
 
 
 def _side_set_index(side: Mapping[str, object], fallback: int | None) -> int | None:
@@ -302,20 +351,24 @@ def _side_set_index(side: Mapping[str, object], fallback: int | None) -> int | N
 
 
 def lock_truth_bundle(draft_json: str | Path, csv_path: str | Path, json_path: str | Path, *, binding: ValidationVideoBinding, repo_root: str | Path, code_sha: str, created_at: str) -> dict[str, Path]:
+    if not isinstance(code_sha, str) or not code_sha.strip() or not isinstance(created_at, str) or not created_at.strip():
+        raise ValidationError("code_sha and created_at must be non-empty strings")
     truth = validate_truth_draft(draft_json, binding=binding)
-    root = Path(repo_root).expanduser().resolve()
-    if Path(binding.repo_video_path).is_absolute() or Path(binding.repo_video_path).as_posix() != binding.repo_video_path:
-        raise ValidationError("Binding video_path must be relative POSIX")
-    source = (binding.video_root / binding.repo_video_path).resolve()
-    if source != binding.video_path.resolve() or not source.is_file() or sha256_file(source).lower() != binding.sha256.lower():
-        raise ValidationError("Bound source video SHA-256 mismatch")
+    _resolve_bound_source(binding, repo_root=repo_root)
     csv_bytes = _csv_bytes(truth); csv_digest = hashlib.sha256(csv_bytes).hexdigest()
     authority = {"format_version": 1, "state": "locked", "video": _binding_dict(binding), "set_intervals": list(truth.set_intervals), "side_intervals": list(truth.side_intervals), "coverage": [asdict(s) for s in truth.coverage], "actions": [asdict(a) for a in truth.actions], "visibility_events": [asdict(v) for v in truth.visibility_events], "annotation": {"annotation_version": truth.annotation_version, "code_sha": code_sha, "created_at": created_at}}
-    locked_digest = hashlib.sha256(canonical_json_bytes(authority)).hexdigest()
+    locked_digest = _lock_digest(authority, csv_digest)
     final = {**authority, "integrity": {"locked_sha256": locked_digest, "csv_sha256": csv_digest}}
     csv_dest, json_dest = Path(csv_path).expanduser().resolve(), Path(json_path).expanduser().resolve()
     if csv_dest.exists() or json_dest.exists(): raise ValidationError("Destination already exists")
-    write_new_bytes(csv_dest, csv_bytes); write_new_bytes(json_dest, canonical_json_bytes(final))
+    published_csv = False
+    try:
+        write_new_bytes(csv_dest, csv_bytes); published_csv = True
+        write_new_bytes(json_dest, canonical_json_bytes(final))
+    except Exception:
+        if published_csv and csv_dest.exists() and not json_dest.exists():
+            csv_dest.unlink(missing_ok=True)
+        raise
     return {"csv": csv_dest, "json": json_dest}
 
 
@@ -325,7 +378,7 @@ def load_locked_truth(json_path: str | Path, csv_path: str | Path, *, binding: V
         raise ValidationError("Locked truth is missing lock hash")
     truth = _validate_records(data, binding, locked=True)
     authority = dict(data); authority.pop("integrity", None)
-    if hashlib.sha256(canonical_json_bytes(authority)).hexdigest() != data["integrity"].get("locked_sha256"):
+    if _lock_digest(authority, truth.csv_sha256 or "") != data["integrity"].get("locked_sha256"):
         raise ValidationError("Locked truth hash mismatch")
     if truth.csv_sha256:
         try:
@@ -339,7 +392,7 @@ def load_locked_truth(json_path: str | Path, csv_path: str | Path, *, binding: V
 
 def verify_truth_bundle(json_path: str | Path, csv_path: str | Path, *, binding: ValidationVideoBinding, repo_root: str | Path, video_root: str | Path | None = None) -> dict[str, object]:
     truth = load_locked_truth(json_path, csv_path, binding=binding)
-    if sha256_file(binding.video_path).lower() != binding.sha256.lower(): raise ValidationError("Bound source video SHA-256 mismatch")
+    _resolve_bound_source(binding, repo_root=repo_root, video_root=video_root)
     data = _read_json(json_path); integrity = data["integrity"]
     try:
         if Path(json_path).read_bytes() != canonical_json_bytes(data):
@@ -347,7 +400,7 @@ def verify_truth_bundle(json_path: str | Path, csv_path: str | Path, *, binding:
     except OSError as exc:
         raise ValidationError("Locked truth JSON is unreadable") from exc
     authority = dict(data); authority.pop("integrity", None)
-    if hashlib.sha256(canonical_json_bytes(authority)).hexdigest() != integrity.get("locked_sha256"): raise ValidationError("Locked truth hash mismatch")
+    if _lock_digest(authority, truth.csv_sha256 or "") != integrity.get("locked_sha256"): raise ValidationError("Locked truth hash mismatch")
     try:
         with Path(csv_path).open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.reader(handle); header = next(reader, None)

@@ -1,10 +1,11 @@
 import csv, json, tempfile, unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from spiketrace.domain import VideoMetadata
 from spiketrace.errors import ValidationError
-from spiketrace.validation_contract import ValidationVideoBinding, sha256_file
+from spiketrace.validation_contract import ValidationVideoBinding, sha256_file, canonical_json_bytes
 from spiketrace.validation_rallies import RallySegment, RallyDetectionSettings, write_rally_queue
 from spiketrace.validation_truth import (
     CSV_HEADER, GroundTruthAction, VisibilityInterval, ValidationTruth,
@@ -60,6 +61,34 @@ class TruthTests(unittest.TestCase):
     def test_duplicate_and_unknown_root_fields_fail_closed(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); text=draft.read_text(); draft.write_text(text[:-1] + ',"extra":1}')
         with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
+
+    def test_csv_hash_rebinding_is_rejected(self):
+        root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False); payload["actions"]=[{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"x","player_number":None,"notes":""}]; draft.write_text(json.dumps(payload)); csv_path=root/"truth.csv"; json_path=root/"truth.json"; lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="now"); csv_path.write_bytes(csv_path.read_bytes().replace(b"\n",b"\r\n")); locked=json.loads(json_path.read_text()); locked["integrity"]["csv_sha256"]=sha256_file(csv_path); json_path.write_bytes(canonical_json_bytes(locked));
+        with self.assertRaises(ValidationError): verify_truth_bundle(json_path,csv_path,binding=binding,repo_root=root)
+
+    def test_explicit_video_root_mismatch_is_rejected(self):
+        root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=True); payload["actions"]=[]; draft.write_text(json.dumps(payload)); csv_path=root/"truth.csv"; json_path=root/"truth.json"; lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="now"); other=root/"other"; other.mkdir(); (other/"match.mp4").write_bytes(binding.video_path.read_bytes());
+        with self.assertRaises(ValidationError): verify_truth_bundle(json_path,csv_path,binding=binding,repo_root=root,video_root=other)
+
+    def test_split_rally_requires_every_part_confirmed(self):
+        root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0]["coverage_confirmed"]=True; payload["coverage"][0]["all_c2_actions_checked"]=False; payload["coverage"][0]["no_c2_action"]=True; payload["coverage"].insert(1,dict(payload["coverage"][0],segment_id="set-01-rally-001-b",start_seconds=11,end_seconds=12,coverage_confirmed=True,all_c2_actions_checked=True)); draft.write_text(json.dumps(payload));
+        with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
+
+    def test_strict_interval_and_text_validation(self):
+        root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False); payload["actions"]=[{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":3,"player_number":None,"notes":""}]; draft.write_text(json.dumps(payload));
+        with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
+
+    def test_paired_publication_rolls_back_first_file(self):
+        root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=True); draft.write_text(json.dumps(payload)); csv_path=root/"truth.csv"; json_path=root/"truth.json"
+        import spiketrace.validation_truth as truth_mod
+        original = truth_mod.write_new_bytes
+        calls = {"count": 0}
+        def fail_second(path, data):
+            calls["count"] += 1
+            if calls["count"] == 2: raise ValidationError("injected publication failure")
+            return original(path, data)
+        with patch.object(truth_mod, "write_new_bytes", side_effect=fail_second), self.assertRaises(ValidationError): lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="now")
+        self.assertFalse(csv_path.exists()); self.assertFalse(json_path.exists())
         draft.write_text('{"format_version":1,"format_version":1}')
         with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
 
