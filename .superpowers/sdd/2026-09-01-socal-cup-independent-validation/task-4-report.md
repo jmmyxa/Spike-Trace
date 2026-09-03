@@ -53,3 +53,35 @@ Output: `Ran 25 tests ... OK`.
   evaluation contract supplies a side/crop mapping for them.
 - Real SoCal video/checkpoint inference was not run; fixtures only use tiny
   synthetic video and a deterministic fake model as required.
+
+## Fix round 1
+
+### RED
+
+Added regressions for missing/malformed side mappings, adjacent near/far
+mapping, invalid public parameters, stride gaps, and decoder failures. These
+cases exposed the prior silent side-record skip and leaked `ValueError`/video
+pipeline exceptions.
+
+### GREEN
+
+Side intervals are now validated strictly, sorted per set, rejected when
+overlapping, and required to fully cover every rally lacking its own valid
+side/crop. Public inference parameters and checkpoint window compatibility are
+validated before decoding; checkpoint/device, range, merge, and sequential
+decoder failures are converted to `ValidationError` while preserving the early
+locked-truth gate. The existing `stride_seconds > window_seconds` rejection is
+retained to preserve the established sliding-window coverage contract and is
+covered by regression tests. README and project plan document these fail-closed
+boundaries.
+
+### Fix round command/output
+
+```powershell
+$env:PYTHONPATH='src'
+.venv\Scripts\python.exe -m unittest tests.test_validation_inference tests.test_inference tests.test_video -v
+```
+
+Output: `Ran 27 tests ... OK`.
+
+Fix-round commits: `ec654b1 fix: harden locked segmented validation boundaries` (implementation, tests, docs); report update follows.
