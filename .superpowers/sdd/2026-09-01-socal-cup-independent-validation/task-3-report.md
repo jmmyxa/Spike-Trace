@@ -78,3 +78,20 @@ $env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validatio
 The implementation now validates every split rally part, counts no-action rallies by unique rally ID, enforces locked action fields and coverage types, uses `csv.reader` for projection comparison, and requires a valid explicit repository root during source resolution.
 
 Round 2 implementation commit: `3c21bd3503921fe0fb766fc5ee57899e05c25b83`.
+
+## Review Fix Round 3
+
+RED regressions covered repository-root authority, explicit external video roots, actual source metadata tampering, strict coverage numeric types, literal CSV bytes, and unique split-rally no-action counts.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 13 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+Round 3 now resolves default sources from `repo_root`, permits only explicitly matching external `video_root` mappings, re-reads source metadata with `inspect_video`, rejects pseudo-numeric coverage values, and counts split no-action rallies uniquely.
+
+Round 3 implementation commit: `efc0be6f07619e198ef03805f7cf323637402b24`.
