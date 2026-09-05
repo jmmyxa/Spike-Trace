@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环。Rangitoto 首轮的 40 段短片与 83 条人工记录已发布为证据感知的 v2 权威结果；原 `review.xlsx` 保持不可变，不需要再填写或运行 v1 提取。独立评估仍须使用未参与训练的另一场完整比赛；号码识别运行时代码、前端和 SQLite 暂不启动。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环。Rangitoto 首轮的 40 段短片与 83 条人工记录已发布为证据感知的 v2 权威结果；原 `review.xlsx` 保持不可变，不需要再填写或运行 v1 提取。球员身份层已加入运行时数据契约和事件旁路适配器，但检测器、跟踪器和 OCR 引擎仍待接入；独立评估仍须使用未参与训练的另一场完整比赛，前端和 SQLite 暂不启动。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -113,6 +113,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 CSV 固定使用 UTF-8 BOM，缺少 BOM 的文件会被拒绝。
 
 完整的目录约束、提交边界和人工字段说明见 [data/validation/README.md](data/validation/README.md)。
+- 球员身份旁路 MVP：检测/轨迹/号码数据契约、多帧号码聚合，以及仅将已确认美国队号码关联到动作事件。
 
 ## 环境安装
 
@@ -187,7 +188,9 @@ Spike-Trace/
 │  │  └─ account-workspace-design.md # 账户与工作区页面数据契约
 │  ├─ identity/
 │  │  ├─ 2026-08-10-audit.md      # 号码归属相关仓库审计
-│  │  └─ 2026-08-10-design.md     # 检测、跟踪、号码与人工复核契约
+│  │  ├─ 2026-08-10-design.md     # 检测、跟踪、号码与人工复核契约
+│  │  ├─ 2026-09-05-mvp.md        # 身份运行时 MVP 与当前边界
+│  │  └─ 2026-09-05-component-integration.md # 开源检测/跟踪/OCR 接入建议
 │  ├─ product/
 │  │  └─ mvp-workflow-design.md   # 导入、复核、评估、统计和导出流程
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
@@ -222,6 +225,11 @@ Spike-Trace/
 │  ├─ dual_crop_review.py         # 确定性双裁剪合并、自包含验证与 JSON/CSV 输出
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
+│  ├─ identity/                  # 球员检测、跟踪、号码聚合与事件身份适配
+│  │  ├─ models.py               # 检测、轨迹、号码解析和身份分配数据契约
+│  │  ├─ numbers.py              # 多帧 OCR 号码归一化与保守聚合
+│  │  ├─ events.py               # 已确认美国队身份到 ActionEvent 的旁路关联
+│  │  └─ __init__.py             # 身份层公开 API
 │  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
 │  ├─ validation_contract.py     # 源视频冻结、哈希、元数据和内容隔离门禁
 │  ├─ validation_rallies.py      # prediction-blind 回合候选、整场覆盖、换边裁剪和静音代理
@@ -282,11 +290,12 @@ Spike-Trace/
 当前项目拆分为三个长期协作任务：`player-identity` 负责美国队球员检测、跟踪和号码归属；
 `product-frontend` 负责总体产品规划、导航以及标注/分析前端；`data-workspace` 负责数据存储、
 版本审计、CSV/JSON 导入导出和账户/工作区数据契约。每个任务只能修改注册表中的自身范围，
-工作进展记录在 `.agent-lanes/*/worklog.md`。三条 Lane 的第一阶段设计已经汇入主分支；号码识别、前端和数据平台尚未进入运行时代码实现。
+工作进展记录在 `.agent-lanes/*/worklog.md`。三条 Lane 的第一阶段设计已经汇入主分支；身份层已进入运行时契约阶段，前端和数据平台尚未进入运行时代码实现。
 
 设计入口：
 
 - [球员身份与号码归属设计](docs/identity/2026-08-10-design.md)
+- [身份 MVP 与组件接入建议](docs/identity/2026-09-05-component-integration.md)
 - [MVP 产品工作流](docs/product/mvp-workflow-design.md)
 - [数据平台与工作区设计](docs/data-platform/README.md)
 - [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)

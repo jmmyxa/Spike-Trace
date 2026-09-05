@@ -110,3 +110,31 @@
 - OCR license and deployment constraints
 - human review storage, authority, and publish flow
 - downstream stable key format for stats joins
+
+## 2026-09-05
+
+### MVP runtime slice
+
+- Added `src/spiketrace/identity/` with immutable `PlayerDetection`, `Track`,
+  `NumberObservation`, `NumberResolution`, and `IdentityAssignment` models.
+- Kept camera court position (`court_side`) separate from visual team identity
+  (`team`); all unknown and out-of-scope values remain explicit.
+- Added conservative multi-frame OCR aggregation with roster filtering,
+  leading-zero preservation, and conflict handling.
+- Added `apply_identity_assignments` adapter that joins only overlapping,
+  confirmed USA assignments to action events without changing action metadata.
+- Added six focused tests under `tests/identity/`.
+
+### Verification
+
+- `python -m unittest discover -s tests/identity -v`: 6 tests passed.
+- No detector/OCR weights were downloaded and no action or SoCal validation
+  modules were changed.
+
+### Component integration note
+
+- Added `docs/identity/2026-09-05-component-integration.md` describing optional
+  YOLO/RT-DETR detection, ByteTrack/BoT-SORT tracking, and PaddleOCR/Tesseract
+  adapters.
+- The note keeps components replaceable and defines `Unknown`, conservative
+  OCR statuses, and mandatory manual-review boundaries.
