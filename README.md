@@ -2,7 +2,7 @@
 
 Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目标是识别我方球员的技术动作，将事件归属到球衣号码，并形成可保存、复核和导出的球员数据。
 
-当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份、产品前端和数据平台的第一阶段设计。下一阶段先把第二场完整比赛的全量候选改为每轮 40 个短回合的主动学习批次，建立跨比赛训练素材；独立评估继续使用未参与训练的另一场完整比赛。号码归属、前端和 SQLite 仍只围绕动作模型闭环逐步接入。
+当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份、产品前端和数据平台的第一阶段设计。球员身份层已加入运行时数据契约和事件旁路适配器，但检测器、跟踪器和 OCR 引擎仍待接入。下一阶段先把第二场完整比赛的全量候选改为每轮 40 个短回合的主动学习批次，建立跨比赛训练素材；独立评估继续使用未参与训练的另一场完整比赛。前端和 SQLite 仍只围绕动作模型闭环逐步接入。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 
@@ -19,6 +19,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 - 训练集/验证集损失、逐类 Precision/Recall/F1 和混淆矩阵。
 - 可复现 checkpoint，包含标签、预处理参数、指标和模型版本。
 - 整场视频滑动窗口推理（单次顺序解码整段视频）、动作事件合并、JSON/CSV 导出。
+- 球员身份旁路 MVP：检测/轨迹/号码数据契约、多帧号码聚合，以及仅将已确认美国队号码关联到动作事件。
 
 ## 环境安装
 
@@ -72,7 +73,9 @@ Spike-Trace/
 │  │  └─ account-workspace-design.md # 账户与工作区页面数据契约
 │  ├─ identity/
 │  │  ├─ 2026-08-10-audit.md      # 号码归属相关仓库审计
-│  │  └─ 2026-08-10-design.md     # 检测、跟踪、号码与人工复核契约
+│  │  ├─ 2026-08-10-design.md     # 检测、跟踪、号码与人工复核契约
+│  │  ├─ 2026-09-05-mvp.md        # 身份运行时 MVP 与当前边界
+│  │  └─ 2026-09-05-component-integration.md # 开源检测/跟踪/OCR 接入建议
 │  ├─ product/
 │  │  └─ mvp-workflow-design.md   # 导入、复核、评估、统计和导出流程
 │  ├─ PROJECT_PLAN.md            # 产品边界、技术决策与阶段路线
@@ -93,6 +96,11 @@ Spike-Trace/
 │  ├─ dual_crop_review.py         # 确定性双裁剪合并、自包含验证与 JSON/CSV 输出
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
+│  ├─ identity/                  # 球员检测、跟踪、号码聚合与事件身份适配
+│  │  ├─ models.py               # 检测、轨迹、号码解析和身份分配数据契约
+│  │  ├─ numbers.py              # 多帧 OCR 号码归一化与保守聚合
+│  │  ├─ events.py               # 已确认美国队身份到 ActionEvent 的旁路关联
+│  │  └─ __init__.py             # 身份层公开 API
 │  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
 │  ├─ manifest.py                # 标注 CSV 加载、校验与摘要
 │  ├─ metrics.py                 # 分类指标和混淆矩阵
@@ -120,11 +128,12 @@ Spike-Trace/
 当前项目拆分为三个长期协作任务：`player-identity` 负责美国队球员检测、跟踪和号码归属；
 `product-frontend` 负责总体产品规划、导航以及标注/分析前端；`data-workspace` 负责数据存储、
 版本审计、CSV/JSON 导入导出和账户/工作区数据契约。每个任务只能修改注册表中的自身范围，
-工作进展记录在 `.agent-lanes/*/worklog.md`。三条 Lane 的第一阶段设计已经汇入主分支；号码识别、前端和数据平台尚未进入运行时代码实现。
+工作进展记录在 `.agent-lanes/*/worklog.md`。三条 Lane 的第一阶段设计已经汇入主分支；身份层已进入运行时契约阶段，前端和数据平台尚未进入运行时代码实现。
 
 设计入口：
 
 - [球员身份与号码归属设计](docs/identity/2026-08-10-design.md)
+- [身份 MVP 与组件接入建议](docs/identity/2026-09-05-component-integration.md)
 - [MVP 产品工作流](docs/product/mvp-workflow-design.md)
 - [数据平台与工作区设计](docs/data-platform/README.md)
 - [Rangitoto 主动学习设计](docs/superpowers/specs/2026-08-16-rangitoto-active-learning-design.md)
@@ -145,8 +154,8 @@ results JSON，核对权威累计清单哈希和派生清单的逐行前缀，�
 
 1. 从 Rangitoto 全量候选中每轮自动选择 40 个短回合，人工一次穷举片段内全部我方动作并迭代动作模型。
 2. 使用未加入训练的另一场完整比赛建立固定 `val`，以后再保留第三场完整比赛作为 `test`。
-3. 动作模型基线稳定后，在少量已标注回合上实现人员检测、短期跟踪和人工号码确认，不先承诺全自动 OCR。
-4. 把确认的号码归属写入版本化结果，并与现有 `ActionEvent` 关联。
+3. 动作模型基线稳定后，在少量已标注回合上接入人员检测、短期跟踪和人工号码确认；身份层先使用保守的 `Unknown`，不先承诺全自动 OCR。
+4. 把确认的号码归属写入版本化结果，并通过 `src/spiketrace/identity/events.py` 与现有 `ActionEvent` 关联。
 5. 最后接入本地浏览器界面、SQLite 保存和 CSV/JSON 导出，形成端到端 MVP。
 
 `data/annotations/*.csv` 固定使用 CRLF 换行；Python `csv` 写出的清单本身也采用这一格式。不要绕过 Git 属性手工转换这些文件的换行，否则用于基线和补标规格的 SHA-256 会变化。
