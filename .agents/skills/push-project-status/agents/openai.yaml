@@ -1,4 +1,4 @@
 interface:
   display_name: "Push Project Status"
   short_description: "Safely sync code and project status"
-  default_prompt: "Use $push-project-status to close out this Spike-Trace session and sync its status."
+  default_prompt: "Use $push-project-status to close out this project session and sync its status."

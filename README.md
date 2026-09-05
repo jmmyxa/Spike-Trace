@@ -4,7 +4,7 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 
 当前 MVP 已跑通动作模型、人工复核和事件导出的工程闭环，并完成球员身份运行时契约。当前详细状态、独立会话任务和执行顺序见 [项目状态](docs/PROJECT_STATUS.md)。检测器、跟踪器、OCR、统计引擎、SQLite 和前端仍按阶段接入。
 
-项目级会话收尾规则见 [AGENTS.md](AGENTS.md)，可复用的推送与状态同步技能见 [.agents/skills/push-project-status/SKILL.md](.agents/skills/push-project-status/SKILL.md)。
+本仓库的会话收尾规则见 [AGENTS.md](AGENTS.md)；通用的项目收尾、Git 推送与状态同步技能见 [.agents/skills/push-project-status/SKILL.md](.agents/skills/push-project-status/SKILL.md)。该技能不依赖 Spike-Trace 的目录、日志名或远端，可复制到其他 Git 或非 Git 项目使用。
 
 完整产品决策和后续路线见 [项目规划](docs/PROJECT_PLAN.md)。
 

@@ -1,73 +1,75 @@
 ---
 name: push-project-status
-description: "Use when closing a Spike-Trace session, preparing a Git commit, pushing a branch to GitHub, or synchronizing docs/PROJECT_STATUS.md."
+description: "Use when closing a project session, preparing a Git commit, pushing a branch to a remote, or synchronizing a project status log."
 ---
 
 # Push Project Status
 
-Treat project closeout as an auditable transaction: the repository status, the
-project log, the verification evidence, and the remote ref must agree.
+Treat closeout as an auditable transaction: the status log, evidence, local
+history, and remote state must agree.
+
+## Locate the project
+
+1. Find the project root, read applicable `AGENTS.md`/instructions, and detect
+   the VCS. For non-Git projects or undocumented VCS sync, update an existing
+   log when authorized and report local-only; never imply a push occurred.
+2. Resolve the log in this order: explicit configuration/instructions,
+   existing `docs/PROJECT_STATUS.md`, root `PROJECT_STATUS.md`, then another
+   clearly named existing status file. If candidates lack a documented choice,
+   stop and ask—never guess. If none exists, create `docs/PROJECT_STATUS.md`
+   only with explicit authorization and no conflicting convention; otherwise
+   report that no log was persisted. Record the exact path.
 
 ## Required closeout
 
-For every Spike-Trace work session, update `docs/PROJECT_STATUS.md` before
-yielding. Add a concise dated entry containing:
+Every covered session needs a dated entry: changes/remaining work, checks,
+blockers/skips, one next action, and sync state. For no-code, say “no code
+change”; never manufacture an empty commit. After interruption, look for an
+unsynced log first.
 
-- what changed and what remains;
-- checks actually run and their results;
-- blockers or skipped checks;
-- next action;
-- branch, remote, and sync state.
+## Git sequence
 
-If the session made no code change, record that explicitly instead of creating
-an empty commit. A crash or user interruption can prevent this closeout; the
-next session must detect and report an unsynced status file.
+1. Snapshot `git status --porcelain=v1 --branch`, `git branch -vv`,
+   `git remote -v`, and the latest log. Record pre-existing staged/unstaged
+   paths and resolve the actual upstream; never assume a branch, remote, or
+   remote name. No remote is a valid local-only outcome.
+2. Isolate this session's paths and preserve the index. If staged paths overlap
+   or cannot be isolated, stop. Prefer `git commit --only <reviewed paths>`;
+   never broad-stage or unstage user work. Never use `reset`, `checkout`,
+   `clean`, automatic stash, `--force`, or `--no-verify` to bypass uncertainty.
+3. Update the resolved log; update an existing README/equivalent only when
+   structure or workflow changed. Inspect the staged diff for unrelated,
+   secret, generated, large, or conflicting files. Run relevant checks and
+   record exact results, including reasons for skips.
+4. Commit descriptively. Push only with explicit authorization and an
+   unambiguous target; otherwise report the local commit as pending sync.
+5. After each successful push, compare the remote ref with local HEAD using
+   `git ls-remote <remote> refs/heads/<branch>` or an equivalent API. Failure
+   means remote state is unknown. Verify tracking and the working tree. If the
+   log must contain the new SHA, make a second status-only commit, push it, and
+   repeat every verification; never claim synced while the latest log is
+   unpushed.
 
-## Push sequence
+## Stop and report
 
-1. Read repository instructions. Inspect `git status --short --branch`,
-   `git branch -vv`, `git remote -v`, and the latest log. Record the starting
-   state and resolve the actual upstream; never assume `main` or `origin`.
-2. Separate this session's paths from pre-existing user changes. Stage only
-   reviewed paths. Do not use `git reset`, `git checkout`, `git clean`, or an
-   automatic stash to hide or overwrite user work.
-3. Update the status log and `README.md` when structure or workflow changed.
-   Inspect the staged diff for unrelated files, secrets, generated artifacts,
-   and accidental large files. Run the narrowest relevant tests first, then
-   broader checks when practical; record failures honestly.
-4. Commit with a descriptive message. Push normally to the resolved remote and
-   branch when the user or task explicitly authorizes that external mutation.
-   Never use `--force`, `--no-verify`, or an automatic pull/rebase to bypass a
-   rejected push. Without push authorization, leave the reviewed commit local
-   and report that remote synchronization is pending.
-5. Verify the remote ref/commit SHA, local tracking state, and working tree.
-   If the status entry must contain the exact new SHA, make a second status
-   commit after the first push and push it too; otherwise do not self-reference
-   a not-yet-created commit. Do not claim “synced” while a status change is
-   still unpushed.
-
-## Stop conditions
-
-Pause and report instead of guessing when the branch is detached, upstream is
-missing or ambiguous, the remote has diverged, files overlap with user edits,
-or a push times out/rejects. On timeout, check the remote ref before retrying.
-Preserve the local commit and the original error; ask before fetch/merge/rebase
-or any force operation.
+Stop before mutation for a detached/ambiguous branch, conflicting log edits,
+divergent remote, missing authorization, or unclear target. On timeout or
+rejection, preserve the local commit/error; check the remote ref before retrying
+and ask before fetch, merge, or rebase. Use `N/A`, `not configured`, or
+`unknown` for valid local-only states.
 
 ## Handoff
 
-Use this compact report only after evidence is available:
-
 ```text
-结果：成功 / 未推送 / 远端状态不确定
-目标：<remote>/<branch>
+结果：成功 / 本地已提交未推送 / 未提交 / 远端状态不确定
+项目与状态日志：<root and exact path, or not persisted>
+目标：<remote>/<branch or local-only>
 提交：<sha or none>
-证据：<push output and remote ref check>
-验证：<commands and actual results; skipped checks with reasons>
+证据：<push output and remote-ref check, or why unavailable>
+验证：<actual results; skipped checks and reasons>
 工作树：<clean or preserved user paths>
-状态日志：<path and whether its latest change is pushed>
 下一步：<one concrete action>
 ```
 
-Red flags are `git add -A` on a dirty user tree, a force push, a success claim
-without remote verification, and a status file modified after the last push.
+Red flags: broad staging on a dirty tree, guessed paths/remotes, force pushes,
+and success language without remote evidence.
