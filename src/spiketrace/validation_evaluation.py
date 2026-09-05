@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, replace
-from typing import Sequence
 
 from .constants import ACTION_LABELS
 from .errors import ValidationError
@@ -66,7 +66,7 @@ def _project(label: str) -> str:
 
 def _valid_number(value: float, name: str) -> float:
     if isinstance(value, bool):
-        raise ValueError(f"{name} must be finite and non-negative")
+        raise TypeError(f"{name} must be finite and non-negative")
     number = float(value)
     if not math.isfinite(number) or number < 0:
         raise ValueError(f"{name} must be finite and non-negative")
@@ -228,7 +228,7 @@ def evaluate_validation(truth: ValidationTruth, inference: ValidationInferenceRe
     if not truth.locked:
         raise ValidationError("validation truth must be locked")
     confirmed = tuple(s for s in truth.coverage if s.status == "rally" and s.coverage_confirmed)
-    covered_ids = {s.segment_id for s in confirmed}; rally_ids = {s.rally_id for s in confirmed}
+    rally_ids = {s.rally_id for s in confirmed}
     visible_actions = tuple(a for a in truth.actions if a.visibility == "visible" and a.rally_id in rally_ids)
     segment_rallies = {s.segment_id: s.rally_id for s in confirmed}
     settings_segments = inference.settings.get("segments", ()) if isinstance(inference.settings, dict) else ()

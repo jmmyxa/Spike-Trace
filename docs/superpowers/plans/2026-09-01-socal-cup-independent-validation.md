@@ -486,7 +486,7 @@ git commit -m "feat: add validation event and window metrics"
   - lock-validation-truth BINDING_JSON DRAFT_JSON TRUTH_JSON TRUTH_CSV --repo-root ROOT --video-root VIDEO_ROOT --code-sha SHA --created-at ISO8601.
   - verify-validation-truth BINDING_JSON TRUTH_JSON TRUTH_CSV --repo-root ROOT --video-root VIDEO_ROOT.
   - verify-validation-isolation BINDING_JSON --repo-root ROOT --video-root VIDEO_ROOT --manifest MANIFEST (repeatable) [--selection-source JSON (repeatable)].
-  - evaluate-validation VIDEO TRUTH_JSON CHECKPOINT OUTPUT_DIR --repo-root ROOT --video-root VIDEO_ROOT --manifest MANIFEST (repeatable) [--selection-source JSON (repeatable)] plus the fixed inference options --stride-seconds, --confidence-threshold, --merge-gap-seconds, --min-event-seconds, --batch-size, and --device.
+  - evaluate-validation VIDEO TRUTH_JSON CHECKPOINT OUTPUT_DIR --truth-csv TRUTH_CSV --repo-root ROOT --video-root VIDEO_ROOT --manifest MANIFEST (repeatable) [--selection-source JSON (repeatable)] plus the fixed inference options --stride-seconds, --confidence-threshold, --merge-gap-seconds, --min-event-seconds, --batch-size, and --device.
   - verify-validation OUTPUT_DIR --repo-root ROOT --video-root VIDEO_ROOT.
 
 - [ ] **Step 1: Write failing output, CLI, and collision tests**

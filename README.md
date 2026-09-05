@@ -103,6 +103,15 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 可见性证据与备注。草稿尚未锁定时，程序不会加载 checkpoint，也不会生成 SoCal 预测。只有
 `verify-validation-truth` 成功后才开始基线识别。
 
+输出发布器会在构建和最终目录提交前重新计算源视频与 checkpoint 的 SHA-256；验证器还会检查
+`metrics.json`、`run-manifest.json` 的规范 JSON 字节、全部 CSV 表头与 JSON 投影、五个文件的
+哈希/字节数以及真值和源视频绑定。这样可以发现半写入、误改或来源漂移。该 bundle 目前是
+自包含的一致性证据，不是数字签名：拥有写权限的人若同时改写内容和所有内部哈希，仍需要后续
+引入外部签名或受信摘要才能抵抗恶意伪造。
+
+验证绑定、队列、真值和结果文件的 `format_version` 必须是严格的 JSON 整数；锁定真值的兼容
+CSV 固定使用 UTF-8 BOM，缺少 BOM 的文件会被拒绝。
+
 完整的目录约束、提交边界和人工字段说明见 [data/validation/README.md](data/validation/README.md)。
 
 ## 环境安装

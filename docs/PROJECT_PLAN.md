@@ -445,6 +445,13 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 
 SoCal C2 独立验证命令均要求显式传入视频、真值、清单、选择源和 checkpoint 路径。冻结真值后使用 `evaluate-validation`，结果发布为不可覆盖的五文件目录 `outputs/validation/socal-cup-c2-baseline/`；可用 `verify-validation` 在不加载模型的情况下重算文件哈希、源视频绑定和跨文件计数。
 
+输出层在发布前会再次核对源视频和 checkpoint 的 SHA-256，并在验证时拒绝非规范 JSON 字节、
+不匹配的 CSV 投影、半写入目录、来源漂移和真值/模型绑定不一致。内部哈希用于检测意外或局部
+篡改；它们不构成外部真实性签名，若未来需要抗恶意的整包同步改写，应另行加入签名或受信摘要。
+
+验证绑定、队列、真值和结果文件的 `format_version` 必须是严格的 JSON 整数；锁定真值 CSV 固定
+使用 UTF-8 BOM。
+
 当前独立验证模块为 `validation_contract.py`、`validation_rallies.py`、`validation_truth.py`、
 `validation_inference.py`、`validation_evaluation.py` 和 `validation_outputs.py`；对应的八个
 验证测试模块另含 `test_socal_validation_integration.py`，用合成视频覆盖冻结、队列、草稿、锁定

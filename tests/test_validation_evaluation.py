@@ -3,14 +3,20 @@ from pathlib import Path
 
 from spiketrace.domain import VideoMetadata
 from spiketrace.validation_contract import ValidationVideoBinding
-from spiketrace.validation_inference import ValidationInferenceResult, ValidationPrediction
-from spiketrace.validation_rallies import RallySegment
-from spiketrace.validation_truth import GroundTruthAction, ValidationTruth, VisibilityInterval
 from spiketrace.validation_evaluation import (
-    EventMatchResult,
     evaluate_validation,
     expand_one_second_windows,
     match_events,
+)
+from spiketrace.validation_inference import (
+    ValidationInferenceResult,
+    ValidationPrediction,
+)
+from spiketrace.validation_rallies import RallySegment
+from spiketrace.validation_truth import (
+    GroundTruthAction,
+    ValidationTruth,
+    VisibilityInterval,
 )
 
 

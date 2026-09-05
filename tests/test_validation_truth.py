@@ -1,17 +1,35 @@
-import csv, json, tempfile, unittest
-from dataclasses import replace
+import csv
+import hashlib
+import json
+import tempfile
+import unittest
 from pathlib import Path
 from unittest.mock import patch
-import cv2, numpy as np
+
+import cv2
+import numpy as np
 
 from spiketrace.domain import VideoMetadata
 from spiketrace.errors import ValidationError
-from spiketrace.validation_contract import ValidationVideoBinding, sha256_file, canonical_json_bytes
-from spiketrace.validation_rallies import RallySegment, RallyDetectionSettings, write_rally_queue
+from spiketrace.validation_contract import (
+    ValidationVideoBinding,
+    canonical_json_bytes,
+    sha256_file,
+)
+from spiketrace.validation_rallies import (
+    RallyDetectionSettings,
+    RallySegment,
+    write_rally_queue,
+)
 from spiketrace.validation_truth import (
-    CSV_HEADER, GroundTruthAction, VisibilityInterval, ValidationTruth,
-    init_truth_draft, validate_truth_draft, lock_truth_bundle,
-    load_locked_truth, verify_truth_bundle,
+    CSV_HEADER,
+    _lock_digest,
+    init_truth_draft,
+    load_locked_truth,
+    lock_truth_bundle,
+    validate_truth_draft,
+    verify_truth_artifacts,
+    verify_truth_bundle,
 )
 
 
@@ -55,6 +73,55 @@ class TruthTests(unittest.TestCase):
         draft.write_text(json.dumps(payload)); truth=validate_truth_draft(draft,binding=binding)
         self.assertEqual(truth.actions[0].projected_label,"background"); self.assertEqual(truth.actions[0].match_id,"match-1")
 
+    def test_draft_rejects_non_integer_format_version(self):
+        root, binding, queue = self.fixture()
+        draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        for version in (True, 2, 1.0, "1"):
+            payload["format_version"] = version
+            draft.write_bytes(canonical_json_bytes(payload))
+            with self.subTest(version=version), self.assertRaises(ValidationError):
+                validate_truth_draft(draft, binding=binding)
+
+    def test_locked_truth_rejects_non_integer_format_version(self):
+        root, binding, queue = self.fixture()
+        draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload))
+        truth_json, truth_csv = root / "truth.json", root / "truth.csv"
+        lock_truth_bundle(
+            draft,
+            truth_csv,
+            truth_json,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        locked = json.loads(truth_json.read_text(encoding="utf-8"))
+        for version in (True, 2, 1.0, "1"):
+            locked["format_version"] = version
+            authority = dict(locked)
+            integrity = authority.pop("integrity")
+            authority["integrity"] = integrity
+            locked["integrity"]["locked_sha256"] = _lock_digest(
+                {key: value for key, value in locked.items() if key != "integrity"},
+                locked["integrity"]["csv_sha256"],
+            )
+            truth_json.write_bytes(canonical_json_bytes(locked))
+            with self.subTest(version=version), self.assertRaises(ValidationError):
+                load_locked_truth(truth_json, truth_csv, binding=binding)
+
     def test_rejects_invalid_truth_records(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text())
         payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False)
@@ -64,7 +131,7 @@ class TruthTests(unittest.TestCase):
             with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
 
     def test_rejects_duplicate_action_ref_and_duplicate_action(self):
-        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        _root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
         payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
         base = {"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"video","player_number":None,"notes":""}
         payload["actions"] = [base, {**base, "start_seconds": 13, "end_seconds": 14}]
@@ -75,7 +142,7 @@ class TruthTests(unittest.TestCase):
             self._write_and_validate(draft, payload, binding)
 
     def test_rejects_action_outside_rally_and_pending_coverage(self):
-        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        _root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
         payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False)
         payload["actions"] = [{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":9,"end_seconds":10,"visibility":"visible","evidence":"video","player_number":None,"notes":""}]
         with self.assertRaisesRegex(ValidationError, "whole seconds within rally"):
@@ -86,7 +153,7 @@ class TruthTests(unittest.TestCase):
             self._write_and_validate(draft, payload, binding)
 
     def test_rejects_actions_in_non_rally_segments(self):
-        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        _root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
         payload["coverage"][0].update(coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True)
         payload["coverage"][2]["rally_id"] = "non-rally-001"
         payload["actions"] = [{"action_ref":"a","rally_id":"non-rally-001","label":"serve","start_seconds":17,"end_seconds":18,"visibility":"visible","evidence":"video","player_number":None,"notes":""}]
@@ -154,15 +221,174 @@ class TruthTests(unittest.TestCase):
         writer.release()
         binding.video_path.write_bytes(replacement.read_bytes())
         import spiketrace.validation_truth as truth_mod
-        with patch.object(truth_mod, "sha256_file", return_value=binding.sha256):
-            with self.assertRaisesRegex(ValidationError, "metadata mismatch"):
-                verify_truth_bundle(json_path, csv_path, binding=binding, repo_root=root)
+        with patch.object(truth_mod, "sha256_file", return_value=binding.sha256), self.assertRaisesRegex(ValidationError, "metadata mismatch"):
+            verify_truth_bundle(json_path, csv_path, binding=binding, repo_root=root)
 
     def test_lock_projection_and_verify(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False); payload["actions"]=[{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"visible","evidence":"x","player_number":None,"notes":""}]; draft.write_text(json.dumps(payload))
         csv_path=root/"truth.csv"; json_path=root/"truth.json"; out=lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="2026-01-01T00:00:00Z")
         self.assertEqual(out["csv"],csv_path); raw_csv=csv_path.read_bytes(); self.assertTrue(raw_csv.startswith(b"\xef\xbb\xbf")); self.assertNotIn(b"\r\n", raw_csv); self.assertEqual(csv_path.read_text(encoding="utf-8-sig").splitlines()[0],"video_path,start_seconds,end_seconds,label,team_side,player_number,crop_x1,crop_y1,crop_x2,crop_y2,split,match_id,rally_id"); self.assertEqual(csv_path.read_text(encoding="utf-8-sig").splitlines()[1],"match.avi,12,13,serve,near,,0,0,100,80,val,match-1,set-01-rally-001")
         truth=load_locked_truth(json_path,csv_path,binding=binding); self.assertTrue(truth.locked); report=verify_truth_bundle(json_path,csv_path,binding=binding,repo_root=root); self.assertEqual(report["visible_actions"],1)
+
+    def test_source_independent_artifact_verifier_accepts_missing_video(self):
+        root, binding, queue = self.fixture(); draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload))
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(
+            draft,
+            csv_path,
+            json_path,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        binding.video_path.unlink()
+
+        truth = verify_truth_artifacts(json_path, csv_path, binding=binding)
+
+        self.assertTrue(truth.locked)
+        self.assertEqual(truth.video.sha256, binding.sha256)
+
+    def test_source_independent_artifact_verifier_rejects_noncanonical_json_without_video(self):
+        root, binding, queue = self.fixture(); draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload))
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(
+            draft,
+            csv_path,
+            json_path,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        binding.video_path.unlink()
+        json_path.write_bytes(json_path.read_bytes() + b"\n")
+
+        with self.assertRaisesRegex(ValidationError, "JSON bytes were modified"):
+            verify_truth_artifacts(json_path, csv_path, binding=binding)
+
+    def test_source_independent_artifact_verifier_rejects_projection_tamper_without_video(self):
+        root, binding, queue = self.fixture(); draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=False
+        )
+        payload["actions"] = [
+            {
+                "action_ref": "a",
+                "rally_id": "set-01-rally-001",
+                "label": "serve",
+                "start_seconds": 12,
+                "end_seconds": 13,
+                "visibility": "visible",
+                "evidence": "video",
+                "player_number": None,
+                "notes": "",
+            }
+        ]
+        draft.write_bytes(canonical_json_bytes(payload))
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(
+            draft,
+            csv_path,
+            json_path,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        rows = csv_path.read_bytes().replace(b",serve,", b",attack,")
+        csv_path.write_bytes(rows)
+        locked = json.loads(json_path.read_text(encoding="utf-8"))
+        csv_digest = hashlib.sha256(rows).hexdigest()
+        locked["integrity"]["csv_sha256"] = csv_digest
+        authority = dict(locked)
+        authority.pop("integrity")
+        locked["integrity"]["locked_sha256"] = _lock_digest(authority, csv_digest)
+        json_path.write_bytes(canonical_json_bytes(locked))
+        binding.video_path.unlink()
+
+        with self.assertRaisesRegex(ValidationError, "CSV projection mismatch"):
+            verify_truth_artifacts(json_path, csv_path, binding=binding)
+
+    def test_source_independent_artifact_verifier_rejects_header_tamper_without_video(self):
+        root, binding, queue = self.fixture(); draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload))
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(
+            draft,
+            csv_path,
+            json_path,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        rows = csv_path.read_bytes().replace(b"video_path,", b"wrong_path,", 1)
+        csv_path.write_bytes(rows)
+        locked = json.loads(json_path.read_text(encoding="utf-8"))
+        csv_digest = hashlib.sha256(rows).hexdigest()
+        locked["integrity"]["csv_sha256"] = csv_digest
+        authority = dict(locked)
+        authority.pop("integrity")
+        locked["integrity"]["locked_sha256"] = _lock_digest(authority, csv_digest)
+        json_path.write_bytes(canonical_json_bytes(locked))
+        binding.video_path.unlink()
+
+        with self.assertRaisesRegex(ValidationError, "CSV header mismatch"):
+            verify_truth_artifacts(json_path, csv_path, binding=binding)
+
+    def test_source_independent_artifact_verifier_requires_csv_bom(self):
+        root, binding, queue = self.fixture()
+        draft = root / "draft.json"
+        init_truth_draft(queue, draft, code_sha="x")
+        payload = json.loads(draft.read_text(encoding="utf-8"))
+        payload["coverage"][0].update(
+            coverage_confirmed=True, all_c2_actions_checked=True, no_c2_action=True
+        )
+        payload["actions"] = []
+        draft.write_bytes(canonical_json_bytes(payload))
+        csv_path, json_path = root / "truth.csv", root / "truth.json"
+        lock_truth_bundle(
+            draft,
+            csv_path,
+            json_path,
+            binding=binding,
+            repo_root=root,
+            code_sha="x",
+            created_at="now",
+        )
+        csv_path.write_bytes(csv_path.read_bytes()[3:])
+        locked = json.loads(json_path.read_text(encoding="utf-8"))
+        csv_digest = hashlib.sha256(csv_path.read_bytes()).hexdigest()
+        locked["integrity"]["csv_sha256"] = csv_digest
+        authority = {key: value for key, value in locked.items() if key != "integrity"}
+        locked["integrity"]["locked_sha256"] = _lock_digest(authority, csv_digest)
+        json_path.write_bytes(canonical_json_bytes(locked))
+
+        with self.assertRaisesRegex(ValidationError, "BOM"):
+            verify_truth_artifacts(json_path, csv_path, binding=binding)
 
     def test_no_action_and_visibility_do_not_emit_rows(self):
         root,binding,queue=self.fixture(); draft=root/"draft.json"; init_truth_draft(queue,draft,code_sha="x"); payload=json.loads(draft.read_text()); payload["coverage"][0].update(coverage_confirmed=True,all_c2_actions_checked=True,no_c2_action=False); payload["visibility_events"]=[{"event_ref":"v1","rally_id":"set-01-rally-001","kind":"fully_occluded","start_seconds":10,"end_seconds":11,"notes":"net"}]; payload["actions"]=[{"action_ref":"a","rally_id":"set-01-rally-001","label":"serve","start_seconds":12,"end_seconds":13,"visibility":"fully_occluded","evidence":"direct_video","player_number":None,"notes":""}]; draft.write_text(json.dumps(payload)); csv_path=root/"truth.csv"; json_path=root/"truth.json"; lock_truth_bundle(draft,csv_path,json_path,binding=binding,repo_root=root,code_sha="x",created_at="now"); self.assertEqual(len(csv_path.read_text(encoding="utf-8-sig").splitlines()),1); self.assertEqual(verify_truth_bundle(json_path,csv_path,binding=binding,repo_root=root)["visibility_intervals"],1)
@@ -222,7 +448,7 @@ class TruthTests(unittest.TestCase):
         with self.assertRaises(ValidationError): validate_truth_draft(draft,binding=binding)
 
     def test_coverage_rejects_invalid_source_and_no_action_types(self):
-        root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
+        _root, binding, queue = self.fixture(); _, draft, payload = self._draft_payload(binding, queue)
         payload["coverage"][0]["source_segment_id"] = ["not", "text"]
         with self.assertRaises(ValidationError):
             self._write_and_validate(draft, payload, binding)

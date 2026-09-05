@@ -5,9 +5,9 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
 
 from .domain import VideoMetadata
 from .errors import ValidationError, VideoError
@@ -19,14 +19,17 @@ def sha256_file(path: str | Path) -> str:
     if not source.is_file():
         raise ValidationError(f"Video does not exist: {source}")
     digest = hashlib.sha256()
-    with source.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
+    try:
+        with source.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise ValidationError(f"Could not read file for SHA-256: {source}") from exc
     return digest.hexdigest()
 
 
 def canonical_json_bytes(value: object) -> bytes:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def write_new_bytes(path: Path, payload: bytes, *, error_type: type[Exception] = ValidationError) -> None:
@@ -117,6 +120,8 @@ def load_video_binding(path: str | Path, *, repo_root: str | Path, video_root: s
     source = Path(path).expanduser().resolve()
     try:
         data = json.loads(source.read_text(encoding="utf-8"))
+        if not isinstance(data, dict) or type(data.get("format_version")) is not int or data.get("format_version") != 1:
+            raise ValidationError("Invalid validation binding format")
         root = Path(video_root).expanduser().resolve() if video_root else Path(repo_root).expanduser().resolve()
         video = (root / data["video_path"]).resolve()
         return freeze_video_binding(video, match_id=data["match_id"], expected_sha256=data["sha256"], repo_root=repo_root, video_root=root, expected_metadata=data.get("metadata"))

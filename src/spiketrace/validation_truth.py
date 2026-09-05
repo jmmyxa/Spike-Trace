@@ -4,13 +4,20 @@ import csv
 import hashlib
 import json
 import math
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from itertools import pairwise
 from pathlib import Path
-from typing import Literal, Mapping
+from typing import Literal
 
 from .constants import ACTION_LABELS
 from .errors import ValidationError
-from .validation_contract import ValidationVideoBinding, canonical_json_bytes, sha256_file, write_new_bytes
+from .validation_contract import (
+    ValidationVideoBinding,
+    canonical_json_bytes,
+    sha256_file,
+    write_new_bytes,
+)
 from .validation_rallies import RallySegment
 from .video import inspect_video
 
@@ -88,7 +95,7 @@ def _read_json(path: str | Path) -> dict[str, object]:
 def _check_fields(value: Mapping[str, object], allowed: set[str], name: str) -> None:
     unknown = set(value) - allowed
     if unknown:
-        raise ValidationError(f"Unknown {name} field: {sorted(unknown)[0]}")
+        raise ValidationError(f"Unknown {name} field: {min(unknown)}")
 
 
 def _binding_dict(binding: ValidationVideoBinding) -> dict[str, object]:
@@ -218,7 +225,7 @@ def _real_num(value: object, label: str) -> float:
 
 def _validate_records(data: Mapping[str, object], binding: ValidationVideoBinding, *, locked: bool) -> ValidationTruth:
     _check_fields(data, _ROOT_FIELDS, "root")
-    if data.get("format_version") != 1 or data.get("state") != ("locked" if locked else "draft"):
+    if type(data.get("format_version")) is not int or data.get("format_version") != 1 or data.get("state") != ("locked" if locked else "draft"):
         raise ValidationError("Truth state or format is invalid")
     video = data.get("video")
     if not isinstance(video, dict):
@@ -315,7 +322,7 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
             raise ValidationError("actions cannot be in non-rally coverage")
     for rally_id, items in by_rally.items():
         ordered = sorted(items, key=lambda a: (a.start_seconds, a.end_seconds, a.action_ref))
-        for left, right in zip(ordered, ordered[1:]):
+        for left, right in pairwise(ordered):
             if right.start_seconds < left.end_seconds:
                 raise ValidationError("overlapping duplicate action")
     vis_raw = data.get("visibility_events")
@@ -356,7 +363,7 @@ def _validate_records(data: Mapping[str, object], binding: ValidationVideoBindin
 
 def init_truth_draft(queue_json: str | Path, output_json: str | Path, *, code_sha: str) -> Path:
     queue = _read_json(queue_json)
-    if queue.get("format_version") != 1 or not isinstance(queue.get("binding"), dict):
+    if type(queue.get("format_version")) is not int or queue.get("format_version") != 1 or not isinstance(queue.get("binding"), dict):
         raise ValidationError("Invalid rally queue")
     binding = queue["binding"]
     segments = queue.get("segments", [])
@@ -441,32 +448,63 @@ def load_locked_truth(json_path: str | Path, csv_path: str | Path, *, binding: V
     return truth
 
 
-def verify_truth_bundle(json_path: str | Path, csv_path: str | Path, *, binding: ValidationVideoBinding, repo_root: str | Path, video_root: str | Path | None = None) -> dict[str, object]:
-    truth = load_locked_truth(json_path, csv_path, binding=binding)
-    _resolve_bound_source(binding, repo_root=repo_root, video_root=video_root)
-    data = _read_json(json_path); integrity = data["integrity"]
+def _verify_truth_json_canonical(json_path: str | Path, data: Mapping[str, object]) -> None:
     try:
         if Path(json_path).read_bytes() != canonical_json_bytes(data):
             raise ValidationError("Locked truth JSON bytes were modified")
     except OSError as exc:
         raise ValidationError("Locked truth JSON is unreadable") from exc
-    authority = dict(data); authority.pop("integrity", None)
-    if _lock_digest(authority, truth.csv_sha256 or "") != integrity.get("locked_sha256"): raise ValidationError("Locked truth hash mismatch")
+
+
+def _verify_truth_csv_projection(csv_path: str | Path, truth: ValidationTruth) -> None:
     try:
+        raw_csv = Path(csv_path).read_bytes()
+        if not raw_csv.startswith(b"\xef\xbb\xbf"):
+            raise ValidationError("CSV must start with UTF-8 BOM")
         with Path(csv_path).open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.reader(handle); header = next(reader, None)
-            if header != list(_CSV_FIELDS): raise ValidationError("CSV header mismatch")
+            reader = csv.reader(handle)
+            header = next(reader, None)
+            if header != list(_CSV_FIELDS):
+                raise ValidationError("CSV header mismatch")
             rows = list(reader)
     except ValidationError:
         raise
-    except (OSError, csv.Error) as exc:
+    except (OSError, UnicodeError, csv.Error) as exc:
         raise ValidationError("CSV is unreadable") from exc
     try:
         import io
+
         generated = csv.reader(io.StringIO(_csv_bytes(truth).decode("utf-8-sig"), newline=""))
         next(generated, None)
         expected_rows = list(generated)
     except csv.Error as exc:
         raise ValidationError("CSV projection is invalid") from exc
-    if rows != expected_rows: raise ValidationError("CSV projection mismatch")
+    if rows != expected_rows:
+        raise ValidationError("CSV projection mismatch")
+
+
+def verify_truth_artifacts(
+    json_path: str | Path,
+    csv_path: str | Path,
+    *,
+    binding: ValidationVideoBinding,
+) -> ValidationTruth:
+    """Validate locked truth files without reading the bound source video."""
+    truth = load_locked_truth(json_path, csv_path, binding=binding)
+    data = _read_json(json_path)
+    _verify_truth_json_canonical(json_path, data)
+    integrity = data.get("integrity")
+    if not isinstance(integrity, dict):
+        raise ValidationError("integrity is invalid")
+    authority = dict(data)
+    authority.pop("integrity", None)
+    if _lock_digest(authority, truth.csv_sha256 or "") != integrity.get("locked_sha256"):
+        raise ValidationError("Locked truth hash mismatch")
+    _verify_truth_csv_projection(csv_path, truth)
+    return truth
+
+
+def verify_truth_bundle(json_path: str | Path, csv_path: str | Path, *, binding: ValidationVideoBinding, repo_root: str | Path, video_root: str | Path | None = None) -> dict[str, object]:
+    truth = verify_truth_artifacts(json_path, csv_path, binding=binding)
+    _resolve_bound_source(binding, repo_root=repo_root, video_root=video_root)
     return {"coverage_segments": len(truth.coverage), "visible_actions": sum(a.visibility == "visible" for a in truth.actions), "no_action_rallies": len({s.rally_id for s in truth.coverage if s.status == "rally" and s.no_c2_action is True}), "visibility_intervals": len(truth.visibility_events)}

@@ -84,9 +84,8 @@ class ValidationInferenceTests(unittest.TestCase):
             self.assertEqual(len(result.settings["segments"]), 2)
 
     def test_requires_locked_truth_before_model_loading(self):
-        with patch("spiketrace.validation_inference.load_checkpoint") as loader:
-            with self.assertRaisesRegex(ValidationError, "locked"):
-                infer_locked_validation("missing.avi", "missing.pt", _truth_for_missing_video(), device="cpu")
+        with patch("spiketrace.validation_inference.load_checkpoint") as loader, self.assertRaisesRegex(ValidationError, "locked"):
+            infer_locked_validation("missing.avi", "missing.pt", _truth_for_missing_video(), device="cpu")
         loader.assert_not_called()
 
     def test_rejects_out_of_order_or_overlapping_segments_and_invalid_crop(self):
@@ -152,12 +151,10 @@ class ValidationInferenceTests(unittest.TestCase):
             checkpoint.write_bytes(b"checkpoint")
             truth = _truth(video)
             for kwargs in ({"stride_seconds": 0}, {"stride_seconds": 2.0}, {"confidence_threshold": 2}, {"merge_gap_seconds": -1}, {"min_event_seconds": float("nan")}, {"batch_size": True}, {"device": ""}):
-                with self.subTest(kwargs=kwargs), self.assertRaises(ValidationError):
-                    with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
-                        infer_locked_validation(video, checkpoint, truth, **kwargs)
-            with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"), patch("spiketrace.validation_inference.iter_sequential_video_clip_batches", side_effect=ValueError("bad decoder")):
-                with self.assertRaises(ValidationError):
-                    infer_locked_validation(video, checkpoint, truth)
+                with self.subTest(kwargs=kwargs), self.assertRaises(ValidationError), patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
+                    infer_locked_validation(video, checkpoint, truth, **kwargs)
+            with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"), patch("spiketrace.validation_inference.iter_sequential_video_clip_batches", side_effect=ValueError("bad decoder")), self.assertRaises(ValidationError):
+                infer_locked_validation(video, checkpoint, truth)
 
     def test_rejects_source_mutation_after_decoding_starts(self):
         for source_name in ("video", "checkpoint"):
@@ -167,9 +164,8 @@ class ValidationInferenceTests(unittest.TestCase):
                 _write_video(video)
                 checkpoint.write_bytes(b"checkpoint")
                 mutate_path = video if source_name == "video" else checkpoint
-                with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(mutate_path), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"):
-                    with self.assertRaisesRegex(ValidationError, f"{source_name} changed"):
-                        infer_locked_validation(video, checkpoint, _truth(video), device="cpu")
+                with patch("spiketrace.validation_inference.load_checkpoint", return_value=(_ConstantModel(mutate_path), _checkpoint())), patch("spiketrace.validation_inference.resolve_device", return_value="cpu"), self.assertRaisesRegex(ValidationError, f"{source_name} changed"):
+                    infer_locked_validation(video, checkpoint, _truth(video), device="cpu")
 
 
 def _truth_for_missing_video() -> ValidationTruth:

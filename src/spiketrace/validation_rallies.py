@@ -3,9 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import shutil
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
+from itertools import pairwise
 from pathlib import Path
-from typing import Literal, Mapping, Sequence
+from typing import Literal
 
 from .domain import VideoMetadata
 from .errors import ValidationError, VideoError
@@ -117,15 +120,13 @@ def complete_coverage(candidates: Sequence[tuple[float, float]], *, duration_sec
     normalized.sort()
     previous = 0.0
     output: list[RallySegment] = []
-    rally_num = 0
-    for start, end in normalized:
+    for rally_num, (start, end) in enumerate(normalized, start=1):
         if start < 0 or end <= start or end > duration_seconds:
             raise ValidationError("candidate interval is out of bounds")
         if start < previous:
             raise ValidationError("candidate intervals overlap")
         if start > previous:
             output.append(_segment(f"non-rally-{len(output)+1:06d}", previous, start, "non_rally"))
-        rally_num += 1
         output.append(_segment(f"rally-{rally_num:06d}", start, end, "rally", f"rally-{rally_num:06d}"))
         previous = end
     if previous < duration_seconds:
@@ -167,7 +168,7 @@ def apply_side_map(segments: Sequence[RallySegment], *, set_intervals: Sequence[
         try:
             set_index_value = set_item["set_index"]
             if isinstance(set_index_value, bool):
-                raise ValueError
+                raise TypeError
             set_index = int(set_index_value)
         except (KeyError, TypeError, ValueError) as exc:
             raise ValidationError("set_index is malformed") from exc
@@ -183,13 +184,15 @@ def apply_side_map(segments: Sequence[RallySegment], *, set_intervals: Sequence[
             if start < segment.end_seconds and end > segment.start_seconds:
                 matches.append((side, start, end))
         matches.sort(key=lambda item: item[1])
-        for left, right in zip(matches, matches[1:]):
+        for left, right in pairwise(matches):
             if left[2] > right[1]:
                 raise ValidationError("side intervals overlap")
         if not matches:
             raise ValidationError(f"No side interval for {segment.segment_id}")
         cursor = segment.start_seconds
         for side, side_start, side_end in matches:
+            if side_start > cursor + 1e-9:
+                raise ValidationError("side intervals do not cover rally")
             start, end = max(cursor, side_start), min(segment.end_seconds, side_end)
             if end <= start: continue
             if side.get("team_side") not in {"near", "far"}:
@@ -224,7 +227,7 @@ def validate_rally_queue(segments: Sequence[RallySegment], *, binding: Validatio
         if start < previous - 1e-9:
             raise ValidationError("segments overlap")
         previous = end
-    if require_complete and (not segments or abs(float(segments[0].start_seconds)) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9 or any(abs(float(a.end_seconds) - float(b.start_seconds)) > 1e-9 for a, b in zip(segments, segments[1:]))):
+    if require_complete and (not segments or abs(float(segments[0].start_seconds)) > 1e-9 or abs(previous - binding.metadata.duration_seconds) > 1e-9 or any(abs(float(a.end_seconds) - float(b.start_seconds)) > 1e-9 for a, b in pairwise(segments))):
         raise ValidationError("queue coverage is incomplete")
 
 
@@ -237,7 +240,7 @@ def write_rally_queue(path: str | Path, *, binding: ValidationVideoBinding, segm
 def load_rally_queue(path: str | Path, *, binding: ValidationVideoBinding) -> tuple[RallySegment, ...]:
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8")); frozen = data["binding"]
-        if data.get("format_version") != 1 or frozen["sha256"].lower() != binding.sha256.lower() or frozen["match_id"] != binding.match_id or frozen["video_path"] != binding.repo_video_path:
+        if type(data.get("format_version")) is not int or data.get("format_version") != 1 or frozen["sha256"].lower() != binding.sha256.lower() or frozen["match_id"] != binding.match_id or frozen["video_path"] != binding.repo_video_path:
             raise ValidationError("Queue binding mismatch")
         expected = binding.metadata.to_dict()
         actual = frozen["metadata"]
@@ -288,4 +291,5 @@ def write_rally_proxies(queue: Sequence[RallySegment], output_dir: str | Path, *
         write_new_bytes(output / "proxy-manifest.json", canonical_json_bytes(payload))
         return payload
     except Exception:
-        import shutil; shutil.rmtree(output, ignore_errors=True); raise
+        shutil.rmtree(output, ignore_errors=True)
+        raise

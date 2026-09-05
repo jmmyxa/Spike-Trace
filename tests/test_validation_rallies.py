@@ -10,7 +10,11 @@ import numpy as np
 
 from spiketrace.domain import VideoMetadata
 from spiketrace.errors import ValidationError, VideoError
-from spiketrace.validation_contract import ValidationVideoBinding, sha256_file
+from spiketrace.validation_contract import (
+    ValidationVideoBinding,
+    canonical_json_bytes,
+    sha256_file,
+)
 from spiketrace.validation_rallies import (
     RallyDetectionSettings,
     apply_side_map,
@@ -155,7 +159,20 @@ class RallyQueueTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             apply_side_map(segment, set_intervals=[{"set_index": 1, "start_seconds": 0.0}], side_intervals=[], metadata=self.metadata)
         with self.assertRaises(ValidationError):
-            apply_side_map(segment, set_intervals=[{"set_index": 1, "start_seconds": 0.0, "end_seconds": 12.0}], side_intervals=[{"set_index": 1, "start_seconds": float("nan"), "end_seconds": 12.0, "team_side": "near", "crop": [0, 0, 100, 100]}], metadata=self.metadata)
+                apply_side_map(segment, set_intervals=[{"set_index": 1, "start_seconds": 0.0, "end_seconds": 12.0}], side_intervals=[{"set_index": 1, "start_seconds": float("nan"), "end_seconds": 12.0, "team_side": "near", "crop": [0, 0, 100, 100]}], metadata=self.metadata)
+
+    def test_side_map_rejects_uncovered_rally_gaps(self):
+        segment = complete_coverage(((2.0, 10.0),), duration_seconds=12.0, binding=self.binding)
+        set_intervals = [{"set_index": 1, "start_seconds": 0.0, "end_seconds": 12.0}]
+        with self.assertRaisesRegex(ValidationError, "do not cover"):
+            apply_side_map(
+                segment,
+                set_intervals=set_intervals,
+                side_intervals=[
+                    {"set_index": 1, "start_seconds": 3.0, "end_seconds": 10.0, "team_side": "near", "crop": [0, 0, 100, 100]}
+                ],
+                metadata=self.metadata,
+            )
 
     def test_queue_round_trip_and_no_overwrite(self):
         segments = complete_coverage(((2.0, 5.0),), duration_seconds=12.0, binding=self.binding)
@@ -165,6 +182,26 @@ class RallyQueueTests(unittest.TestCase):
             self.assertEqual(load_rally_queue(path, binding=self.binding), segments)
             with self.assertRaises(ValidationError):
                 write_rally_queue(path, binding=self.binding, segments=segments, set_intervals=[], side_intervals=[], settings=RallyDetectionSettings(), code_sha="abc")
+
+    def test_queue_rejects_non_integer_format_version(self):
+        segments = complete_coverage(((2.0, 5.0),), duration_seconds=12.0, binding=self.binding)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "queue.json"
+            write_rally_queue(
+                path,
+                binding=self.binding,
+                segments=segments,
+                set_intervals=[],
+                side_intervals=[],
+                settings=RallyDetectionSettings(),
+                code_sha="abc",
+            )
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            for version in (True, 2, 1.0, "1"):
+                payload["format_version"] = version
+                path.write_bytes(canonical_json_bytes(payload))
+                with self.subTest(version=version), self.assertRaises(ValidationError):
+                    load_rally_queue(path, binding=self.binding)
 
     def test_queue_rejects_binding_metadata_and_shape_tampering(self):
         segments = complete_coverage(((2.0, 5.0),), duration_seconds=12.0, binding=self.binding)

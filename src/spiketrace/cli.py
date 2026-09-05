@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 import subprocess
-from datetime import datetime, timezone
+import sys
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
@@ -32,7 +32,7 @@ def _queue_binding(path: Path):
 def _git_sha(repo_root: Path) -> str:
     try:
         return subprocess.check_output(["git", "-C", str(repo_root), "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL).strip()
-    except Exception:
+    except (OSError, subprocess.SubprocessError, UnicodeError):
         return "unknown"
 
 
@@ -301,6 +301,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     evaluate = subparsers.add_parser("evaluate-validation")
     evaluate.add_argument("video", type=Path); evaluate.add_argument("truth_json", type=Path); evaluate.add_argument("checkpoint", type=Path); evaluate.add_argument("output_dir", type=Path)
+    evaluate.add_argument("--truth-csv", type=Path, required=True, help="Explicit locked truth CSV paired with TRUTH_JSON.")
     evaluate.add_argument("--repo-root", type=Path, required=True); evaluate.add_argument("--video-root", type=Path, required=True); evaluate.add_argument("--manifest", type=Path, action="append", required=True); evaluate.add_argument("--selection-source", type=Path, action="append", default=[])
     evaluate.add_argument("--stride-seconds", type=_positive_float, default=0.4); evaluate.add_argument("--confidence-threshold", type=float, default=0.5); evaluate.add_argument("--merge-gap-seconds", type=float, default=0.25); evaluate.add_argument("--min-event-seconds", type=float, default=0.2); evaluate.add_argument("--batch-size", type=_positive_int, default=8); evaluate.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
 
@@ -489,7 +490,14 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
 
     if args.command == "prepare-validation-rallies":
         from .validation_contract import load_video_binding
-        from .validation_rallies import RallyDetectionSettings, apply_side_map, complete_coverage, detect_rally_candidates, write_rally_proxies, write_rally_queue
+        from .validation_rallies import (
+            RallyDetectionSettings,
+            apply_side_map,
+            complete_coverage,
+            detect_rally_candidates,
+            write_rally_proxies,
+            write_rally_queue,
+        )
         binding = load_video_binding(args.binding_json, repo_root=args.repo_root, video_root=args.video_root)
         side_payload = json.loads(args.side_map.read_text(encoding="utf-8"))
         set_intervals = side_payload.get("set_intervals", [])
@@ -532,27 +540,66 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         return {"ok": True, "manifests": len(args.manifest), "selection_sources": len(args.selection_source)}
 
     if args.command == "evaluate-validation":
-        from .validation_contract import assert_no_content_overlap, load_video_binding
-        from .validation_truth import load_locked_truth
-        from .validation_inference import infer_locked_validation
-        from .validation_evaluation import evaluate_validation
-        from .validation_outputs import write_validation_outputs
-        from .validation_contract import freeze_video_binding, ValidationVideoBinding
         from .domain import VideoMetadata
-        truth_data = json.loads(args.truth_json.read_text(encoding="utf-8"))
-        video_info = truth_data.get("video", {})
+        from .validation_contract import (
+            ValidationVideoBinding,
+            assert_no_content_overlap,
+            freeze_video_binding,
+            load_video_binding,
+        )
+        from .validation_evaluation import evaluate_validation
+        from .validation_inference import infer_locked_validation
+        from .validation_outputs import write_validation_outputs
+        from .validation_truth import load_locked_truth
+        try:
+            truth_data = json.loads(args.truth_json.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValidationError("Locked truth JSON is invalid") from exc
+        if not isinstance(truth_data, dict):
+            raise ValidationError("Locked truth JSON must contain an object")
+        video_info = truth_data.get("video")
         if not isinstance(video_info, dict):
             raise ValidationError("Locked truth video binding is invalid")
-        video_root = args.video_root.resolve()
-        source = (video_root / str(video_info.get("video_path", ""))).resolve()
-        expected_metadata = video_info.get("metadata")
-        if isinstance(expected_metadata, dict):
-            expected_metadata = {key: value for key, value in expected_metadata.items() if key != "path"}
-        csv_path = args.truth_json.with_suffix(".csv")
-        metadata_info = video_info.get("metadata") if isinstance(video_info.get("metadata"), dict) else {}
-        metadata = VideoMetadata(source, float(metadata_info.get("fps", 0)), int(metadata_info.get("frame_count", 0)), int(metadata_info.get("width", 0)), int(metadata_info.get("height", 0)), float(metadata_info.get("duration_seconds", 0)))
-        binding = ValidationVideoBinding(str(video_info.get("match_id", "")), source, video_root, str(video_info.get("video_path", "")), str(video_info.get("sha256", "")), metadata)
+        video_path_value = video_info.get("video_path")
+        if (
+            not isinstance(video_path_value, str)
+            or not video_path_value
+            or Path(video_path_value).is_absolute()
+            or Path(video_path_value).as_posix() != video_path_value
+            or ".." in Path(video_path_value).parts
+        ):
+            raise ValidationError("Locked truth video path is invalid")
+        video_root = args.video_root.expanduser().resolve()
+        source = (video_root / video_path_value).resolve()
+        try:
+            source.relative_to(video_root)
+        except ValueError as exc:
+            raise ValidationError("Locked truth video path escapes video root") from exc
+        metadata_info = video_info.get("metadata")
+        if not isinstance(metadata_info, dict):
+            raise ValidationError("Locked truth video metadata is invalid")
+        try:
+            metadata = VideoMetadata(
+                source,
+                float(metadata_info["fps"]),
+                int(metadata_info["frame_count"]),
+                int(metadata_info["width"]),
+                int(metadata_info["height"]),
+                float(metadata_info["duration_seconds"]),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValidationError("Locked truth video metadata is invalid") from exc
+        match_id = video_info.get("match_id")
+        expected_sha256 = video_info.get("sha256")
+        if not isinstance(match_id, str) or not match_id or not isinstance(expected_sha256, str) or not expected_sha256:
+            raise ValidationError("Locked truth video binding is invalid")
+        binding = ValidationVideoBinding(match_id, source, video_root, video_path_value, expected_sha256, metadata)
+        csv_path = args.truth_csv.expanduser().resolve()
         truth = load_locked_truth(args.truth_json, csv_path, binding=binding)
+        explicit_video = args.video.expanduser().resolve()
+        if explicit_video != source:
+            raise ValidationError("video path does not match locked truth binding")
+        expected_metadata = {key: value for key, value in metadata_info.items() if key != "path"}
         binding = freeze_video_binding(source, match_id=binding.match_id, expected_sha256=binding.sha256, repo_root=args.repo_root, video_root=video_root, expected_metadata=expected_metadata)
         from .validation_truth import verify_truth_bundle
         verify_truth_bundle(args.truth_json, csv_path, binding=binding, repo_root=args.repo_root, video_root=args.video_root)
@@ -560,7 +607,7 @@ def run_command(args: argparse.Namespace) -> dict[str, object]:
         inference = infer_locked_validation(args.video, args.checkpoint, truth, stride_seconds=args.stride_seconds, confidence_threshold=args.confidence_threshold, merge_gap_seconds=args.merge_gap_seconds, min_event_seconds=args.min_event_seconds, batch_size=args.batch_size, device=args.device)
         report = evaluate_validation(truth, inference)
         created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        paths = write_validation_outputs(args.output_dir, truth=truth, inference=inference, report=report, checkpoint_path=args.checkpoint, code_sha=_git_sha(args.repo_root), parameters={"stride_seconds": args.stride_seconds, "confidence_threshold": args.confidence_threshold, "merge_gap_seconds": args.merge_gap_seconds, "min_event_seconds": args.min_event_seconds, "batch_size": args.batch_size, "device": args.device, "truth_json_path": str(args.truth_json), "truth_csv_path": str(csv_path)}, created_at=created_at)
+        paths = write_validation_outputs(args.output_dir, truth=truth, inference=inference, report=report, checkpoint_path=args.checkpoint, code_sha=_git_sha(args.repo_root), parameters={"stride_seconds": args.stride_seconds, "confidence_threshold": args.confidence_threshold, "merge_gap_seconds": args.merge_gap_seconds, "min_event_seconds": args.min_event_seconds, "batch_size": args.batch_size, "device": args.device, "truth_json_path": str(args.truth_json.resolve()), "truth_csv_path": str(csv_path.resolve())}, created_at=created_at)
         return {key: str(value) for key, value in paths.items()}
 
     if args.command == "verify-validation":

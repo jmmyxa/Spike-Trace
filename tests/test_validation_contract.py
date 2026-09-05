@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 import cv2
 import numpy as np
@@ -56,6 +57,33 @@ class ValidationContractTests(unittest.TestCase):
                 write_new_bytes(destination, b"loser")
             self.assertEqual(destination.read_bytes(), b"winner")
 
+    def test_binding_rejects_non_integer_format_version(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            video = root / "data" / "fixture.avi"
+            video.parent.mkdir()
+            self._video(video)
+            binding = freeze_video_binding(
+                video,
+                match_id="match-a",
+                expected_sha256=sha256_file(video),
+                repo_root=root,
+            )
+            metadata = binding.metadata.to_dict()
+            metadata.pop("path")
+            for version in (True, 2, 1.0, "1"):
+                payload = {
+                    "format_version": version,
+                    "match_id": binding.match_id,
+                    "video_path": binding.repo_video_path,
+                    "sha256": binding.sha256,
+                    "metadata": metadata,
+                }
+                path = root / f"binding-{str(version).replace('.', '-')}.json"
+                path.write_bytes(canonical_json_bytes(payload))
+                with self.subTest(version=version), self.assertRaises(ValidationError):
+                    load_video_binding(path, repo_root=root)
+
     def test_overlap_rejects_copy_match_selection_sha_and_allows_unrelated(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -85,6 +113,10 @@ class ValidationContractTests(unittest.TestCase):
 
     def test_canonical_json_is_stable(self):
         self.assertEqual(canonical_json_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
+
+    def test_canonical_json_rejects_nonfinite_values(self):
+        with self.assertRaises(ValueError):
+            canonical_json_bytes({"value": float("nan")})
 
     def test_rejects_absolute_binding_repo_path(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -138,6 +170,13 @@ class ValidationContractTests(unittest.TestCase):
             manifest = root / "manifest.csv"
             manifest.write_text("video_path,split,match_id,video_sha256\nother.avi,val\n", encoding="utf-8")
             assert_no_content_overlap(binding, manifest_paths=[manifest], selection_paths=[], repo_root=root)
+
+    def test_hash_read_errors_are_validation_errors(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "video.bin"
+            source.write_bytes(b"video")
+            with patch("spiketrace.validation_contract.Path.open", side_effect=PermissionError("denied")), self.assertRaises(ValidationError):
+                sha256_file(source)
 
 
 if __name__ == "__main__":

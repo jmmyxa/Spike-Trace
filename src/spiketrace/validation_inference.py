@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Literal
 
 from .constants import SAMPLING_CONTRACT
@@ -13,7 +13,11 @@ from .events import merge_action_windows_with_provenance
 from .inference import _file_sha256
 from .ml import frames_to_tensor, load_checkpoint, require_torch, resolve_device
 from .validation_truth import ValidationTruth
-from .video import inspect_video, iter_sequential_video_clip_batches, iter_window_times_range
+from .video import (
+    inspect_video,
+    iter_sequential_video_clip_batches,
+    iter_window_times_range,
+)
 
 
 @dataclass(frozen=True, slots=True)
