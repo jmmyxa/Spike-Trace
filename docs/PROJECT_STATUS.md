@@ -81,3 +81,10 @@
 - 技能验证：`quick_validate.py` 通过，技能正文 455 词；身份测试 `6/6` 通过；全包 `compileall` 和 `git diff --check` 通过。
 - 当前状态：本次文档和技能改动尚待提交、推送和远程 ref 核验。
 - 下一步：选择性提交本次文件，推送到当前上游分支，核验远端后补记最终同步结果。
+
+### 2026-09-06：最终同步
+
+- 技能与项目规则已提交为 `74bb19f`，并推送到 `origin/codex/rangitoto-review`。
+- 本地 HEAD 与 GitHub 远程 ref 已核验一致；未使用强制推送。
+- 本机技能副本已安装到 `C:\Users\Fakelove\.codex\skills\push-project-status`。
+- 后续每次会话结束时，先更新本文件，再按该技能选择性提交、推送和核验。
