@@ -94,5 +94,5 @@
 - 当前进度：已将 `.agents/skills/push-project-status/` 改为跨项目技能，不再依赖 Spike-Trace 的目录、日志名或 GitHub；新增项目根目录/VCS/状态日志探测、非 Git local-only 降级、用户暂存隔离、远端 ref 核验和二次状态提交规则。README 已注明可复制到其他项目；个人副本已同步到 `C:\Users\Fakelove\.codex\skills\push-project-status\`。
 - 实际验证：`quick_validate.py`（项目 `.venv`、UTF-8 模式）通过；技能正文 499 词；独立 GREEN 压力场景覆盖 Git+remote、无 remote、非 Git/多状态文件、超时或 non-fast-forward，均确认不得猜路径、混入用户暂存或无证据声称同步；`git diff --check` 通过，仅有换行格式提示。未重跑产品代码测试，本轮仅修改文档和技能。
 - 同步进度：本轮四个文件已提交为 `ff68d53` 并推送到 `origin/codex/rangitoto-review`；`git ls-remote` 已核验远端 ref 与本地 HEAD 一致。当前工作树未触碰其他用户文件。
-- 下一步：将本次状态修订作为状态提交推送，并再次核验远端 ref、跟踪状态和工作树；产品代码测试仍留待代码变更会话执行。
-- Git 状态：分支 `codex/rangitoto-review`，上游 `origin/codex/rangitoto-review`，会话开始 HEAD `dd0fa2e`；首个提交已同步，本条状态修订正在进行最终同步。
+- 下一步：回到产品代码会话，优先完成 SoCal 独立验证基线；产品代码测试仍留待代码变更会话执行。
+- Git 状态：截至状态提交 `430aa3f`，分支 `codex/rangitoto-review` 已与 `origin/codex/rangitoto-review` 的远端 ref、跟踪状态和工作树核验一致；本次收尾记录随后的修订继续按同一流程同步。
