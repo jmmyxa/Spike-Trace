@@ -1,7 +1,10 @@
 # Spike-Trace 项目规划与开发上下文
 
+独立验证来源契约由 `src/spiketrace/validation_contract.py` 统一维护：视频以相对仓库路径、SHA-256
+和元数据冻结，验证清单与选择 JSON 仅扫描显式传入的来源并 fail-closed 防止内容重叠。
+
 > 文档状态：已确认的项目基线  
-> 更新日期：2026-08-30
+> 更新日期：2026-09-04
 > 用途：保存产品决策、MVP 边界和技术路线，供项目成员及后续 AI 持续开发时使用。
 
 ## 1. 项目愿景
@@ -149,6 +152,16 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 7. 对持续时间过短的孤立结果进行过滤。
 8. 输出最终事件及推理证据。
 
+锁定独立验证真值后，`spiketrace.validation_inference.infer_locked_validation` 对能由侧区间
+完整映射到 `team_side`/`crop` 的 rally 与 non_rally 子区间执行上述窗口推理。每段独立解码和合并，窗口与预测保留
+绝对时间、段标识和来源窗口索引；没有完整裁剪映射的 non_rally 区间保留为评估排除范围。
+入口在加载 checkpoint 前检查 `truth.locked`，并在解码前后校验视频与 checkpoint SHA-256。
+侧区间必须无重叠且完整覆盖 rally；非法参数、窗口、合并或解码错误统一转换为验证错误。
+
+`spiketrace.validation_evaluation` 消费锁定真值与分段推理结果，使用一秒绝对窗口和确定性动态规划
+事件匹配输出六类动作的事件 Precision/Recall/F1、混淆诊断、覆盖率与可见性排除统计；
+`free_ball` 投影为 `background`，non-rally 与不可用区间不会进入窗口支持集。
+
 ### 7.3 事件输出契约
 
 ```json
@@ -248,6 +261,12 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 - Rangitoto 已完成的 40 段、83 条人工记录已发布为 v2 分层结果和训练投影；推断或不可见动作
   只保留为比赛事实，不进入视觉训练。
 - 已用真实比赛建立第一份同场零样本基线报告；独立验证基线仍待第二场比赛。
+- SoCal Cup 已作为当前独立 `val` 验收交付物：固定来源声明位于
+  `data/validation/socal_cup_c2_video.json`，六个验证模块、八个验证测试模块和九个显式 CLI
+  命令已具备；运行时仍必须重新校验源视频 SHA-256 与元数据。
+- 当前尚未生成 SoCal 草稿、锁定真值或预测输出。下一步是 prediction-blind 地逐回合检查代理、
+  填写 C2 全部动作或 `no_c2_action=true`，再锁定 `data/validation/socal_cup_c2_validation.json`
+  与 `data/validation/socal_cup_c2_validation.csv`；真值锁定前不得加载 checkpoint。
 
 ### 阶段 B：增强事件理解
 
@@ -269,6 +288,13 @@ videos/match_010.mp4,28.50,29.30,attack,near,12,0,170,1280,720,val
 - 按比赛、局次和球员统计。
 - CSV、XLSX、JSON、PDF 导出。
 - 数据备份、恢复和模型升级。
+
+SoCal 独立验证的固定边界如下：视频相对路径为
+`data/SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4`，
+`match_id=socal-cup-final-2025`，目标队为 `C2 Attack 17-1 Elite`，内容 SHA-256 为
+`b29e55cde114f5fda745349f86cc878d8abb81ba44ee430f467885bd7ce11c17`。该 match ID 和内容 SHA
+只能出现在独立 `val` 真值及其报告中，不能进入任何 `train`/`test` 清单、主动学习选择源、
+伪标签或训练缓存；复制、改名或重新编码也必须被内容隔离门禁拒绝。
 
 ## 13. 当前数据状态和下一步输入
 
@@ -395,7 +421,7 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 
 下一步严格按以下顺序执行：
 
-1. 完成未触及的整场比赛验证真值。
+1. 完成 SoCal 未触及整场比赛的 prediction-blind 回合真值（已具备来源声明、草稿与不可变锁定 bundle 契约）。
 2. 运行高效的两阶段微调。
 3. 在选定回合实现身份跟踪和已确认的号码归属。
 4. 加入 SQLite，以及用户复核、统计和导出工作流。
@@ -414,3 +440,21 @@ Accuracy 为 0.630137（46/73）、Macro F1 为 0.344159，六类兼容 Macro F1
 - 训练/验证/测试集必须按比赛隔离。
 - 所有模型结果必须保留置信度、模型版本和来源信息。
 - 人工修正数据是未来训练集的重要资产，后续产品不得丢弃修正历史。
+
+独立验证回合队列模块已加入：它生成 prediction-blind 的运动候选，补齐整场回合/非回合覆盖，按已确认换边区间应用近端/远端裁剪，并写出不含音轨的静音代理与原子 manifest。
+
+SoCal C2 独立验证命令均要求显式传入视频、真值、清单、选择源和 checkpoint 路径。冻结真值后使用 `evaluate-validation`，结果发布为不可覆盖的五文件目录 `outputs/validation/socal-cup-c2-baseline/`；可用 `verify-validation` 在不加载模型的情况下重算文件哈希、源视频绑定和跨文件计数。
+
+输出层在发布前会再次核对源视频和 checkpoint 的 SHA-256，并在验证时拒绝非规范 JSON 字节、
+不匹配的 CSV 投影、半写入目录、来源漂移和真值/模型绑定不一致。内部哈希用于检测意外或局部
+篡改；它们不构成外部真实性签名，若未来需要抗恶意的整包同步改写，应另行加入签名或受信摘要。
+
+验证绑定、队列、真值和结果文件的 `format_version` 必须是严格的 JSON 整数；锁定真值 CSV 固定
+使用 UTF-8 BOM。
+
+当前独立验证模块为 `validation_contract.py`、`validation_rallies.py`、`validation_truth.py`、
+`validation_inference.py`、`validation_evaluation.py` 和 `validation_outputs.py`；对应的八个
+验证测试模块另含 `test_socal_validation_integration.py`，用合成视频覆盖冻结、队列、草稿、锁定
+和输出契约，不读取真实 SoCal 视频。详细九命令参数、人工交接和提交边界记录在
+`data/validation/README.md`。真值锁定前不生成 SoCal baseline 识别结果；锁定后结果仍只属于
+`val`，并必须使用新的不可覆盖输出目录。

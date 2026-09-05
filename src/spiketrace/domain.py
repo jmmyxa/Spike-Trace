@@ -15,6 +15,8 @@ class AnnotationRecord:
     team_side: str | None = None
     player_number: str | None = None
     crop: tuple[int, int, int, int] | None = None
+    match_id: str | None = None
+    rally_id: str | None = None
 
     @property
     def duration_seconds(self) -> float:

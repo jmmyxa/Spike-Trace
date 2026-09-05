@@ -125,6 +125,8 @@ def load_manifest(
                     team_side=_optional_text(row.get("team_side")),
                     player_number=_optional_text(row.get("player_number")),
                     crop=_optional_crop(row, row_number),
+                    match_id=_optional_text(row.get("match_id")),
+                    rally_id=_optional_text(row.get("rally_id")),
                 )
             )
 

@@ -510,3 +510,35 @@ def iter_window_times(
         start += stride_seconds
     if not yielded_last and last_start > 0:
         yield last_start, duration_seconds
+
+
+def iter_window_times_range(
+    start_seconds: float,
+    end_seconds: float,
+    *,
+    window_seconds: float,
+    stride_seconds: float,
+) -> Iterator[tuple[float, float]]:
+    """Yield clamped sliding windows contained in a half-open time range."""
+    values = (start_seconds, end_seconds, window_seconds, stride_seconds)
+    try:
+        numeric_values = tuple(float(value) for value in values)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("range window parameters must be finite numbers.") from exc
+    if any(isinstance(value, bool) or not isfinite(number) for value, number in zip(values, numeric_values)):
+        raise ValueError("range window parameters must be finite numbers.")
+    start_seconds, end_seconds, window_seconds, stride_seconds = numeric_values
+    if start_seconds < 0 or end_seconds <= start_seconds:
+        raise ValueError("range must satisfy 0 <= start_seconds < end_seconds.")
+    if window_seconds <= 0 or stride_seconds <= 0:
+        raise ValueError("window_seconds and stride_seconds must be positive.")
+    if stride_seconds > window_seconds:
+        raise ValueError("stride_seconds cannot exceed window_seconds.")
+
+    start = start_seconds
+    while start < end_seconds - 1e-9:
+        end = min(start + window_seconds, end_seconds)
+        yield round(start, 9), round(end, 9)
+        if end >= end_seconds - 1e-9:
+            break
+        start += stride_seconds

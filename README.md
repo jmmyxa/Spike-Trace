@@ -10,6 +10,9 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 
 - 内部七类动作数据契约：`background`、`serve`、`receive`、`set`、`attack`、`block`、`dig`；旧六类 checkpoint 继续兼容。
 - CSV 标注清单校验，并强制按完整比赛隔离训练集和验证集。
+- 独立验证来源绑定契约：冻结视频 SHA-256/元数据，并对清单与选择源执行显式内容隔离。
+- 独立验证回合队列：基于确定性运动候选补齐整场覆盖、处理换边裁剪，并生成静音代理。
+- 独立验证真值：以 prediction-blind 草稿逐回合记录动作与可见性，并原子锁定不可变 JSON/CSV 权威 bundle。
 - OpenCV 视频元数据读取和固定帧数片段采样。
 - 可训练的 R3D-18 基线，以及只用于冒烟测试的 Tiny3D 模型。
 - 可选的 Ultralytics YOLO 预训练动作检测适配层，不复制外部项目源码。
@@ -19,6 +22,97 @@ Spike-Trace 是一个面向排球比赛视频的本地分析软件。长期目�
 - 训练集/验证集损失、逐类 Precision/Recall/F1 和混淆矩阵。
 - 可复现 checkpoint，包含标签、预处理参数、指标和模型版本。
 - 整场视频滑动窗口推理（单次顺序解码整段视频）、动作事件合并、JSON/CSV 导出。
+- 锁定真值后的分段推理：按 rally/non_rally 覆盖和半场裁剪生成绝对时间窗口，并保留事件来源窗口索引。
+- 独立验证评估：对可见动作执行确定性事件匹配，生成一秒窗口分类指标、覆盖率、可见性排除和混淆诊断报告。
+- 分段推理对侧区间映射、裁剪、参数和解码异常统一 fail-closed 抛出验证错误；无裁剪的 non_rally 显式排除。
+- SoCal 独立验证提供显式路径 CLI 门禁（`freeze-validation-video`、`prepare-validation-rallies`、`init/validate/lock/verify-validation-truth`、`verify-validation-isolation`、`evaluate-validation`、`verify-validation`）。评估结果以不可覆盖的五文件 bundle 写入 `outputs/validation/socal-cup-c2-baseline/`：`metrics.json`、`confusion_matrix.csv`、`predicted-events.json`、`predicted-events.csv` 和 `run-manifest.json`。
+
+## SoCal Cup 独立验证（当前 Stage A）
+
+已提交的 `data/validation/socal_cup_c2_video.json` 只是来源声明；运行时必须把下面固定的
+视频路径和 `--video-root E:\Spike-Trace` 组合起来重新校验 SHA-256 与元数据。当前目标队是
+`C2 Attack 17-1 Elite`，`match_id` 为 `socal-cup-final-2025`。第一轮固定使用
+`runs\rangitoto-r3d18-bootstrap\best.pt`，它只能产生独立 `val` 报告，不能写回训练清单。
+
+按下面九个命令顺序执行（每次输出目录都必须是新的空目录）：
+
+```powershell
+.venv\Scripts\spiketrace.exe freeze-validation-video `
+  "data\SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4" `
+  data\validation\socal_cup_c2_binding.json `
+  --repo-root . --video-root E:\Spike-Trace `
+  --match-id socal-cup-final-2025 `
+  --expected-sha256 b29e55cde114f5fda745349f86cc878d8abb81ba44ee430f467885bd7ce11c17
+
+.venv\Scripts\spiketrace.exe prepare-validation-rallies `
+  data\validation\socal_cup_c2_binding.json `
+  data\validation\socal_cup_c2_queue.json `
+  outputs\validation\socal-cup-c2-proxies `
+  --repo-root . --video-root E:\Spike-Trace `
+  --side-map data\validation\socal_cup_c2_side_map.json
+
+.venv\Scripts\spiketrace.exe init-validation-truth `
+  data\validation\socal_cup_c2_queue.json `
+  data\validation\socal_cup_c2_truth-draft.json `
+  --code-sha (git rev-parse HEAD)
+
+.venv\Scripts\spiketrace.exe validate-validation-truth `
+  data\validation\socal_cup_c2_binding.json `
+  data\validation\socal_cup_c2_truth-draft.json `
+  --repo-root . --video-root E:\Spike-Trace
+
+.venv\Scripts\spiketrace.exe lock-validation-truth `
+  data\validation\socal_cup_c2_binding.json `
+  data\validation\socal_cup_c2_truth-draft.json `
+  data\validation\socal_cup_c2_validation.json `
+  data\validation\socal_cup_c2_validation.csv `
+  --repo-root . --video-root E:\Spike-Trace `
+  --code-sha (git rev-parse HEAD) --created-at "2026-09-04T00:00:00Z"
+
+.venv\Scripts\spiketrace.exe verify-validation-truth `
+  data\validation\socal_cup_c2_binding.json `
+  data\validation\socal_cup_c2_validation.json `
+  data\validation\socal_cup_c2_validation.csv `
+  --repo-root . --video-root E:\Spike-Trace
+
+.venv\Scripts\spiketrace.exe verify-validation-isolation `
+  data\validation\socal_cup_c2_binding.json `
+  --repo-root . --video-root E:\Spike-Trace `
+  --manifest data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv
+
+.venv\Scripts\spiketrace.exe evaluate-validation `
+  "data\SoCal Cup Final_ MVVC 17 Red vs C2 Attack 17-1, 06_15_2025 [9ESOXojmAGI].mp4" `
+  data\validation\socal_cup_c2_validation.json `
+  --truth-csv data\validation\socal_cup_c2_validation.csv `
+  runs\rangitoto-r3d18-bootstrap\best.pt `
+  outputs\validation\socal-cup-c2-baseline `
+  --repo-root . --video-root E:\Spike-Trace `
+  --manifest data\annotations\usa_germany_2024_annotations_expanded_batch_02.csv `
+  --stride-seconds 0.4 --confidence-threshold 0.5 `
+  --merge-gap-seconds 0.25 --min-event-seconds 0.2 `
+  --batch-size 8 --device cuda
+
+.venv\Scripts\spiketrace.exe verify-validation `
+  outputs\validation\socal-cup-c2-baseline `
+  --repo-root . --video-root E:\Spike-Trace
+```
+
+在 `lock-validation-truth` 之前，下一项人工工作是逐个打开 prediction-blind 草稿的回合代理，
+确认边界、我方半场和 C2 的全部动作；没有动作的回合必须明确写 `no_c2_action=true`。只能确认到
+整秒时就填写整秒，不要用模型候选、裁判手势或比分推断被遮挡动作；遮挡、镜头外和不确定情况写入
+可见性证据与备注。草稿尚未锁定时，程序不会加载 checkpoint，也不会生成 SoCal 预测。只有
+`verify-validation-truth` 成功后才开始基线识别。
+
+输出发布器会在构建和最终目录提交前重新计算源视频与 checkpoint 的 SHA-256；验证器还会检查
+`metrics.json`、`run-manifest.json` 的规范 JSON 字节、全部 CSV 表头与 JSON 投影、五个文件的
+哈希/字节数以及真值和源视频绑定。这样可以发现半写入、误改或来源漂移。该 bundle 目前是
+自包含的一致性证据，不是数字签名：拥有写权限的人若同时改写内容和所有内部哈希，仍需要后续
+引入外部签名或受信摘要才能抵抗恶意伪造。
+
+验证绑定、队列、真值和结果文件的 `format_version` 必须是严格的 JSON 整数；锁定真值的兼容
+CSV 固定使用 UTF-8 BOM，缺少 BOM 的文件会被拒绝。
+
+完整的目录约束、提交边界和人工字段说明见 [data/validation/README.md](data/validation/README.md)。
 
 ## 环境安装
 
@@ -78,6 +172,9 @@ Spike-Trace/
 │  │  ├─ round-01-action-participants.csv # 已确认参与者（当前为空）
 │  │  └─ round-01-exports.manifest.json # 六文件清单和 SHA-256
 │  └─ *_match.json               # 比赛信息、当前清单、复核状态与半场区间
+├─ data/validation/
+│  ├─ socal_cup_c2_video.json     # SoCal 源视频的固定路径、SHA-256 和元数据声明
+│  └─ README.md                   # 独立验证九命令工作流与人工交接说明
 ├─ data/active-learning/
 │  └─ rangitoto/
 │     ├─ round-01-selection.json # 可复现的首轮 40 段选片规格
@@ -107,6 +204,8 @@ Spike-Trace/
 ├─ outputs/active-learning/rangitoto/
 │  ├─ round-01/                 # 本地忽略的 40 段代理、manifest 和已完成的不可变 review.xlsx
 │  └─ round-01-previews/        # 本地忽略的四页工作簿预览
+├─ outputs/validation/
+│  └─ socal-cup-c2-baseline/     # 本地生成、不可覆盖的五文件独立验证结果目录
 ├─ src/spiketrace/
 │  ├─ active_learning_selection.py # 主动学习选片的稳定公共入口
 │  ├─ active_learning_review.py  # 应用主动学习人工结论、硬负样本与累计清单
@@ -124,6 +223,12 @@ Spike-Trace/
 │  ├─ errors.py                  # 可操作的命令行错误
 │  ├─ events.py                  # 滑窗结果合并为动作事件
 │  ├─ inference.py               # R3D-18/Tiny3D 整场滑窗推理，复用单次顺序视频解码
+│  ├─ validation_contract.py     # 源视频冻结、哈希、元数据和内容隔离门禁
+│  ├─ validation_rallies.py      # prediction-blind 回合候选、整场覆盖、换边裁剪和静音代理
+│  ├─ validation_truth.py        # 逐回合真值草稿、可见性证据和不可变 JSON/CSV 锁定
+│  ├─ validation_inference.py    # 锁定真值分段推理、半场裁剪和绝对时间来源契约
+│  ├─ validation_evaluation.py   # 事件匹配、一秒窗口、覆盖率和可见性指标
+│  ├─ validation_outputs.py      # 五文件结果 bundle、哈希交叉校验和无覆盖发布
 │  ├─ manifest.py                # 标注 CSV 加载、校验与摘要
 │  ├─ metrics.py                 # 分类指标和混淆矩阵
 │  ├─ ml.py                      # PyTorch 模型、设备和 checkpoint
@@ -144,6 +249,14 @@ Spike-Trace/
 │  ├─ test_active_learning_review_outputs.py # v2 六文件发布、跨文件校验与无覆盖测试
 │  ├─ test_dual_crop_review.py   # 双裁剪合并、篡改拒绝、规模与 CLI 测试
 │  ├─ test_outputs.py            # inference JSON v2 窗口成员索引输出测试
+│  ├─ test_validation_contract.py # 验证源冻结、哈希和比赛隔离
+│  ├─ test_validation_rallies.py # 回合候选、整场覆盖和换边映射
+│  ├─ test_validation_truth.py   # prediction-blind 真值和锁定 CSV/JSON
+│  ├─ test_validation_inference.py # 锁定真值后的分段推理来源
+│  ├─ test_validation_evaluation.py # 事件/窗口指标和混淆诊断
+│  ├─ test_validation_outputs.py # 五文件输出、哈希和原子发布
+│  ├─ test_validation_cli.py    # 九个验证命令的参数与门禁
+│  ├─ test_socal_validation_integration.py # SoCal 常量和合成端到端链路
 │  ├─ test_review_batch.py       # 主动学习代理视频批次 manifest、原子写入与 CLI 测试
 │  └─ ...                        # 其余不依赖真实视频或外部权重的单元测试
 └─ tools/

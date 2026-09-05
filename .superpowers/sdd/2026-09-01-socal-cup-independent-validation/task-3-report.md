@@ -1,0 +1,112 @@
+# Task 3 Report: Locked Validation Truth Bundle
+
+## RED
+
+Command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+```
+
+Result: failed during import with `ModuleNotFoundError: No module named 'spiketrace.validation_truth'`.
+
+## GREEN
+
+Focused command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+```
+
+Result: `Ran 5 tests ... OK`.
+
+Adjacent validation command:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies tests.test_validation_truth -v
+```
+
+Result: `Ran 32 tests ... OK`.
+
+## Scope
+
+- Added strict prediction-blind draft validation, raw `free_ball` preservation, and `background` CSV projection.
+- Added visibility interval retention, coverage/no-action enforcement, whole-second bounds, empty player numbers, duplicate/unknown field rejection, and fail-closed parsing.
+- Added immutable UTF-8 BOM CSV and canonical locked JSON publication with source/hash revalidation and verification counts.
+- Updated `README.md` and `docs/PROJECT_PLAN.md`.
+
+## Self-review / concerns
+
+- The implementation intentionally does not inspect, decode, or recognize source video; it only re-hashes the frozen binding at lock/verify.
+- CSV notes/evidence remain authority-only as required by the fixed compatibility header.
+- Full repository discovery was not used as a release gate because several unrelated video/model tests are significantly longer; focused and adjacent validation suites are green.
+
+## Commit
+
+`0125471efe1c44a8cf4913db6e253772e7a9b1d4` (`feat: add locked validation truth bundle`)
+
+## Review Fix Round 1
+
+RED regressions covered CSV-hash rebinding, explicit-root substitution, split-rally confirmation, strict evidence typing, and paired-publication rollback.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 10 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+The fix binds `csv_sha256` into the lock digest, centralizes source-root/hash resolution, validates every split rally part and mapped side crop, preserves strict text/schema types, uses `csv.writer`, and rolls back a newly published CSV if JSON publication fails.
+
+Fix commit: `6d60d5145bfa254470a69256e18b38743e75cb49`.
+
+## Review Fix Round 2
+
+Added RED regressions for CSV parser/order, explicit repository-root participation, split-rally confirmation/counting, strict coverage and locked action fields, and publication collision behavior.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 10 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+The implementation now validates every split rally part, counts no-action rallies by unique rally ID, enforces locked action fields and coverage types, uses `csv.reader` for projection comparison, and requires a valid explicit repository root during source resolution.
+
+Round 2 implementation commit: `3c21bd3503921fe0fb766fc5ee57899e05c25b83`.
+
+## Review Fix Round 3
+
+RED regressions covered repository-root authority, explicit external video roots, actual source metadata tampering, strict coverage numeric types, literal CSV bytes, and unique split-rally no-action counts.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_truth -v
+# Ran 13 tests ... OK
+$env:PYTHONPATH='src'; .venv\Scripts\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+Round 3 now resolves default sources from `repo_root`, permits only explicitly matching external `video_root` mappings, re-reads source metadata with `inspect_video`, rejects pseudo-numeric coverage values, and counts split no-action rallies uniquely.
+
+Round 3 implementation commit: `efc0be6f07619e198ef03805f7cf323637402b24`.
+
+## Review Fix Round 4
+
+RED regression matrix expanded in `tests/test_validation_truth.py` to cover duplicate action references and overlapping actions, action bounds, pending coverage, non-rally action rejection, free-ball projection, visibility/no-action row suppression, literal CSV bytes (ordered 13-column header, UTF-8 BOM, LF endings, crop coordinates, empty player number), destination collisions, paired publication rollback, split-rally unique no-action counting, and real source-file replacement. The source replacement test writes a readable video at the frozen path and verifies failure on both SHA mismatch and, with the frozen hash supplied, metadata mismatch; JSON metadata tampering remains covered independently.
+
+GREEN commands:
+
+```powershell
+$env:PYTHONPATH='src'; .venv\\Scripts\\python.exe -m unittest tests.test_validation_truth -v
+# Ran 23 tests ... OK
+$env:PYTHONPATH='src'; .venv\\Scripts\\python.exe -m unittest tests.test_validation_contract tests.test_validation_rallies -q
+# Ran 27 tests ... OK
+```
+
+Round 4 implementation changes add strict `source_segment_id`/`no_c2_action` coverage typing, strict locked-video metadata types/path checks, and a post-inspection source hash recheck to close TOCTOU mutation. `load_locked_truth` now parses and validates the locked authority/CSV without performing source I/O; `verify_truth_bundle` performs the caller-authorized source re-read with `repo_root`/`video_root` before returning counts.
